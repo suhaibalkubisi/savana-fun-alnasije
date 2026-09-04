@@ -42,7 +42,6 @@ export async function upstream(
     ...options,
     cache: "no-store",
     redirect: "error",
-    signal: AbortSignal.timeout(20000),
     headers: supabaseHeaders(c, { token, admin, headers: options.headers }),
   });
   const data = (await response.json().catch(() => null)) as
