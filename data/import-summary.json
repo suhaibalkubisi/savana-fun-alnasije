@@ -1,0 +1,31 @@
+{
+  "file": "AHH.xlsx",
+  "sha256": "d8249d6b8a6a8a9284151086cf1033f8d5d4fd6fc42284fc79ae09c2ea7c914e",
+  "sheets": [
+    {
+      "sheet": "Sheet1",
+      "rows": 207,
+      "headers": [
+        "الاسم",
+        "القسم",
+        "الصفة",
+        "حالة الموظف"
+      ]
+    }
+  ],
+  "total": 206,
+  "counts": {
+    "active": 192,
+    "resigned": 13,
+    "long_leave": 1
+  },
+  "duplicate_names": {
+    "خلدون حسين علي": 2
+  },
+  "missing_fields": [
+    "employee_number",
+    "shift_id",
+    "direct_manager_id"
+  ],
+  "source_role_usage": "Supervisors become selectable manager entries; no direct-manager relationship is inferred."
+}

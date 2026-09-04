@@ -1,0 +1,76 @@
+import test, { after } from "node:test";
+import assert from "node:assert/strict";
+import { readFile, rm } from "node:fs/promises";
+import { build } from "esbuild";
+import { unzipSync, strFromU8 } from "fflate";
+import { report } from "./export-fixture.mjs";
+const compiled = new URL("./.export-check.mjs", import.meta.url);
+await build({
+  entryPoints: ["lib/hr/exports.ts"],
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  packages: "external",
+  outfile: compiled.pathname,
+});
+const { excelBytes, pdfBytes } = await import(compiled.href);
+after(() => rm(compiled, { force: true }));
+test("Excel matrix exports real active database employees, valid days and weighted totals", () => {
+  const zip = unzipSync(excelBytes(report, "الموقف الشامل", false));
+  const sheet = strFromU8(zip["xl/worksheets/sheet1.xml"]);
+  assert.equal(report.rows.length, 192);
+  assert.equal(report.totals.weighted, 6);
+  assert.equal(report.totals.late_minutes, 27);
+  assert.ok(sheet.includes('rightToLeft="1"'));
+  assert.ok(sheet.includes("الالتقاط (Picking)"));
+  assert.ok(sheet.includes("غ×2"));
+  assert.ok(sheet.includes("غ×3"));
+  assert.ok(!sheet.includes("<f>"));
+  assert.equal((sheet.match(/<row /g) || []).length, 197);
+});
+test("Summary and department Excel export use the same filtered report values", () => {
+  const zip = unzipSync(excelBytes(report, "ملخص الموظفين", true));
+  const sheet = strFromU8(zip["xl/worksheets/sheet1.xml"]);
+  const header = sheet.match(/<row r="4".*?<\/row>/s)[0];
+  assert.ok(
+    header.indexOf("إجمالي الغياب المحتسب") < header.indexOf("الإجازات"),
+  );
+  assert.ok(
+    sheet.includes('I197" s="7"><v>6</v>') ||
+      /r="I197"[^>]*><v>6<\/v>/.test(sheet),
+  );
+  assert.ok(/r="L197"[^>]*><v>27<\/v>/.test(sheet));
+  const id = report.rows[0].department_id;
+  const rows = report.rows.filter((r) => r.department_id === id);
+  const totals = Object.fromEntries(
+    Object.keys(report.totals).map((k) => [
+      k,
+      rows.reduce((n, r) => n + Number(r[k]), 0),
+    ]),
+  );
+  const department = strFromU8(
+    unzipSync(excelBytes({ ...report, rows, totals }, "موقف الأقسام", false))[
+      "xl/worksheets/sheet1.xml"
+    ],
+  );
+  assert.equal((department.match(/<row /g) || []).length, rows.length + 5);
+});
+test("Arabic PDF exports use embedded font and paginate full source report", async () => {
+  const font = (await readFile("public/fonts/DejaVuSans.ttf")).toString(
+    "base64",
+  );
+  for (const summary of [false, true]) {
+    const bytes = await pdfBytes(
+      report,
+      summary ? "ملخص الموظفين" : "الموقف الشامل",
+      summary,
+      font,
+    );
+    const pdf = Buffer.from(bytes).toString("latin1");
+    assert.ok(pdf.startsWith("%PDF-"));
+    assert.ok(pdf.includes("/FontFile2"));
+    assert.ok(
+      (pdf.match(/\/Type \/Page\b/g) || []).length >= (summary ? 10 : 20),
+    );
+  }
+});

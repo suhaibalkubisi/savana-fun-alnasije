@@ -1,0 +1,1856 @@
+[
+  {
+    "id": "e88d2b18-5fdd-52c6-913b-febd3d7f23d2",
+    "employee_number": null,
+    "name": "علي محمود صافي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "eaf668cf-62a9-5406-a97f-33d443a4fa86",
+    "employee_number": null,
+    "name": "ابراهيم خليل ابراهيم",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "88cab91e-1427-559d-ac2f-6896019b8733",
+    "employee_number": null,
+    "name": "ابراهيم علي حمد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "a5a95999-cd3b-5e29-ad5c-8282dc2c16fa",
+    "employee_number": null,
+    "name": "احمد عباس حسين",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "c98f774a-6f03-531e-b7fc-e109c7583772",
+    "employee_number": null,
+    "name": "امجد دريد لطيف",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "0b31c01c-4fd1-5513-a16e-9c2000229bd9",
+    "employee_number": null,
+    "name": "امين مشتاق طالب",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "808d41d2-9161-58be-89ba-79f382fe9b22",
+    "employee_number": null,
+    "name": "باقر فلاح حسن",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "888cbb6c-0251-5043-9a60-e3b757ae9705",
+    "employee_number": null,
+    "name": "جعفر عقيل كاظم",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "e1e12e26-1e63-5b02-8186-3ae471f23a48",
+    "employee_number": null,
+    "name": "حاتم عبدالكريم مجيد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "5615b22c-2fed-52bb-9078-9cdf2759f781",
+    "employee_number": null,
+    "name": "حارث حاكم سعود",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "6e6c4676-d2e5-5e42-9e85-f4fc95f76727",
+    "employee_number": null,
+    "name": "حذيفه عزيز علي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "0525ef34-574d-5513-9ab7-15e2edd79827",
+    "employee_number": null,
+    "name": "حسين اياد ضايع",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "2989fb07-7195-55bb-a9f0-c98e78637625",
+    "employee_number": null,
+    "name": "حسين علي جلاب",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "24249b66-f0bf-50b2-9ddb-f0b89e25c18d",
+    "employee_number": null,
+    "name": "ذوالفقار عبدالكريم عبيد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "81382f75-6520-5ca5-aa1b-e5600d9229f5",
+    "employee_number": null,
+    "name": "سجاد احمد عبيد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "6d7f413b-67a4-5791-8751-b77c6b79c6d8",
+    "employee_number": null,
+    "name": "سجاد علاء عباس",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d255ddfd-8f22-56bb-a4ac-a77afe73aa6d",
+    "employee_number": null,
+    "name": "سجاد نوار عيدان",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "94298a97-4204-53fc-a961-1ac6482e8422",
+    "employee_number": null,
+    "name": "سيف صالح خضير",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "4b92d5f2-b20f-52fe-a574-bb6eab418980",
+    "employee_number": null,
+    "name": "سيف فراس عباس",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "0410c699-a035-5c9f-a215-d380c49415ae",
+    "employee_number": null,
+    "name": "عبد الرحمن خالد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "0e417486-2154-574f-afb4-da548da69686",
+    "employee_number": null,
+    "name": "عبدالرحمن عدنان جلاب",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "cffbb18b-2a71-583b-a045-a1855ece69fb",
+    "employee_number": null,
+    "name": "عبد الرحمن كامل",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "983cddb4-00fe-5f56-8759-36cae8a38828",
+    "employee_number": null,
+    "name": "عبدالله حسين عبدالهادي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "890caf56-98c3-5c9a-9647-ccb7436b3489",
+    "employee_number": null,
+    "name": "عبدالله صليبي عوده",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d132d345-37d1-5826-ad39-5703664e92e2",
+    "employee_number": null,
+    "name": "عبد الله شمخي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "059f4f8a-25e0-52ad-a102-cb4d6f30d340",
+    "employee_number": null,
+    "name": "عبدالله علي ابراهيم",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "483b5b3e-fbe6-5b6a-a77f-5dde4c962ed4",
+    "employee_number": null,
+    "name": "عبدالله هيثم عباس",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "750b67e3-9a3b-5b62-a995-e5ff1fccaf38",
+    "employee_number": null,
+    "name": "عبد الباسط عزيز علي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "db5703aa-b21c-55fa-9c5a-8dfc9569798b",
+    "employee_number": null,
+    "name": "علي احمد صالح",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "93b85178-85fb-57e4-b686-4918edd0b8ad",
+    "employee_number": null,
+    "name": "علي امير علي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "05de44f3-5814-5b52-a267-71bc0c3d2847",
+    "employee_number": null,
+    "name": "علي عامر حامد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "119066d7-f865-575d-a303-d49640a82302",
+    "employee_number": null,
+    "name": "عمر رشيد مظلوم",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "b9c01a1e-cb9b-53db-923e-e1030ec84287",
+    "employee_number": null,
+    "name": "رضا سعد احمد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "fc5ea978-b0bb-5a69-a632-f8409472e361",
+    "employee_number": null,
+    "name": "فاروق عمر سالم",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "654a0564-0e58-5c0b-8af9-3bb78a169b8f",
+    "employee_number": null,
+    "name": "كاظم حامد شوشي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "079b2059-696e-5773-b0e6-2b9fec8caef5",
+    "employee_number": null,
+    "name": "ليث احمد جبار",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d898350f-9c9a-5cff-ab24-cb28d0fac866",
+    "employee_number": null,
+    "name": "محمد حمزة حسن",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "447d1b4d-1830-529d-8951-21673f598b53",
+    "employee_number": null,
+    "name": "محمود سعدون عليوي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "e450b63c-3379-5d45-9de0-fd833a535887",
+    "employee_number": null,
+    "name": "مجاهد جاسم عبد الله",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "904dba68-ee42-59bb-88b0-79cd2a2bfb41",
+    "employee_number": null,
+    "name": "مرتضى حياوي نصر",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "abe96862-2d0b-5ece-b14f-d7e44197b6c9",
+    "employee_number": null,
+    "name": "مصطفى حسن علي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "3c785b20-5688-51cd-b740-19573e47a241",
+    "employee_number": null,
+    "name": "مصطفى علي حمد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "cfcc5c45-f3d8-5b1a-b6c9-51f54df9dad6",
+    "employee_number": null,
+    "name": "مصطفى سمير جاسب",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "4c249c42-205e-5dbd-b078-50030128eade",
+    "employee_number": null,
+    "name": "معاذ ستار احمد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "9d61dae3-9a85-584f-a96d-b76291a03c5b",
+    "employee_number": null,
+    "name": "منتظر علي ابراهيم",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "a774efd5-54e8-53c5-a10c-e16039f6925f",
+    "employee_number": null,
+    "name": "هشام عادل علي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "c1e60a1a-e6d2-582d-87f9-c1a477977d89",
+    "employee_number": null,
+    "name": "هيثم صلاح ماجد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "38960e98-129c-5916-b5ca-2d1ab303a279",
+    "employee_number": null,
+    "name": "وسام مثنى شلال",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "408910b7-3499-57ad-ade4-ffe7809fd8c3",
+    "employee_number": null,
+    "name": "ياسر صالح هادي",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "80fbf494-10e9-5330-940b-b9c158647ad5",
+    "employee_number": null,
+    "name": "ياسر محمد حميد",
+    "department_id": "301543c5-c28b-54c7-9e85-d0bf13ab7a37",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "91daacfe-d745-57fd-bdaf-cb047fc4f6ce",
+    "employee_number": null,
+    "name": "علي السجاد احمد",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "84f22743-6e2a-5b09-ac9c-5a7daa82023a",
+    "employee_number": null,
+    "name": "أحمد حامد متعب",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "35fdfab0-ee18-5f82-b090-5a1cdac2df41",
+    "employee_number": null,
+    "name": "سجاد ستار جبار",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "bdfc9cd6-9c35-5a22-9b72-84691125f26c",
+    "employee_number": null,
+    "name": "سرمد محمد حسين",
+    "department_id": "3da50846-56a3-5b03-9bb9-09e8bc83e563",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "930db7f5-64a9-566d-849c-82d3db38fa0e",
+    "employee_number": null,
+    "name": "صادق جابر عباس",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "dac988e0-9ab6-5a4b-ba5d-f3cb97e5c111",
+    "employee_number": null,
+    "name": "عامر واوي ياس",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "75c1e2f2-e55d-568a-a2ee-7e69e8db894d",
+    "employee_number": null,
+    "name": "عثمان موفق سعد",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "f96bb30e-ad1f-5a2f-be3b-8b2d6d5be6e4",
+    "employee_number": null,
+    "name": "عزالدين مجيد سالم",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "447c0fc6-3642-5ef9-a87a-ea2515fa4651",
+    "employee_number": null,
+    "name": "عبد العزيز باسم",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "218c35e0-ba7d-5285-8dc3-be2318a934dd",
+    "employee_number": null,
+    "name": "زين العابدين علي صبري",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "33516517-de2a-58a9-afc1-82ccec534bb3",
+    "employee_number": null,
+    "name": "مصطفى احمد خلف",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "c2458a76-2407-5fb7-9b20-dddd8a43f7b5",
+    "employee_number": null,
+    "name": "محمد فلاح حسن",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "187cbd22-c27d-5385-9fed-35ae71ea4b5b",
+    "employee_number": null,
+    "name": "مصطفى عدنان عبدالحسين",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "a955b69a-5330-552a-a26f-5043e6ed3295",
+    "employee_number": null,
+    "name": "مصطفى ياسر سلمان",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "2a6dad91-cac1-54a5-988c-ea3ff87625a4",
+    "employee_number": null,
+    "name": "مصطفى أحمد مسلم",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "50169c2e-7ee8-5889-a0e4-74362a70ef21",
+    "employee_number": null,
+    "name": "مهند ابراهيم كاظم",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "15f0331d-e0a1-5fba-b317-7bc9e30833be",
+    "employee_number": null,
+    "name": "خلدون حسين علي",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "2d756dc0-f6d7-543a-bf6f-90ff1428e980",
+    "employee_number": null,
+    "name": "ياسر خالد حميد",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "a0af67f3-4ddc-5d07-92c5-6a54ab9954da",
+    "employee_number": null,
+    "name": "ياسر عامر كعيم",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "036cecdd-4820-5053-afdf-c83a50d2a625",
+    "employee_number": null,
+    "name": "ياسين شاكر عبد",
+    "department_id": "850e96f5-14b5-584b-9932-7f50dea0a891",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "02002d00-cd5c-5abe-a354-4988ed4df260",
+    "employee_number": null,
+    "name": "علي صدام حسن",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "eacc7df4-c31a-5201-8be6-a418eebc8f3d",
+    "employee_number": null,
+    "name": "احمد جمال خلف",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "6c75d528-5529-5336-8d48-440894fd030c",
+    "employee_number": null,
+    "name": "احمد صباح محمود",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "64d474fd-09a6-5bab-82a5-fdd924278b13",
+    "employee_number": null,
+    "name": "امير رياض حميد",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "58b99eb2-0678-57e2-b750-d9f6943e1ae3",
+    "employee_number": null,
+    "name": "انور صباح محمود",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "ea8515aa-3c23-5ccb-9384-581c36e9da5c",
+    "employee_number": null,
+    "name": "اياد شاكر جاسم",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "6bd7d597-dc5d-5728-a6ca-c7af41fa4c72",
+    "employee_number": null,
+    "name": "حيدر صلاح حسين",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "3d8e9772-8371-5be8-b4e1-3182217dcd11",
+    "employee_number": null,
+    "name": "حيدر حميد محمود",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "242fc4cf-f9a9-583d-84ba-98bf6dce8817",
+    "employee_number": null,
+    "name": "حيدر محمد نعمة",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "5863873f-03e1-546f-8bfa-4da72ff67b4d",
+    "employee_number": null,
+    "name": "رسول كاظم رشك",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "06f885d7-c0f5-58de-8226-eba628ba3589",
+    "employee_number": null,
+    "name": "رضا جميل عبد",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "7ea19f03-462f-555a-8fad-7f211c5f38a5",
+    "employee_number": null,
+    "name": "سفيان مجيد عبد الله",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "a2a78609-4a2c-5dbb-86e0-a7adfd3de0ad",
+    "employee_number": null,
+    "name": "سجاد سهيل نجم",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "1724c426-e4ff-537d-abab-e22c04ab2258",
+    "employee_number": null,
+    "name": "صادق ضياء محيبس",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "02c5caa7-bc59-5ef9-b9dc-73792a8828d3",
+    "employee_number": null,
+    "name": "عبدالله حازم خضير",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "812d0c62-dc67-57ae-b20f-b92e62819e05",
+    "employee_number": null,
+    "name": "عبدالوارث صالح عبيد",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "76938824-1dee-5684-941a-4369cf7503ed",
+    "employee_number": null,
+    "name": "علي ناظم احمد",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "90d7fc95-4730-5221-aff8-be868ee7b967",
+    "employee_number": null,
+    "name": "عمر عباس فاضل",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "f0a0cdb9-ffc3-57b5-8d9c-374c0f03f3cf",
+    "employee_number": null,
+    "name": "فيصل مبدر حميد",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "27207503-7a81-510e-a93d-4f8023e71e45",
+    "employee_number": null,
+    "name": "ليث حميد رجب",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "9d86e21e-ad3f-5316-9966-4cefa56aa24c",
+    "employee_number": null,
+    "name": "محمد سامي حميد",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "bee61f0e-b1c9-51f9-a41f-234bceae2fd0",
+    "employee_number": null,
+    "name": "محمد عبدالزهرة علاوي",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "ee5e28ff-c4ae-5ef0-8264-4e332b38ad1a",
+    "employee_number": null,
+    "name": "مصطفى احمد عبد الحي",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "b61faa47-4c72-53a9-bb6f-4ea729e76697",
+    "employee_number": null,
+    "name": "مصطفى حيدر حميد",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "9f2f3969-a399-5043-bde8-1e81dd57b191",
+    "employee_number": null,
+    "name": "مصطفى سعد سعيد",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "dc26de56-7e8d-598d-806d-7f09a4de058c",
+    "employee_number": null,
+    "name": "مصطفى علي حمزة",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d74360fa-019f-5cd0-a72c-2f83342e4421",
+    "employee_number": null,
+    "name": "مصطفى محمد عبد عون",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "855e9542-aaa9-5d16-8616-0c093910ec8d",
+    "employee_number": null,
+    "name": "مصطفى محمد هادي",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "219ce28f-ea16-5df1-9499-c50bd68647ef",
+    "employee_number": null,
+    "name": "منتظر كامل جهاد",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "3f1c6366-5ce9-5450-b0ec-f847a0748ea6",
+    "employee_number": null,
+    "name": "مهند حميد محمود",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "928ce104-e26d-575c-af5f-867d80e555eb",
+    "employee_number": null,
+    "name": "ياسين ثائر عجيل",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d5fdfd71-215f-5fab-a69c-e446b33ba604",
+    "employee_number": null,
+    "name": "يوسف محمد فاضل",
+    "department_id": "4401405c-13c6-5a0b-8962-8ae60b47c0b2",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "7883b4db-f2c7-5589-a9f6-5bdc4bb76a68",
+    "employee_number": null,
+    "name": "احمد محمود ثامر",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "e09752ab-7849-53d6-ac39-1a8e6786ddbb",
+    "employee_number": null,
+    "name": "احمد عبدالسلام طرويل",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "74f8b010-9b15-523d-9a86-81a803497927",
+    "employee_number": null,
+    "name": "احمد ماجد حامد",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "9a40b4e5-ad69-5163-b444-5ed41e625a92",
+    "employee_number": null,
+    "name": "اسماعيل علي حمد",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "dfa47df0-d8bc-5731-8bbb-010ab75f88b9",
+    "employee_number": null,
+    "name": "امير رزاق حسين",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d2ae6f79-f2c1-59ac-bc44-613f81fce00d",
+    "employee_number": null,
+    "name": "ايوب صفاء سامي",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "87ae3c30-77fd-5971-8f14-29ba39d09d4b",
+    "employee_number": null,
+    "name": "باقر سلام عادل",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "747eb5c2-db4b-5517-8b56-d11a6d533f83",
+    "employee_number": null,
+    "name": "حسين ثامر علي",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "aa08cec9-1426-51ff-a9da-533a2e9e808d",
+    "employee_number": null,
+    "name": "حسين حامد عبد",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "80d92041-82ce-5d7d-9715-8c74481159e3",
+    "employee_number": null,
+    "name": "حسين خالد مطشر",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "474c71f5-adc4-5065-9220-5bbd788a761b",
+    "employee_number": null,
+    "name": "حسين محمود صافي",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "32c75ebe-c27d-59ec-a4d5-6a2b6a54fc9e",
+    "employee_number": null,
+    "name": "حياوي زامل سلمان",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "1865b090-a959-5992-8555-95dcf869123b",
+    "employee_number": null,
+    "name": "حيدر خالد مطشر",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d751edb5-a5b3-5325-9a95-23994bd30d98",
+    "employee_number": null,
+    "name": "حيدر رياض احمد",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "b66d7378-dc09-502c-8b76-fe670017530f",
+    "employee_number": null,
+    "name": "خلدون حسين علي",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "a62317d1-16be-5000-a680-8e6f08cc35ab",
+    "employee_number": null,
+    "name": "رياض سعد عبدالله",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "9b01da9b-b6b7-5e4e-9b09-d1fbacaab97c",
+    "employee_number": null,
+    "name": "زياد طارق كاظم",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "b9d5b97e-9d62-5440-a401-3b87fc2cddd5",
+    "employee_number": null,
+    "name": "زيد محمد كاظم",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "890b408b-dd47-5647-9f41-71ad11818805",
+    "employee_number": null,
+    "name": "سلطان تحرير فاهم",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "8e45cf5c-a868-58fa-a79f-69f6b1efbb6b",
+    "employee_number": null,
+    "name": "سيف الامير سعد",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d08e5ada-26b8-5544-93ad-ace3c57cd4e9",
+    "employee_number": null,
+    "name": "صهيب عامر",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "84e797a0-a6b1-5218-9560-775e6a879a6e",
+    "employee_number": null,
+    "name": "عباس حسن هادي",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "ab9a6faf-03d1-5fba-b440-91c8fcd3f05a",
+    "employee_number": null,
+    "name": "عبدالرحمن واثق كاظم",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "aed7d6e3-6a31-55b4-833b-67d6b77de714",
+    "employee_number": null,
+    "name": "عبدالله علاءالدين",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "c32073ad-716a-52ac-8cf1-694832a19659",
+    "employee_number": null,
+    "name": "علاء زامل سلمان",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "644f497d-65af-5f4f-953d-7e7835f50f7a",
+    "employee_number": null,
+    "name": "علي رائد عزيز",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "1b7fc712-f286-528b-8e1b-093bc2c8ecda",
+    "employee_number": null,
+    "name": "علي عقيل كاظم",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "ad6e4927-b074-5c40-8903-762eecfb06a0",
+    "employee_number": null,
+    "name": "علي رحيم داخل",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "4abbc7cd-25db-5846-82ba-2ab54bd6d319",
+    "employee_number": null,
+    "name": "علي عادل أبراهيم",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "b6545e21-b5b5-51c6-ae81-4882eaced03d",
+    "employee_number": null,
+    "name": "علي عادل خزعل",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "a9387353-df9f-578d-a3f0-160953ecc4df",
+    "employee_number": null,
+    "name": "علي عبدالرزاق سلمان",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "888a3d83-eba9-5107-896c-da417b5fb980",
+    "employee_number": null,
+    "name": "فراس خالد خليل",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "494cd08f-ae42-59b3-b087-c5de5c8ddcd5",
+    "employee_number": null,
+    "name": "فريد سعد صليبي",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "7bda90d4-2e77-5ee5-b76c-ad7fbceb37eb",
+    "employee_number": null,
+    "name": "كرار حيدر خضير",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "689b946c-5fc8-524f-a88a-a8c1bbfef718",
+    "employee_number": null,
+    "name": "ماهر مخيلف صالح",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "f92159db-225e-5bcc-a767-aa4f22409d42",
+    "employee_number": null,
+    "name": "محمد احمد سلمان",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "73f79a10-7bcd-595c-a9e9-cd20dc59b4a5",
+    "employee_number": null,
+    "name": "محمد بشار علي",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "8b648ea4-973d-5c19-8e4c-cf94f0cf6ac9",
+    "employee_number": null,
+    "name": "محمد حسين عبد الحسن",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "b2c655e1-041c-5ea2-a3e1-99c8c46eb3ac",
+    "employee_number": null,
+    "name": "محمد حمزة مهدي",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "668e3392-ad01-56e5-9540-0c7ce412bc9c",
+    "employee_number": null,
+    "name": "مصطفى تيسير فاهم",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "e8c802b0-4090-58af-a335-c684286ba8a7",
+    "employee_number": null,
+    "name": "مصطفى محمود عبد",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "e636704e-3fd8-5fac-a44a-87eb449131a4",
+    "employee_number": null,
+    "name": "مهدي احمد مهدي",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "d08ef937-72ba-586e-95ec-9fcbc8305eb6",
+    "employee_number": null,
+    "name": "ناطق هاشم صالح",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "1aa069ad-a1fa-5ca3-82ce-727e7ead49ce",
+    "employee_number": null,
+    "name": "ياسر أحمد جاسم",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "9c920868-1357-5db8-bddf-c49ff19326e7",
+    "employee_number": null,
+    "name": "يوسف عبد مدحي",
+    "department_id": "fb85993e-b39a-5eb7-b15a-e8129894a5d3",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "32636031-3af8-5a50-91a2-28ff6c8c26ea",
+    "employee_number": null,
+    "name": "مصطفى قصي كاظم",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "b963cc4f-84af-5912-be64-25eb00f59a7c",
+    "employee_number": null,
+    "name": "احمد حسين ارحيل",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "f628f8df-dac9-505d-93ad-443655a761cc",
+    "employee_number": null,
+    "name": "احمد عدنان احمد",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "a64e83a6-bbb6-5fdc-99eb-85c420dcf1d1",
+    "employee_number": null,
+    "name": "احمد موسى عواد",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "70e42ca0-253c-53af-91e4-1097e34620ee",
+    "employee_number": null,
+    "name": "امير حميد ياس",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "1a486783-cb4c-57d0-a358-5633c378dde3",
+    "employee_number": null,
+    "name": "امير ضياء رحيم",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "5628d09c-cfcf-5967-92a0-13824df74432",
+    "employee_number": null,
+    "name": "بشار صالح حسيب",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "86540842-113d-51e5-96e7-4c8bdc314d43",
+    "employee_number": null,
+    "name": "حسين جاسم",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "acea82ee-eaee-59e6-8030-6bc936bbc891",
+    "employee_number": null,
+    "name": "حيدر جاسم محمد",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "e490d6e6-bdb0-5342-b41a-e7a1b20746ad",
+    "employee_number": null,
+    "name": "رعد سعيد حسن",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "9d86ab5f-5b4d-54f9-b73a-aa9e558c8a46",
+    "employee_number": null,
+    "name": "ساجد حميد ياس",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d14df877-9282-57fb-ac1d-e59f1c534daf",
+    "employee_number": null,
+    "name": "سلام داود مشرع",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "563786c1-5649-52da-b0b4-12ea8d09fa74",
+    "employee_number": null,
+    "name": "سلام يوسف شاهر",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "3a0dc581-ff5e-5ad6-8403-0f5047a64564",
+    "employee_number": null,
+    "name": "عبد الله عامر",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "caeda39b-80d4-59d3-9c39-177ab55951f2",
+    "employee_number": null,
+    "name": "عبدالله مجيد حامد",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "b7b5a9ce-50be-5b6d-91f5-c29144bf93e4",
+    "employee_number": null,
+    "name": "عدي عباس هندي",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "6d39c195-f013-56d1-a92b-cfc6b2b64817",
+    "employee_number": null,
+    "name": "غيث سعد",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "62cce31c-13af-5446-b944-610ed34866aa",
+    "employee_number": null,
+    "name": "فراس زغير دهش",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "7555d335-b672-52c3-864d-479e1b712768",
+    "employee_number": null,
+    "name": "فهد سالم حافظ",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "4bbf8dae-8834-578a-8050-1a485563018a",
+    "employee_number": null,
+    "name": "مؤمن كريم",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "340d4dd5-ed4a-5e82-86e0-1ae544a42667",
+    "employee_number": null,
+    "name": "يوسف احمد شاكر",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "394b884e-9eb2-520f-b566-44f7aa3b42a3",
+    "employee_number": null,
+    "name": "مصطفى رشيد حسين",
+    "department_id": "89d9ae09-4393-5d0c-a27e-1cb6001072d1",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "5161ca86-3399-5fdd-8023-8c7f3ccd3ac2",
+    "employee_number": null,
+    "name": "ياسر حسين عليوي",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "e8f7451e-662e-5f77-b423-4303699e4580",
+    "employee_number": null,
+    "name": "اوس زهير عبداللطيف",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "4fe0b36f-26a9-50e3-9aa9-947144d9f71a",
+    "employee_number": null,
+    "name": "انس مرتضى عبدالكريم",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "57e87030-8d79-551b-99fe-054afeeaaab5",
+    "employee_number": null,
+    "name": "حسين رائد عزيز",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "96ab18eb-7860-55e7-8df3-18f852ca4e60",
+    "employee_number": null,
+    "name": "حسين سلام صكب",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "e842c082-039e-5198-8ee0-a5768b1841f7",
+    "employee_number": null,
+    "name": "حسين كامل احمد",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "90d6ef3b-a6ac-51ea-a115-67d03208e844",
+    "employee_number": null,
+    "name": "رسول كاظم عودة",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "f2cffb81-ab74-5156-a008-6d9909e36635",
+    "employee_number": null,
+    "name": "سجاد احمد خضير",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "f3f99267-7022-5df9-815e-290f696dffa2",
+    "employee_number": null,
+    "name": "سجاد خزعل تركي",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "f10d4705-5a28-5198-9588-ff5a92bc514b",
+    "employee_number": null,
+    "name": "صادق خالد لطيف",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "5eaea431-eb7d-5e6c-9413-62a30b16604e",
+    "employee_number": null,
+    "name": "عبدالرحمن عائد دهش",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "b4b2c45c-d868-50f5-bf03-b8f522203a02",
+    "employee_number": null,
+    "name": "عقيل حيدر عبدالحسين",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "c6de6563-a6b4-5488-b1e4-69b565960d2d",
+    "employee_number": null,
+    "name": "علاء كاظم محمد",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "c9dddbaf-9f7b-526c-9dcf-fd64a98826ff",
+    "employee_number": null,
+    "name": "علي حسن كريم",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "b054e991-a668-546a-8165-910f0eb273e5",
+    "employee_number": null,
+    "name": "علي محمد صالح",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "516f46e0-098c-5903-b5b6-56fa4cb28fea",
+    "employee_number": null,
+    "name": "كريم سعد جواد",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "long_leave"
+  },
+  {
+    "id": "439b8b09-edf8-5637-a46c-2b8f856b2607",
+    "employee_number": null,
+    "name": "محمدالباقر علي حطاب",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "3b348e70-391d-5186-a847-8723d859c1be",
+    "employee_number": null,
+    "name": "محمد حازم خضير",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "a60557a5-a955-58fc-94db-8f926a177cd0",
+    "employee_number": null,
+    "name": "محمد حمدان علي",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "675654aa-2706-5f37-bdf9-0d616102497e",
+    "employee_number": null,
+    "name": "محمد رحيم محمود",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "508b11c1-bdbc-507b-ba63-e6cdfce72fa7",
+    "employee_number": null,
+    "name": "محمد يحيى جبر",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d4c56ba6-f8e6-58dd-84ba-99bcc7320b0c",
+    "employee_number": null,
+    "name": "محمود محمد عباس",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "fb12867e-918e-5d52-a8f2-2bc8c75f6b70",
+    "employee_number": null,
+    "name": "محمود يونس سلمان",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "7d5f38ef-0325-5623-9469-74c060cd308c",
+    "employee_number": null,
+    "name": "مرتجى كاظم غانم",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "fdb52a4f-7093-5715-b32c-41b720bac73f",
+    "employee_number": null,
+    "name": "مصطفى خزعل تركي",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "4c437156-fc11-50be-b02d-ec55631d207e",
+    "employee_number": null,
+    "name": "مصطفى محمد داود",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "c8164b9d-4dc9-5334-aa80-802fe52992dd",
+    "employee_number": null,
+    "name": "مؤيد سعيد شاكر",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "7c32f2ba-f168-530e-b006-436a8c89acbc",
+    "employee_number": null,
+    "name": "ولي عبدالله خضير",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "8ed6ce1b-3303-5c60-99c1-f9f3ee265914",
+    "employee_number": null,
+    "name": "ياسر يونس محمود",
+    "department_id": "7a4eb536-de8b-5a0b-9ffb-ac7de6c9c818",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "56c99fe9-d93b-598b-b3af-d10a23702a21",
+    "employee_number": null,
+    "name": "احمد حسين يدام",
+    "department_id": "5bd7517e-5c5c-511b-80b5-8a9123ae6471",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "2b2e29a9-84bf-50a1-8798-ccfa5fbb3c53",
+    "employee_number": null,
+    "name": "حسنين عصام فيصل",
+    "department_id": "e9497a6a-1e63-583e-b299-2ffec1d46fa0",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "d6c8f89d-7f51-51fa-84cb-38d0dcaddcb4",
+    "employee_number": null,
+    "name": "جعفر سعد علي",
+    "department_id": "e9497a6a-1e63-583e-b299-2ffec1d46fa0",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "c7dce9e3-1744-5920-89df-0fd12d6b304e",
+    "employee_number": null,
+    "name": "كاظم سعد علي",
+    "department_id": "e9497a6a-1e63-583e-b299-2ffec1d46fa0",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "497099e3-bb1a-5936-ab37-475066ea9078",
+    "employee_number": null,
+    "name": "امير علي تركي",
+    "department_id": "6540bb01-34cb-5e60-bb7f-a2c31ee48395",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "1fa8afe2-54a6-55e9-bb45-45eef5bb9a38",
+    "employee_number": null,
+    "name": "حسين علي سوادي",
+    "department_id": "6540bb01-34cb-5e60-bb7f-a2c31ee48395",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "resigned"
+  },
+  {
+    "id": "0dc4b93b-f171-5ac6-b3c1-49ce4bee015c",
+    "employee_number": null,
+    "name": "حسين علي فوزي",
+    "department_id": "6540bb01-34cb-5e60-bb7f-a2c31ee48395",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  },
+  {
+    "id": "9046bdd9-2e6a-5ca3-b008-80029720bd92",
+    "employee_number": null,
+    "name": "اوس وسام محمود",
+    "department_id": "6540bb01-34cb-5e60-bb7f-a2c31ee48395",
+    "shift_id": null,
+    "direct_manager_id": null,
+    "employment_status": "active"
+  }
+]
