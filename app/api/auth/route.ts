@@ -14,7 +14,8 @@ import {
 export async function GET() {
   try {
     const c = config();
-    if (!c.url || !c.key) return json({ configured: false, user: null });
+    if (!c.url || !c.publishableKey)
+      return json({ configured: false, user: null });
     try {
       const s = await session();
       return json({ configured: true, user: s.profile });

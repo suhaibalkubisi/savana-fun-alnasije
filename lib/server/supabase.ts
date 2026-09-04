@@ -1,6 +1,12 @@
+import "server-only";
 import { cookies } from "next/headers";
 import { env } from "cloudflare:workers";
 import type { Profile } from "@/lib/hr/types";
+import {
+  readSupabaseEnvironment,
+  validateSupabaseConnection,
+  supabaseHeaders,
+} from "./supabase-connection.mjs";
 export class AppError extends Error {
   constructor(
     message: string,
@@ -11,20 +17,17 @@ export class AppError extends Error {
 }
 export function config() {
   const runtime = env as unknown as Record<string, string | undefined>;
-  return {
-    url: runtime.SUPABASE_URL || process.env.SUPABASE_URL,
-    key: runtime.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY,
-    service:
-      runtime.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-  };
+  return readSupabaseEnvironment(runtime, process.env);
 }
 export function requireConfig() {
   const c = config();
-  if (!c.url || !c.key) throw new AppError("الخدمة غير مهيأة حالياً", 503);
-  if (!/^https:\/\//.test(c.url))
+  if (!c.url || !c.publishableKey)
+    throw new AppError("الخدمة غير مهيأة حالياً", 503);
+  try {
+    return validateSupabaseConnection(c);
+  } catch {
     throw new AppError("إعداد الاتصال غير صالح", 503);
-  return c as { url: string; key: string; service?: string };
+  }
 }
 export async function upstream(
   path: string,
@@ -33,18 +36,14 @@ export async function upstream(
   admin = false,
 ) {
   const c = requireConfig();
-  const key = admin ? c.service : c.key;
+  const key = admin ? c.secretKey : c.publishableKey;
   if (!key) throw new AppError("إدارة الحسابات غير مهيأة", 503);
   const response = await fetch(`${c.url}${path}`, {
     ...options,
     cache: "no-store",
+    redirect: "error",
     signal: AbortSignal.timeout(20000),
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${token || key}`,
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers: supabaseHeaders(c, { token, admin, headers: options.headers }),
   });
   const data = (await response.json().catch(() => null)) as
     | ({

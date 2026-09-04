@@ -4,15 +4,19 @@ A Next.js / React / TypeScript application built with the Sites Vinext worker ad
 
 ## Runtime configuration
 
-Set these **server-only** variables in the hosting provider's encrypted environment settings:
+Set these variables in the hosting provider's encrypted environment settings:
 
-- `SUPABASE_URL`: the project's HTTPS URL.
-- `SUPABASE_ANON_KEY`: the project's legacy anon key.
-- `SUPABASE_SERVICE_ROLE_KEY`: the service role key, used only for account creation and signing import confirmations. It never appears in client code.
+- `NEXT_PUBLIC_SUPABASE_URL`: the project's HTTPS URL.
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: the project's new `sb_publishable_…` API key.
+- `SUPABASE_SECRET_KEY`: the new `sb_secret_…` API key, used only for account creation and signing import confirmations. It never appears in client code.
+
+The secret key is server-only. Both API keys travel only in the `apikey` header; `Authorization: Bearer` carries a signed-in user JWT. Server administrative requests have no user bearer token. The application deliberately has no fallback to legacy environment variable names. Built-in PostgreSQL roles (`anon`, `authenticated`, `service_role`) keep their standard names.
 
 No credentials are committed. Copy `.env.example` for local configuration. On Sites, use its runtime environment settings. Keep site access private until the intended HR users have been granted access. Sites also has its own outer access gate; Supabase accounts do not grant Sites access automatically.
 
 ## Database and initial import
+
+The three application values do not provide a PostgreSQL migration connection. Applying DDL requires a database-owner connection or authorized Supabase management access.
 
 1. Apply `supabase/migrations/202609040001_hr.sql` as the database migration owner to a clean Supabase project.
 2. Apply `supabase/seed.sql` once. The fixed generated UUIDs and source hash make a repeat safe.
@@ -23,6 +27,7 @@ AHH.xlsx was fully analyzed: 206 records, 192 active, 13 resigned, one long leav
 
 ## Validation and packaging
 
+- `node --test tests/supabase-connection.test.mjs`
 - `npm run typecheck`
 - `npm run lint`
 - `npm run test:db` (real PostgreSQL engine in PGlite, with a minimal Supabase auth-schema fixture; does not certify hosted GoTrue or hosted PostgREST)
@@ -45,4 +50,4 @@ PDF reports use A3 landscape and split the month into 1–15 and 16–month-end 
 
 A live Supabase project, its encrypted environment values, applied migrations/seed and a first administrator are required for operational publication. Local schema, code, and isolated tests are not proof of a live database or live authentication. Configure these before calling the system production ready. Perform live login/logout, refresh-token, multi-account, and database-backup verification after connection.
 
-Reference documentation: https://supabase.com/docs/guides/auth/server-side/creating-a-client and https://supabase.com/docs/guides/database/functions
+Reference documentation: https://supabase.com/docs/guides/getting-started/api-keys and https://supabase.com/docs/guides/database/functions

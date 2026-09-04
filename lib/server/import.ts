@@ -1,8 +1,9 @@
+import "server-only";
 import { employeeSchema } from "@/lib/hr/validation";
 import type { Employee, Reference } from "@/lib/hr/types";
 import { departmentLabel } from "@/lib/hr/types";
 import type { SourceRow } from "@/lib/hr/xlsx-import";
-import { AppError, config } from "./supabase";
+import { AppError, requireConfig } from "./supabase";
 export interface PreviewRow {
   row: number;
   sheet: string;
@@ -113,7 +114,7 @@ export function previewRows(
   });
 }
 async function signingKey() {
-  const secret = config().service;
+  const secret = requireConfig().secretKey;
   if (!secret) throw new AppError("خدمة الاستيراد غير مهيأة", 503);
   return crypto.subtle.importKey(
     "raw",

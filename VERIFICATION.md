@@ -9,6 +9,7 @@
 - PostgreSQL integration suite: 17 passed. Uses the real PostgreSQL engine in PGlite, an isolated `auth.users` fixture and the exact production migration and seed.
 - Export suite: 3 passed against a report calculated by that database.
 - Component regression suite: 4 passed.
+- Supabase new-key transport suite: 6 passed. Login/refresh use the publishable key in `apikey`; user RPCs add only the user's JWT as Bearer; administrative calls use the secret key only in `apikey` and reject user-token mixing or header overrides.
 
 The database suite covers source counts, new employees, search, duplicate names, five exception types, weighted absence, lateness, duplicate dates, invalid departments, optimistic revisions, corrected names, transfers, resignation, historical corrections, confirmed soft deletion, audit old/new values, RLS and direct-SQL/RPC role restrictions, disabled accounts, last-admin protection, calendar validation, safe department settings and transactional import rollback/replay prevention.
 
@@ -31,3 +32,5 @@ AHH.xlsx was read in full, without modifying it: one worksheet, 207 rows includi
 The hosted Supabase database and authentication service were unavailable during construction. The source import and authorization tests ran only in isolated test databases. No claim is made that employees have been imported into a live production database or that a first administrator has been created.
 
 Operational acceptance still requires the live Supabase connection, migration/seed application, first-admin bootstrap and real multi-account browser/API tests (login, logout, refresh and access disabling). The private application can be deployed with these operations securely unavailable until configured. Database backups and recovery depend on the selected Supabase project.
+
+On 4 September 2026 the code was migrated to `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and the server-only `SUPABASE_SECRET_KEY`. It has no application fallback to the legacy environment names. Both production targets built successfully and neither client bundle contains the secret variable name or an `sb_secret_` value. The Sites production environment had revision 0 with no configured variables, so live migration, import, administrator creation and CRUD testing could not run in that environment.
