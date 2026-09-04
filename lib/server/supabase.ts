@@ -40,8 +40,6 @@ export async function upstream(
   if (!key) throw new AppError("إدارة الحسابات غير مهيأة", 503);
   const response = await fetch(`${c.url}${path}`, {
     ...options,
-    cache: "no-store",
-    redirect: "error",
     headers: supabaseHeaders(c, { token, admin, headers: options.headers }),
   });
   const data = (await response.json().catch(() => null)) as
@@ -159,7 +157,9 @@ export function errorResponse(error: unknown) {
     );
   console.error(
     "HR request failed",
-    error instanceof Error ? error.name : "unknown",
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : "unknown",
   );
   return Response.json(
     { error: "تعذر إكمال العملية. حاول مرة أخرى" },

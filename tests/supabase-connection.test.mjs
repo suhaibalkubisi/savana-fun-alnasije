@@ -110,4 +110,8 @@ test("server-only guards protect modules containing secret access", async () => 
     await readFile("lib/server/supabase.ts", "utf8"),
     /AbortSignal\.timeout/,
   );
+  assert.doesNotMatch(
+    await readFile("lib/server/supabase.ts", "utf8"),
+    /cache:\s*"no-store"|redirect:\s*"error"/,
+  );
 });
