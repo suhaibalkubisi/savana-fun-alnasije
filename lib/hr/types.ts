@@ -2,6 +2,7 @@ export type Role = "ADMIN" | "HR" | "VIEWER";
 export type EmploymentStatus =
   "active" | "resigned" | "inactive" | "long_leave";
 export type StatusType = "absence" | "absence2" | "absence3" | "leave" | "late";
+export type AdministrativeActionState = "active" | "closed" | "cancelled";
 export interface Profile {
   id: string;
   name: string;
@@ -52,6 +53,12 @@ export interface StatusRecord {
   employee_number: string | null;
   department: string;
   department_id: string;
+  shift_id?: string | null;
+  direct_manager_id?: string | null;
+  shift?: string | null;
+  manager?: string | null;
+  created_by_name?: string | null;
+  updated_by_name?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -63,6 +70,7 @@ export interface Totals {
   late: number;
   late_minutes: number;
   weighted: number;
+  administrative_actions: number;
 }
 export interface ReportRow extends Employee, Totals {
   cells: Record<string, StatusType>;
@@ -76,9 +84,43 @@ export interface Reference {
   departments: Department[];
   shifts: Lookup[];
   managers: Lookup[];
+  action_types: AdministrativeActionType[];
   employees: Employee[];
   app_name: string;
   app_version: number;
+}
+export interface AdministrativeActionType {
+  id: string;
+  arabic_name: string;
+  display_order: number;
+  is_active: boolean;
+  version: number;
+}
+export interface AdministrativeAction {
+  id: string;
+  reference_number: string;
+  employee_id: string;
+  employee_name: string;
+  employee_number: string | null;
+  department_id: string;
+  department: string;
+  shift_id: string | null;
+  shift: string | null;
+  direct_manager_id: string | null;
+  manager: string | null;
+  action_type_id: string;
+  action_type: string;
+  action_date: string;
+  reason: string;
+  description: string | null;
+  notes: string | null;
+  related_status_record_id: string | null;
+  state: AdministrativeActionState;
+  version: number;
+  created_by_name: string | null;
+  created_at: string;
+  updated_by_name: string | null;
+  updated_at: string;
 }
 export interface ReviewIssue {
   employee_id: string;
@@ -128,7 +170,13 @@ export const zeroTotals = (): Totals => ({
   late: 0,
   late_minutes: 0,
   weighted: 0,
+  administrative_actions: 0,
 });
+export const actionStateLabels: Record<AdministrativeActionState, string> = {
+  active: "فعال",
+  closed: "مغلق",
+  cancelled: "ملغي",
+};
 export function baghdadDate(now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Baghdad",

@@ -2,6 +2,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   LayoutDashboard,
   Users,
@@ -17,6 +18,10 @@ import {
   ArrowUpLeft,
   LockKeyhole,
   KeyRound,
+  Timer,
+  CalendarX2,
+  Gavel,
+  FileBarChart,
 } from "lucide-react";
 import {
   Sidebar,
@@ -47,6 +52,7 @@ import {
   type Profile,
   type Reference,
   type StatusRecord,
+  type AdministrativeAction,
 } from "@/lib/hr/types";
 import { LoadState, PageTitle, StatusBadge, Field } from "./shared";
 import { EmployeesPage, EmployeeDetail } from "./employees";
@@ -59,17 +65,82 @@ import {
   UsersPage,
 } from "./administration";
 import { ImportPage } from "./import";
+import {
+  AbsenceLeavePage,
+  AdministrativeActionsPage,
+  CentralReportsPage,
+  LatenessPage,
+} from "./operations";
 const navigation = [
-  { path: "/", label: "الرئيسية", icon: LayoutDashboard },
-  { path: "/employees", label: "الموظفون", icon: Users },
-  { path: "/status", label: "تسجيل الحالة", icon: CalendarPlus, write: true },
-  { path: "/monthly", label: "الموقف الشامل", icon: Table2 },
-  { path: "/departments", label: "موقف الأقسام", icon: Building2 },
-  { path: "/summary", label: "ملخص الموظفين", icon: ChartNoAxesCombined },
-  { path: "/review", label: "المراجعة", icon: ShieldCheck, write: true },
-  { path: "/audit", label: "سجل التعديلات", icon: History, admin: true },
-  { path: "/users", label: "المستخدمون", icon: Users, admin: true },
-  { path: "/settings", label: "الإعدادات", icon: Settings, admin: true },
+  { path: "/", label: "الرئيسية", icon: LayoutDashboard, group: "مساحة العمل" },
+  { path: "/employees", label: "الموظفون", icon: Users, group: "مساحة العمل" },
+  {
+    path: "/status",
+    label: "تسجيل الحالة",
+    icon: CalendarPlus,
+    write: true,
+    group: "العمليات",
+  },
+  { path: "/lateness", label: "التأخيرات", icon: Timer, group: "العمليات" },
+  {
+    path: "/absence-leave",
+    label: "الغيابات والإجازات",
+    icon: CalendarX2,
+    group: "العمليات",
+  },
+  {
+    path: "/actions",
+    label: "الإجراءات الإدارية",
+    icon: Gavel,
+    group: "العمليات",
+  },
+  { path: "/monthly", label: "الموقف الشامل", icon: Table2, group: "التقارير" },
+  {
+    path: "/departments",
+    label: "موقف الأقسام",
+    icon: Building2,
+    group: "التقارير",
+  },
+  {
+    path: "/summary",
+    label: "ملخص الموظفين",
+    icon: ChartNoAxesCombined,
+    group: "التقارير",
+  },
+  {
+    path: "/reports",
+    label: "التقارير",
+    icon: FileBarChart,
+    group: "التقارير",
+  },
+  {
+    path: "/review",
+    label: "المراجعة",
+    icon: ShieldCheck,
+    write: true,
+    group: "الرقابة",
+  },
+  {
+    path: "/audit",
+    label: "سجل التعديلات",
+    icon: History,
+    admin: true,
+    group: "الرقابة",
+  },
+  {
+    path: "/users",
+    label: "المستخدمون",
+    icon: Users,
+    admin: true,
+    group: "الإدارة",
+  },
+  {
+    path: "/settings",
+    label: "الإعدادات",
+    icon: Settings,
+    admin: true,
+    group: "الإدارة",
+  },
 ];
 export function HRApp() {
   const [user, setUser] = useState<Profile | null>(null);
@@ -183,16 +254,43 @@ function Login({
   }
   return (
     <main className="login-page">
-      <div className="login-brand">
-        <div className="brand-icon">HR</div>
-        <span>إدارة الموارد البشرية</span>
+      <div className="login-watermark" aria-hidden="true" />
+      <div className="login-brand" aria-label="فن النسيج">
+        <Image
+          src="/brand/fanu-logo.webp"
+          alt="فن النسيج — FANU ALNASIJ BY ZMC"
+          width={280}
+          height={320}
+          priority
+          unoptimized
+        />
       </div>
       <section className="login-card">
-        <div className="login-lock">
-          <LockKeyhole size={27} />
+        <div className="login-identity">
+          <Image
+            src="/brand/hr-title.webp"
+            alt="قسم الموارد البشرية — مسائي"
+            width={1000}
+            height={247}
+            priority
+            unoptimized
+          />
+          <Image
+            className="login-savanna"
+            src="/brand/savanna.webp"
+            alt="savanna"
+            width={700}
+            height={101}
+            priority
+            unoptimized
+          />
         </div>
-        <p className="eyebrow">HR MANAGEMENT SYSTEM</p>
-        <h1>تسجيل الدخول</h1>
+        <div className="login-heading">
+          <div className="login-lock">
+            <LockKeyhole size={21} />
+          </div>
+          <h1>تسجيل الدخول</h1>
+        </div>
         <form onSubmit={submit}>
           <Field label="البريد الإلكتروني">
             <Input
@@ -233,7 +331,14 @@ function Login({
           </Button>
         )}
       </section>
-      <p className="login-footer">قسم الموارد البشرية</p>
+      <Image
+        className="login-credit"
+        src="/brand/designed-by.webp"
+        alt="Designed by Suhaib Al-Kubaisi"
+        width={640}
+        height={23}
+        unoptimized
+      />
     </main>
   );
 }
@@ -252,15 +357,21 @@ function Navigation({
     <Sidebar side="right" className="hr-sidebar">
       <SidebarHeader>
         <Link href="/" className="brand">
-          <div className="brand-icon">HR</div>
+          <Image
+            className="sidebar-logo"
+            src="/brand/fanu-logo.webp"
+            alt="فن النسيج"
+            width={280}
+            height={320}
+            unoptimized
+          />
           <div>
-            <strong>الموارد البشرية</strong>
-            <small>مساحة العمل</small>
+            <strong>قسم الموارد البشرية</strong>
+            <small>الشفت المسائي</small>
           </div>
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        <p className="nav-heading">إدارة العمل</p>
         <SidebarMenu>
           {navigation
             .filter(
@@ -268,8 +379,11 @@ function Navigation({
                 (!n.admin || user.role === "ADMIN") &&
                 (!n.write || user.role !== "VIEWER"),
             )
-            .map((n) => (
+            .map((n, index, visible) => (
               <SidebarMenuItem key={n.path}>
+                {(index === 0 || visible[index - 1].group !== n.group) && (
+                  <p className="nav-heading">{n.group}</p>
+                )}
                 <SidebarMenuButton
                   asChild
                   isActive={
@@ -352,6 +466,19 @@ function Workspace({ user }: { user: Profile }) {
       />
     );
   else if (path === "/status") content = <StatusPage reference={ref.data} />;
+  else if (path === "/lateness")
+    content = <LatenessPage reference={ref.data} />;
+  else if (path === "/absence-leave")
+    content = <AbsenceLeavePage reference={ref.data} />;
+  else if (path === "/actions")
+    content = (
+      <AdministrativeActionsPage
+        reference={ref.data}
+        canWrite={user.role !== "VIEWER"}
+      />
+    );
+  else if (path === "/reports")
+    content = <CentralReportsPage reference={ref.data} />;
   else if (["/monthly", "/departments", "/summary"].includes(path))
     content = (
       <ReportPage
@@ -383,7 +510,7 @@ function Workspace({ user }: { user: Profile }) {
       <header className="topbar no-print">
         <div className="topbar-title">
           <SidebarTrigger aria-label="القائمة" className="mobile-toggle" />
-          <span>{ref.data?.app_name || "إدارة الموارد البشرية"}</span>
+          <span>{ref.data?.app_name || "قسم الموارد البشرية – مسائي"}</span>
           <span className="topbar-divider" />
           <span className="topbar-muted">{nav?.label || "الموظفون"}</span>
         </div>
@@ -405,9 +532,19 @@ interface DashboardData {
   absence: number;
   leave: number;
   late: number;
+  late_minutes: number;
+  actions_month: number;
   review: number;
   today: string;
   recent: StatusRecord[];
+  recent_actions: AdministrativeAction[];
+  top_late: {
+    employee_id: string;
+    employee_name: string;
+    department: string;
+    occurrences: number;
+    minutes: number;
+  }[];
   departments: { id: string; name: string; count: number }[];
 }
 function Dashboard({ canWrite }: { canWrite: boolean }) {
@@ -417,6 +554,8 @@ function Dashboard({ canWrite }: { canWrite: boolean }) {
     ["الغيابات اليوم", "absence", CalendarPlus, "red"],
     ["الإجازات اليوم", "leave", CalendarPlus, "blue"],
     ["التأخيرات اليوم", "late", History, "amber"],
+    ["دقائق التأخير اليوم", "late_minutes", Timer, "amber"],
+    ["الإجراءات هذا الشهر", "actions_month", Gavel, "indigo"],
     ["تحتاج مراجعة", "review", ShieldCheck, "gray"],
   ] as const;
   return (
@@ -426,12 +565,23 @@ function Dashboard({ canWrite }: { canWrite: boolean }) {
         subtitle={monthLabel(baghdadDate().slice(0, 7))}
         actions={
           canWrite && (
-            <Button asChild>
-              <Link href="/status">
-                <Plus size={18} />
-                تسجيل حالة
-              </Link>
-            </Button>
+            <>
+              <Button asChild>
+                <Link href="/status">
+                  <Plus size={18} />
+                  تسجيل حالة
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/employees?new=1">إضافة موظف</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/actions">
+                  <Gavel size={17} />
+                  إجراء إداري
+                </Link>
+              </Button>
+            </>
           )
         }
       />
@@ -449,7 +599,13 @@ function Dashboard({ canWrite }: { canWrite: boolean }) {
               <p>{label}</p>
               <strong>{q.data?.[key] ?? 0}</strong>
               <span className="kpi-caption">
-                {key === "active" ? "موظف" : key === "review" ? "سجل" : "حالة"}
+                {key === "active"
+                  ? "موظف"
+                  : key === "late_minutes"
+                    ? "دقيقة"
+                    : key === "actions_month" || key === "review"
+                      ? "سجل"
+                      : "حالة"}
               </span>
             </article>
           ))}
@@ -513,6 +669,75 @@ function Dashboard({ canWrite }: { canWrite: boolean }) {
                 </Link>
               ))}
             </div>
+          </section>
+        </div>
+        <div className="dashboard-grid dashboard-secondary">
+          <section className="panel">
+            <div className="panel-heading">
+              <h2>آخر الإجراءات الإدارية</h2>
+              <Link href="/actions">
+                عرض الكل
+                <ArrowUpLeft size={15} />
+              </Link>
+            </div>
+            <LoadState
+              loading={false}
+              empty={!q.data?.recent_actions.length}
+              emptyText="لا توجد إجراءات إدارية"
+            >
+              {q.data?.recent_actions.map((action) => (
+                <div className="recent-row" key={action.id}>
+                  <div className="employee-mini-avatar">
+                    {action.employee_name.slice(0, 1)}
+                  </div>
+                  <div className="recent-person">
+                    <Link href={`/employees/${action.employee_id}`}>
+                      {action.employee_name}
+                    </Link>
+                    <span>
+                      {action.action_type} · {action.reason}
+                    </span>
+                  </div>
+                  <span className={`action-state action-${action.state}`}>
+                    {action.state === "active"
+                      ? "فعال"
+                      : action.state === "closed"
+                        ? "مغلق"
+                        : "ملغي"}
+                  </span>
+                  <time>{action.action_date}</time>
+                </div>
+              ))}
+            </LoadState>
+          </section>
+          <section className="panel">
+            <div className="panel-heading">
+              <h2>أكثر الموظفين تأخيراً</h2>
+              <Link href="/lateness">
+                التفاصيل
+                <ArrowUpLeft size={15} />
+              </Link>
+            </div>
+            <div className="top-late-list">
+              {q.data?.top_late.map((item, index) => (
+                <Link
+                  href={`/employees/${item.employee_id}`}
+                  key={item.employee_id}
+                >
+                  <span>{index + 1}</span>
+                  <div>
+                    <strong>{item.employee_name}</strong>
+                    <small>
+                      <bdi>{item.department}</bdi>
+                    </small>
+                  </div>
+                  <b>{item.minutes} دقيقة</b>
+                </Link>
+              ))}
+            </div>
+            {!q.data?.top_late.length && (
+              <p className="empty-simple">لا توجد تأخيرات لهذا الشهر</p>
+            )}
           </section>
         </div>
       </LoadState>

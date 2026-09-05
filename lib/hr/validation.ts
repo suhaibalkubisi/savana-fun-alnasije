@@ -63,6 +63,43 @@ export const statusSchema = z
         message: "دقائق موجودة لكن الحالة ليست تأخير",
       });
   });
+export const statusBulkSchema = z.object({
+  items: z
+    .array(
+      z.union([
+        z.object({ operation: z.literal("save"), data: statusSchema }),
+        z.object({
+          operation: z.literal("delete"),
+          data: z.object({
+            id,
+            version: z.number().int().positive(),
+            confirmed: z.literal(true),
+          }),
+        }),
+      ]),
+    )
+    .min(1, "لا توجد تغييرات للحفظ")
+    .max(200, "عدد الإدخالات أكبر من المسموح"),
+});
+export const administrativeActionSchema = z.object({
+  id: id.optional(),
+  version: z.number().int().positive().optional(),
+  employee_id: id,
+  action_type_id: id,
+  action_date: date,
+  reason: text.pipe(z.string().min(1, "سبب الإجراء مطلوب").max(300)),
+  description: text.pipe(z.string().max(3000)).nullable(),
+  notes: text.pipe(z.string().max(2000)).nullable(),
+  related_status_record_id: optionalId,
+  state: z.enum(["active", "closed", "cancelled"]),
+});
+export const administrativeActionTypeSchema = z.object({
+  id: id.optional(),
+  version: z.number().int().positive().optional(),
+  arabic_name: text.pipe(z.string().min(1, "اسم الإجراء مطلوب").max(100)),
+  display_order: z.number().int().min(0).max(10000),
+  is_active: z.boolean(),
+});
 export const loginSchema = z.object({
   email: z.string().email("البريد الإلكتروني غير صالح").max(254),
   password: z.string().min(1, "كلمة المرور مطلوبة").max(200),

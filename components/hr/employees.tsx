@@ -1,7 +1,17 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Upload, PenLine, ArrowRight } from "lucide-react";
+import Image from "next/image";
+import { useSearchParams } from "next/navigation";
+import {
+  Plus,
+  Upload,
+  PenLine,
+  ArrowRight,
+  FileDown,
+  FileSpreadsheet,
+  Printer,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,11 +37,18 @@ import {
   baghdadDate,
   departmentLabel,
   employmentLabels,
+  monthLabel,
+  statuses,
+  actionStateLabels,
   type Employee,
   type Profile,
   type Reference,
   type Paged,
   type StatusRecord,
+  type AdministrativeAction,
+  type AuditLog,
+  type Report,
+  auditDate,
 } from "@/lib/hr/types";
 import {
   Choice,
@@ -44,6 +61,8 @@ import {
   SearchPicker,
 } from "./shared";
 import { RecordTable } from "./status";
+import { download, tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
+import { ActionStateBadge } from "./operations";
 export function EmployeesPage({
   reference,
   user,
@@ -51,13 +70,16 @@ export function EmployeesPage({
   reference: Reference;
   user: Profile;
 }) {
+  const params = useSearchParams();
   const [search, setSearch] = useState("");
   const [dep, setDep] = useState("");
   const [shift, setShift] = useState("");
   const [manager, setManager] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
-  const [edit, setEdit] = useState<Employee | null | undefined>(undefined);
+  const [edit, setEdit] = useState<Employee | null | undefined>(
+    params.get("new") === "1" ? null : undefined,
+  );
   const q = useData<Paged<Employee>>("employees", {
     search: useDebounced(search),
     department_id: dep,
@@ -345,24 +367,132 @@ export function EmployeeDetail({
   reference: Reference;
   user: Profile;
 }) {
-  const [month, setMonth] = useState(baghdadDate().slice(0, 7));
-  const [tab, setTab] = useState("all");
+  const params = useSearchParams();
+  const [month, setMonth] = useState(
+    /^\d{4}-\d{2}$/.test(params.get("month") || "")
+      ? params.get("month")!
+      : baghdadDate().slice(0, 7),
+  );
+  const [tab, setTab] = useState("overview");
   const [page, setPage] = useState(1);
   const [edit, setEdit] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const q = useData<Employee>("employee", { id });
   const records = useData<Paged<StatusRecord>>("records", {
     employee_id: id,
     month,
     page,
   });
+  const actions = useData<Paged<AdministrativeAction>>(
+    "employee_actions",
+    { employee_id: id, month, page },
+    tab === "actions",
+  );
+  const audits = useData<Paged<AuditLog>>(
+    "employee_audit",
+    { employee_id: id, page },
+    tab === "audit" && user.role === "ADMIN",
+  );
+  const report = useData<Report>("report", { employee_id: id, month });
+  const employeeReport = useData<{
+    employee: Employee;
+    report: Report;
+    records: StatusRecord[];
+    actions: AdministrativeAction[];
+  }>("employee_report", { employee_id: id, month });
   const rows =
     records.data?.rows.filter(
       (r) =>
-        tab === "all" ||
+        tab === "history" ||
+        tab === "overview" ||
+        tab === "actions" ||
+        tab === "audit" ||
         (tab === "absence"
           ? r.status_type.startsWith("absence")
           : r.status_type === tab),
     ) || [];
+  const reportRow = report.data?.rows[0];
+  const reportHeaders = [
+    "التاريخ",
+    "الفئة",
+    "الحالة / الإجراء",
+    "الدقائق",
+    "السبب / الملاحظات",
+    "حالة الإجراء",
+  ];
+  const reportValues: (string | number)[][] = employeeReport.data
+    ? [
+        [
+          month,
+          "إجماليات الشهر",
+          `غياب محتسب ${reportRow?.weighted || 0} · إجازات ${reportRow?.leave || 0} · تأخيرات ${reportRow?.late || 0}`,
+          reportRow?.late_minutes || 0,
+          `الإجراءات الإدارية: ${reportRow?.administrative_actions || 0}`,
+          "—",
+        ],
+        ...employeeReport.data.records.map((record) => [
+          record.record_date,
+          record.status_type === "late"
+            ? "تأخير"
+            : record.status_type === "leave"
+              ? "إجازة"
+              : "غياب",
+          statuses[record.status_type].label,
+          record.late_minutes || "—",
+          record.notes || "—",
+          "—",
+        ]),
+        ...employeeReport.data.actions.map((action) => [
+          action.action_date,
+          "إجراء إداري",
+          action.action_type,
+          "—",
+          action.reason,
+          actionStateLabels[action.state],
+        ]),
+      ].sort((a, b) =>
+        a[1] === "إجماليات الشهر"
+          ? -1
+          : b[1] === "إجماليات الشهر"
+            ? 1
+            : String(b[0]).localeCompare(String(a[0])),
+      )
+    : [];
+  const exportReport = async (format: "excel" | "pdf") => {
+    if (!q.data || !reportRow || !employeeReport.data) return;
+    setExporting(true);
+    try {
+      const title = `تقرير الموظف — ${q.data.name}`;
+      const period = `${monthLabel(month)} · رقم ${q.data.employee_number || "غير محدد"} · ${q.data.department} · ${q.data.shift || "شفت غير محدد"} · ${q.data.manager || "مسؤول غير محدد"}`;
+      const bytes =
+        format === "excel"
+          ? tableExcelBytes({
+              title,
+              period,
+              headers: reportHeaders,
+              rows: reportValues,
+              sheetName: "تقرير الموظف",
+            })
+          : await tablePdfBytes({
+              title,
+              period,
+              headers: reportHeaders,
+              rows: reportValues,
+            });
+      download(
+        bytes,
+        `employee_${q.data.employee_number || q.data.id.slice(0, 8)}_${month}.${format === "excel" ? "xlsx" : "pdf"}`,
+        format === "excel"
+          ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          : "application/pdf",
+      );
+      toast.success("تم تصدير تقرير الموظف");
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  };
   return (
     <>
       <Button asChild variant="ghost" className="back-link">
@@ -374,12 +504,35 @@ export function EmployeeDetail({
       <PageTitle
         title={q.data?.name || "بيانات الموظف"}
         actions={
-          q.data &&
-          user.role !== "VIEWER" && (
-            <Button variant="outline" onClick={() => setEdit(true)}>
-              <PenLine size={16} />
-              تعديل البيانات
-            </Button>
+          q.data && (
+            <>
+              <Button
+                variant="outline"
+                disabled={exporting || !reportRow || !employeeReport.data}
+                onClick={() => void exportReport("excel")}
+              >
+                <FileSpreadsheet size={16} />
+                Excel
+              </Button>
+              <Button
+                variant="outline"
+                disabled={exporting || !reportRow || !employeeReport.data}
+                onClick={() => void exportReport("pdf")}
+              >
+                <FileDown size={16} />
+                PDF
+              </Button>
+              <Button variant="outline" onClick={() => window.print()}>
+                <Printer size={16} />
+                طباعة
+              </Button>
+              {user.role !== "VIEWER" && (
+                <Button variant="outline" onClick={() => setEdit(true)}>
+                  <PenLine size={16} />
+                  تعديل البيانات
+                </Button>
+              )}
+            </>
           )
         }
       />
@@ -417,14 +570,30 @@ export function EmployeeDetail({
           )}
         </div>
       </LoadState>
-      <section className="panel">
+      <section className="panel employee-detail-panel report-surface">
+        <div className="print-brand">
+          <Image
+            src="/brand/combined-header.webp"
+            alt="فن النسيج — قسم الموارد البشرية"
+            width={1200}
+            height={191}
+            unoptimized
+          />
+          <h1>تقرير الموظف — {q.data?.name}</h1>
+          <p>{month}</p>
+        </div>
         <div className="history-toolbar">
           <Tabs value={tab} onValueChange={setTab} dir="rtl">
             <TabsList>
-              <TabsTrigger value="all">السجل</TabsTrigger>
+              <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
+              <TabsTrigger value="history">السجل</TabsTrigger>
               <TabsTrigger value="absence">الغيابات</TabsTrigger>
               <TabsTrigger value="leave">الإجازات</TabsTrigger>
               <TabsTrigger value="late">التأخيرات</TabsTrigger>
+              <TabsTrigger value="actions">الإجراءات الإدارية</TabsTrigger>
+              {user.role === "ADMIN" && (
+                <TabsTrigger value="audit">سجل التعديلات</TabsTrigger>
+              )}
             </TabsList>
           </Tabs>
           <Field label="الشهر">
@@ -439,26 +608,118 @@ export function EmployeeDetail({
             />
           </Field>
         </div>
-        <LoadState
-          loading={records.loading && !records.data}
-          error={records.error}
-          retry={records.refresh}
-          empty={!rows.length}
-          emptyText="لا توجد سجلات لهذا الشهر"
-        >
-          <RecordTable
-            rows={rows}
-            reference={reference}
-            canWrite={user.role !== "VIEWER"}
-            employee={q.data}
+        {tab === "overview" ? (
+          <div className="employee-overview">
+            {[
+              ["الغياب", reportRow?.absence || 0],
+              ["غياب ×2", reportRow?.absence2 || 0],
+              ["غياب ×3", reportRow?.absence3 || 0],
+              ["الغياب المحتسب", reportRow?.weighted || 0],
+              ["الإجازات", reportRow?.leave || 0],
+              ["التأخيرات", reportRow?.late || 0],
+              ["دقائق التأخير", reportRow?.late_minutes || 0],
+              ["الإجراءات الإدارية", reportRow?.administrative_actions || 0],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <span>{label}</span>
+                <strong>{value}</strong>
+              </div>
+            ))}
+          </div>
+        ) : tab === "actions" ? (
+          <LoadState
+            loading={actions.loading && !actions.data}
+            error={actions.error}
+            retry={actions.refresh}
+            empty={!actions.data?.rows.length}
+            emptyText="لا توجد إجراءات إدارية لهذا الشهر"
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>المرجع</TableHead>
+                  <TableHead>التاريخ</TableHead>
+                  <TableHead>نوع الإجراء</TableHead>
+                  <TableHead>السبب</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead>أنشأه</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {actions.data?.rows.map((action) => (
+                  <TableRow key={action.id}>
+                    <TableCell dir="ltr">{action.reference_number}</TableCell>
+                    <TableCell dir="ltr">{action.action_date}</TableCell>
+                    <TableCell>{action.action_type}</TableCell>
+                    <TableCell className="notes-cell">
+                      {action.reason}
+                    </TableCell>
+                    <TableCell>
+                      <ActionStateBadge state={action.state} />
+                    </TableCell>
+                    <TableCell>{action.created_by_name || "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </LoadState>
+        ) : tab === "audit" ? (
+          <LoadState
+            loading={audits.loading && !audits.data}
+            error={audits.error}
+            retry={audits.refresh}
+            empty={!audits.data?.rows.length}
+            emptyText="لا توجد تعديلات"
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>الوقت — بغداد</TableHead>
+                  <TableHead>المستخدم</TableHead>
+                  <TableHead>العملية</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {audits.data?.rows.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>{auditDate(log.created_at)}</TableCell>
+                    <TableCell>{log.actor_name}</TableCell>
+                    <TableCell>{log.description}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </LoadState>
+        ) : (
+          <LoadState
+            loading={records.loading && !records.data}
+            error={records.error}
+            retry={records.refresh}
+            empty={!rows.length}
+            emptyText="لا توجد سجلات لهذا الشهر"
+          >
+            <RecordTable
+              rows={rows}
+              reference={reference}
+              canWrite={user.role !== "VIEWER"}
+              employee={q.data}
+            />
+          </LoadState>
+        )}
+        {tab !== "overview" && (
+          <Pager
+            page={page}
+            total={
+              tab === "actions"
+                ? actions.data?.total || 0
+                : tab === "audit"
+                  ? audits.data?.total || 0
+                  : records.data?.total || 0
+            }
+            size={50}
+            onChange={setPage}
           />
-        </LoadState>
-        <Pager
-          page={page}
-          total={records.data?.total || 0}
-          size={50}
-          onChange={setPage}
-        />
+        )}
       </section>
       {edit && q.data && (
         <EmployeeEditor

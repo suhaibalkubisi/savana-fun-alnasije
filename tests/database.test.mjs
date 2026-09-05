@@ -1,7 +1,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 let db;
 const ids = {
   admin: "11111111-1111-4111-8111-111111111111",
@@ -13,9 +13,10 @@ before(async () => {
   await db.exec(
     `create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`,
   );
-  await db.exec(
-    await readFile("supabase/migrations/202609040001_hr.sql", "utf8"),
-  );
+  for (const file of (await readdir("supabase/migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .sort())
+    await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
   await db.exec(await readFile("supabase/seed.sql", "utf8"));
   for (const [name, id] of Object.entries(ids)) {
     await db.query("insert into auth.users values($1,$2,$3)", [
@@ -40,12 +41,14 @@ async function who(role) {
   await db.exec("set role authenticated");
 }
 async function read(kind, filters = {}) {
-  return (await db.query("select public.hr_read($1,$2) data", [kind, filters]))
-    .rows[0].data;
+  return (
+    await db.query("select public.hr_read_v2($1,$2) data", [kind, filters])
+  ).rows[0].data;
 }
 async function write(action, data) {
-  return (await db.query("select public.hr_write($1,$2) data", [action, data]))
-    .rows[0].data;
+  return (
+    await db.query("select public.hr_write_v2($1,$2) data", [action, data])
+  ).rows[0].data;
 }
 let e, e2, dep1, dep2, late;
 test("AHH entire workbook imports exactly 192 active, 13 resigned, 1 long leave", async () => {
@@ -432,6 +435,224 @@ test("anonymous calls cannot read HR data or bootstrap an admin", async () => {
   );
   await assert.rejects(
     db.query("select hr_bootstrap($1)", [ids.viewer]),
+    /permission denied/,
+  );
+});
+
+test("premium reference keeps existing data and seeds configurable action types", async () => {
+  await who("admin");
+  const reference = await read("reference");
+  assert.ok(reference.employees.length >= 192);
+  assert.deepEqual(
+    reference.action_types.map((item) => item.arabic_name),
+    [
+      "تنبيه",
+      "لفت نظر",
+      "إنذار",
+      "إنذار نهائي",
+      "تعهد",
+      "خصم إداري",
+      "إجراء آخر",
+    ],
+  );
+  assert.equal(reference.app_name, "قسم الموارد البشرية – مسائي");
+});
+
+test("quick bulk entry is atomic and stores exceptions only", async () => {
+  await who("hr");
+  const items = [
+    {
+      operation: "save",
+      data: {
+        employee_id: e2.id,
+        department_id: dep2.id,
+        record_date: "2099-09-20",
+        status_type: "absence",
+        late_minutes: null,
+      },
+    },
+    {
+      operation: "save",
+      data: {
+        employee_id: e2.id,
+        department_id: dep2.id,
+        record_date: "2099-09-21",
+        status_type: "leave",
+        late_minutes: null,
+      },
+    },
+  ];
+  assert.equal((await write("status.bulk", { items })).count, 2);
+  assert.equal(
+    (await read("records", { employee_id: e2.id, month: "2099-09" })).total,
+    2,
+  );
+  await assert.rejects(
+    write("status.bulk", {
+      items: [
+        { ...items[0], data: { ...items[0].data, record_date: "2099-09-22" } },
+        {
+          ...items[1],
+          data: {
+            ...items[1].data,
+            record_date: "2099-09-23",
+            department_id: dep1.id,
+          },
+        },
+      ],
+    }),
+    /قسم مختلف/,
+  );
+  assert.equal(
+    (await read("records", { employee_id: e2.id, month: "2099-09" })).total,
+    2,
+  );
+});
+
+let linkedStatus, administrativeAction;
+test("lateness detail, summary and shared report update from 27 to 35", async () => {
+  await who("hr");
+  linkedStatus = await write("status.save", {
+    employee_id: e2.id,
+    department_id: dep2.id,
+    record_date: "2099-09-24",
+    status_type: "late",
+    late_minutes: 27,
+  });
+  let lateness = await read("lateness", {
+    month: "2099-09",
+    employee_id: e2.id,
+  });
+  assert.equal(lateness.kpis.minutes, 27);
+  assert.equal(lateness.summary[0].total_minutes, 27);
+  linkedStatus = await write("status.save", {
+    ...linkedStatus,
+    department_id: dep2.id,
+    late_minutes: 35,
+  });
+  lateness = await read("lateness", { month: "2099-09", employee_id: e2.id });
+  assert.equal(lateness.rows[0].late_minutes, 35);
+  assert.equal(lateness.summary[0].highest_minutes, 35);
+  assert.equal(
+    (await read("report", { month: "2099-09", employee_id: e2.id })).rows[0]
+      .late_minutes,
+    35,
+  );
+});
+
+test("administrative action create, update, linkage and employee report stay consistent", async () => {
+  await who("hr");
+  const actionType = (await read("reference")).action_types.find(
+    (item) => item.arabic_name === "إنذار",
+  );
+  administrativeAction = await write("administrative_action.save", {
+    employee_id: e2.id,
+    action_type_id: actionType.id,
+    action_date: "2099-09-24",
+    reason: "اختبار",
+    description: "اختبار تكامل الإجراء",
+    notes: null,
+    related_status_record_id: linkedStatus.id,
+    state: "active",
+  });
+  assert.match(administrativeAction.reference_number, /^ADM-/);
+  let actions = await read("employee_actions", {
+    month: "2099-09",
+    employee_id: e2.id,
+  });
+  assert.equal(actions.total, 1);
+  assert.equal(actions.rows[0].related_status_record_id, linkedStatus.id);
+  administrativeAction = await write("administrative_action.save", {
+    ...administrativeAction,
+    state: "closed",
+    reason: "اختبار محدث",
+  });
+  assert.equal(administrativeAction.version, 2);
+  assert.equal(
+    (await read("report", { month: "2099-09", employee_id: e2.id })).rows[0]
+      .administrative_actions,
+    1,
+  );
+  const employeeReport = await read("employee_report", {
+    month: "2099-09",
+    employee_id: e2.id,
+  });
+  assert.equal(employeeReport.actions.length, 1);
+  assert.equal(
+    employeeReport.records.find((item) => item.id === linkedStatus.id)
+      .late_minutes,
+    35,
+  );
+});
+
+test("administrative action permissions are enforced by RPC and RLS", async () => {
+  await who("admin");
+  const users = await read("users");
+  const viewer = users.find((item) => item.id === ids.viewer);
+  await write("user.save", { ...viewer, is_active: true });
+  await who("viewer");
+  assert.equal(
+    (await read("administrative_actions", { month: "2099-09" })).total,
+    1,
+  );
+  await assert.rejects(
+    write("administrative_action.save", {
+      ...administrativeAction,
+      reason: "اختراق",
+    }),
+    /صلاحية/,
+  );
+  await assert.rejects(
+    db.query("select * from public.administrative_actions"),
+    /permission denied/,
+  );
+  await who("hr");
+  await assert.rejects(
+    write("administrative_action_type.save", {
+      arabic_name: "اختبار ممنوع",
+      display_order: 99,
+      is_active: true,
+    }),
+    /صلاحية/,
+  );
+  await assert.rejects(
+    write("administrative_action.delete", {
+      id: administrativeAction.id,
+      version: administrativeAction.version,
+      confirmed: true,
+    }),
+    /صلاحية/,
+  );
+});
+
+test("administrative action audit is immutable and test data is soft deleted", async () => {
+  await who("admin");
+  const before = await read("audit", { employee_id: e2.id });
+  assert.ok(
+    before.rows.some(
+      (item) =>
+        item.entity_type === "administrative_actions" &&
+        item.action === "create",
+    ),
+  );
+  assert.ok(
+    before.rows.some(
+      (item) =>
+        item.entity_type === "administrative_actions" &&
+        item.action === "update",
+    ),
+  );
+  await write("administrative_action.delete", {
+    id: administrativeAction.id,
+    version: administrativeAction.version,
+    confirmed: true,
+  });
+  assert.equal(
+    (await read("administrative_actions", { month: "2099-09" })).total,
+    0,
+  );
+  await assert.rejects(
+    db.query("delete from public.audit_logs"),
     /permission denied/,
   );
 });

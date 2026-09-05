@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { FileSpreadsheet, FileDown, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,7 +176,23 @@ export function ReportPage({
           </>
         }
       />
-      <section className="panel report-panel">
+      <section className="panel report-panel report-surface">
+        <div className="print-brand">
+          <Image
+            src="/brand/combined-header.webp"
+            alt="فن النسيج — قسم الموارد البشرية"
+            width={1200}
+            height={191}
+            unoptimized
+          />
+          <h1>{title}</h1>
+          <p>
+            {month ? monthLabel(month) : ""}
+            {dep
+              ? ` · ${departmentLabel(reference.departments.find((d) => d.id === dep)!)}`
+              : ""}
+          </p>
+        </div>
         <div className="filterbar no-print">
           <Field label="الشهر والسنة">
             <Input
@@ -231,17 +248,6 @@ export function ReportPage({
             />
             تضمين غير النشطين
           </label>
-        </div>
-        <div className="print-title">
-          <h1>{title}</h1>
-          <p>قسم الموارد البشرية · {month && monthLabel(month)}</p>
-          {dep && (
-            <p>
-              {departmentLabel(
-                reference.departments.find((d) => d.id === dep)!,
-              )}
-            </p>
-          )}
         </div>
         <LoadState
           loading={q.loading && !q.data}

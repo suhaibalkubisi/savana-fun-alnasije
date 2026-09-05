@@ -33,6 +33,7 @@ export const summaryKeys: (keyof Totals)[] = [
   "leave",
   "late",
   "late_minutes",
+  "administrative_actions",
 ];
 export const summaryHeaders = [
   "رقم الموظف",
@@ -47,6 +48,7 @@ export const summaryHeaders = [
   "الإجازات",
   "عدد التأخيرات",
   "مجموع دقائق التأخير",
+  "عدد الإجراءات الإدارية",
 ];
 const values = (r: Totals) => keys.map((k) => Number(r[k]));
 const summaryTotals = (r: Totals) => summaryKeys.map((k) => Number(r[k]));
@@ -98,15 +100,19 @@ export function excelBytes(report: Report, title: string, summary = false) {
           ...values(r),
         ],
   );
-  const total: (string | number)[] = Array(headers.length - 7).fill("");
+  const metricCount = summary ? summaryKeys.length : keys.length;
+  const total: (string | number)[] = Array(headers.length - metricCount).fill(
+    "",
+  );
   total[1] = "الإجمالي";
   total.push(
     ...(summary ? summaryTotals(report.totals) : values(report.totals)),
   );
   data.push(total);
   const grid: (string | number)[][] = [
+    ["قسم الموارد البشرية – مسائي"],
     [title],
-    [`قسم الموارد البشرية · ${monthLabel(report.month)}`],
+    [monthLabel(report.month)],
     [],
     headers,
     ...data,
@@ -114,12 +120,12 @@ export function excelBytes(report: Report, title: string, summary = false) {
   const cells = grid
     .map(
       (r, ri) =>
-        `<row r="${ri + 1}" ht="${ri < 2 ? 29 : ri === 3 ? 42 : 24}" customHeight="1">${r
+        `<row r="${ri + 1}" ht="${ri < 3 ? 28 : ri === 4 ? 42 : 24}" customHeight="1">${r
           .map((v, ci) => {
             const style =
-              ri < 2
+              ri < 3
                 ? 1
-                : ri === 3
+                : ri === 4
                   ? 2
                   : ri === grid.length - 1
                     ? 3
@@ -151,7 +157,7 @@ export function excelBytes(report: Report, title: string, summary = false) {
   );
   add(
     "xl/workbook.xml",
-    `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="التقرير الشهري" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'التقرير الشهري'!$1:$4</definedName><definedName name="_xlnm.Print_Area" localSheetId="0">'التقرير الشهري'!$A$1:$${last}$${lastRow}</definedName></definedNames></workbook>`,
+    `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="التقرير الشهري" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'التقرير الشهري'!$1:$5</definedName><definedName name="_xlnm.Print_Area" localSheetId="0">'التقرير الشهري'!$A$1:$${last}$${lastRow}</definedName></definedNames></workbook>`,
   );
   add(
     "xl/_rels/workbook.xml.rels",
@@ -159,8 +165,8 @@ export function excelBytes(report: Report, title: string, summary = false) {
   );
   const fills = [
     "FFFFFF",
-    "1E2B4A",
-    "EEF1F9",
+    "0B2B55",
+    "EAF2FF",
     "F6F7FB",
     "FDECEC",
     "F9D5D9",
@@ -174,7 +180,7 @@ export function excelBytes(report: Report, title: string, summary = false) {
   );
   add(
     "xl/worksheets/sheet1.xml",
-    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${last}${lastRow}"/><sheetViews><sheetView workbookViewId="0" rightToLeft="1" showGridLines="0"><pane xSplit="3" ySplit="4" topLeftCell="D5" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/><cols>${headers.map((_, i) => `<col min="${i + 1}" max="${i + 1}" width="${i === 1 ? 28 : i === 2 ? 26 : i === 0 ? 14 : summary ? 20 : i < days + 3 ? 5 : 13}" customWidth="1"/>`).join("")}</cols><sheetData>${cells}</sheetData><autoFilter ref="A4:${last}${lastRow - 1}"/><mergeCells count="2"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.25" right="0.25" top="0.35" bottom="0.35" header="0.15" footer="0.15"/><pageSetup paperSize="8" orientation="landscape" fitToWidth="1" fitToHeight="0"/><headerFooter><oddFooter>&amp;C&amp;P / &amp;N</oddFooter></headerFooter></worksheet>`,
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${last}${lastRow}"/><sheetViews><sheetView workbookViewId="0" rightToLeft="1" showGridLines="0"><pane xSplit="3" ySplit="5" topLeftCell="D6" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/><cols>${headers.map((_, i) => `<col min="${i + 1}" max="${i + 1}" width="${i === 1 ? 28 : i === 2 ? 26 : i === 0 ? 14 : summary ? 20 : i < days + 3 ? 5 : 13}" customWidth="1"/>`).join("")}</cols><sheetData>${cells}</sheetData><autoFilter ref="A5:${last}${lastRow - 1}"/><mergeCells count="3"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/><mergeCell ref="A3:${last}3"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.25" right="0.25" top="0.35" bottom="0.45" header="0.15" footer="0.15"/><pageSetup paperSize="8" orientation="landscape" fitToWidth="1" fitToHeight="0"/><headerFooter><oddFooter>&amp;LDesigned by Suhaib Al-Kubaisi&amp;C&amp;P / &amp;N&amp;Rقسم الموارد البشرية – مسائي</oddFooter></headerFooter></worksheet>`,
   );
   return zipSync(files, { level: 6 });
 }
@@ -186,6 +192,19 @@ export function download(bytes: Uint8Array, name: string, type: string) {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+async function webAsset(path: string) {
+  try {
+    const response = await fetch(path);
+    if (!response.ok) return null;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 8192)
+      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    return `data:image/webp;base64,${btoa(binary)}`;
+  } catch {
+    return null;
+  }
 }
 export async function pdfBytes(
   report: Report,
@@ -221,6 +240,11 @@ export async function pdfBytes(
   const height = doc.internal.pageSize.getHeight();
   const margin = 34;
   const usable = width - 2 * margin;
+  const [headerAsset, watermarkAsset, savannaAsset] = await Promise.all([
+    webAsset("/brand/combined-header.webp"),
+    webAsset("/brand/fanu-watermark.webp"),
+    webAsset("/brand/savanna.webp"),
+  ]);
   const dayCount = daysInMonth(report.month);
   const segments = summary
     ? [[0, 0]]
@@ -258,7 +282,7 @@ export async function pdfBytes(
           ),
         ];
     const base = summary
-      ? [65, 170, 155, 70, 145, ...Array(7).fill((usable - 605) / 7)]
+      ? [65, 170, 155, 70, 145, ...Array(8).fill((usable - 605) / 8)]
       : [
           55,
           155,
@@ -280,7 +304,9 @@ export async function pdfBytes(
             ...values(r),
           ],
     );
-    const total: (string | number)[] = Array(headers.length - 7).fill("");
+    const total: (string | number)[] = Array(
+      headers.length - (summary ? summaryKeys.length : keys.length),
+    ).fill("");
     total[1] = "الإجمالي";
     total.push(
       ...(summary ? summaryTotals(report.totals) : values(report.totals)),
@@ -288,21 +314,57 @@ export async function pdfBytes(
     allRows.push(total);
     for (let offset = 0; offset < allRows.length; offset += perPage) {
       if (page++) doc.addPage();
+      if (watermarkAsset)
+        doc.addImage(
+          watermarkAsset,
+          "WEBP",
+          width / 2 - 105,
+          280,
+          175,
+          215,
+          "fanu-watermark",
+          "FAST",
+        );
+      if (headerAsset)
+        doc.addImage(
+          headerAsset,
+          "WEBP",
+          width - 320,
+          18,
+          286,
+          46,
+          "fanu-header",
+          "FAST",
+        );
+      if (savannaAsset)
+        doc.addImage(
+          savannaAsset,
+          "WEBP",
+          margin,
+          27,
+          104,
+          15,
+          "savanna",
+          "FAST",
+        );
+      doc.setDrawColor("#F2AD21");
+      doc.setLineWidth(1.2);
+      doc.line(margin, 74, width - margin, 74);
       doc.setTextColor("#26324A");
-      text(title, width - margin, 42, 18, "right");
+      text(title, width - margin, 96, 17, "right");
       text(
-        `قسم الموارد البشرية · ${monthLabel(report.month)}`,
+        `قسم الموارد البشرية – مسائي · ${monthLabel(report.month)}`,
         width - margin,
-        66,
+        118,
         12,
         "right",
       );
-      if (!summary) text(`الأيام ${start} – ${end}`, margin, 66, 11, "left");
+      if (!summary) text(`الأيام ${start} – ${end}`, margin, 118, 11, "left");
       let x = width - margin;
       headers.forEach((h, i) => {
         x -= base[i];
-        doc.setFillColor("#EDF0F7");
-        doc.rect(x, 82, base[i], 43, "F");
+        doc.setFillColor("#EAF2FF");
+        doc.rect(x, 132, base[i], 43, "F");
         doc.setTextColor("#25324A");
         doc.setFontSize(9);
         const lines =
@@ -311,11 +373,11 @@ export async function pdfBytes(
                 .replace("إجمالي الغياب المحتسب", "الغياب المحتسب")
                 .split(" ")
             : [String(h)];
-        text(lines as unknown as string, x + base[i] / 2, 100, 9);
+        text(lines as unknown as string, x + base[i] / 2, 150, 9);
       });
       allRows.slice(offset, offset + perPage).forEach((r, ri) => {
         let x = width - margin;
-        const y = 125 + ri * 30;
+        const y = 175 + ri * 30;
         const last = offset + ri === allRows.length - 1;
         r.forEach((v, ci) => {
           x -= base[ci];
@@ -334,8 +396,219 @@ export async function pdfBytes(
           });
         });
       });
-      text(String(page), width / 2, height - 20, 10);
     }
+  }
+  const pages = doc.getNumberOfPages();
+  for (let index = 1; index <= pages; index++) {
+    doc.setPage(index);
+    doc.setDrawColor("#DCE5F0");
+    doc.line(margin, height - 31, width - margin, height - 31);
+    doc.setTextColor("#6E7D92");
+    text("Designed by Suhaib Al-Kubaisi", margin, height - 16, 8, "left");
+    text(`${index} / ${pages}`, width / 2, height - 16, 9);
+    text(
+      "قسم الموارد البشرية – مسائي",
+      width - margin,
+      height - 16,
+      8,
+      "right",
+    );
+  }
+  return new Uint8Array(doc.output("arraybuffer"));
+}
+
+export function tableExcelBytes({
+  title,
+  period,
+  headers,
+  rows,
+  sheetName = "التقرير",
+}: {
+  title: string;
+  period: string;
+  headers: string[];
+  rows: (string | number)[][];
+  sheetName?: string;
+}) {
+  const safeSheet =
+    sheetName.replace(/[\\/*?:\[\]]/g, " ").slice(0, 31) || "التقرير";
+  const grid: (string | number)[][] = [
+    ["قسم الموارد البشرية – مسائي"],
+    [title],
+    [period],
+    [],
+    headers,
+    ...rows,
+  ];
+  const last = col(Math.max(headers.length - 1, 0));
+  const files: Record<string, Uint8Array> = {};
+  const add = (name: string, xml: string) =>
+    (files[name] = strToU8(
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${xml}`,
+    ));
+  const sheetRows = grid
+    .map(
+      (row, ri) =>
+        `<row r="${ri + 1}" ht="${ri < 3 ? 28 : ri === 4 ? 42 : 24}" customHeight="1">${row
+          .map((value, ci) => {
+            const style = ri < 3 ? 1 : ri === 4 ? 2 : 0;
+            return typeof value === "number"
+              ? `<c r="${col(ci)}${ri + 1}" s="${style}"><v>${value}</v></c>`
+              : `<c r="${col(ci)}${ri + 1}" t="inlineStr" s="${style}"><is><t xml:space="preserve">${escape(value)}</t></is></c>`;
+          })
+          .join("")}</row>`,
+    )
+    .join("");
+  add(
+    "[Content_Types].xml",
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+  );
+  add(
+    "_rels/.rels",
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+  );
+  add(
+    "xl/workbook.xml",
+    `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="${escape(safeSheet)}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'${escape(safeSheet)}'!$1:$5</definedName></definedNames></workbook>`,
+  );
+  add(
+    "xl/_rels/workbook.xml.rels",
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+  );
+  add(
+    "xl/styles.xml",
+    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Arial"/><color rgb="FF14213D"/></font><font><b/><sz val="15"/><name val="Arial"/><color rgb="FFFFFFFF"/></font><font><b/><sz val="11"/><name val="Arial"/><color rgb="FF0B2B55"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0B2B55"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEAF2FF"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom style="hair"><color rgb="FFDCE5F0"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1" readingOrder="2"/></xf><xf numFmtId="0" fontId="1" fillId="3" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" readingOrder="2"/></xf><xf numFmtId="0" fontId="2" fillId="4" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1" readingOrder="2"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>',
+  );
+  add(
+    "xl/worksheets/sheet1.xml",
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${last}${grid.length}"/><sheetViews><sheetView workbookViewId="0" rightToLeft="1" showGridLines="0"><pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/><cols>${headers.map((h, i) => `<col min="${i + 1}" max="${i + 1}" width="${Math.min(42, Math.max(14, String(h).length + 8))}" customWidth="1"/>`).join("")}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="A5:${last}${grid.length}"/><mergeCells count="3"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/><mergeCell ref="A3:${last}3"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.45" header="0.15" footer="0.15"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/><headerFooter><oddFooter>&amp;LDesigned by Suhaib Al-Kubaisi&amp;C&amp;P / &amp;N&amp;Rقسم الموارد البشرية – مسائي</oddFooter></headerFooter></worksheet>`,
+  );
+  return zipSync(files, { level: 6 });
+}
+
+export async function tablePdfBytes({
+  title,
+  period,
+  headers,
+  rows,
+  fontBase64,
+  landscape = true,
+}: {
+  title: string;
+  period: string;
+  headers: string[];
+  rows: (string | number)[][];
+  fontBase64?: string;
+  landscape?: boolean;
+}) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({
+    orientation: landscape ? "landscape" : "portrait",
+    unit: "pt",
+    format: "a4",
+    compress: true,
+  });
+  if (!fontBase64) {
+    const response = await fetch("/fonts/DejaVuSans.ttf");
+    if (!response.ok) throw new Error("تعذر تحميل خط التقرير");
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 8192)
+      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    fontBase64 = btoa(binary);
+  }
+  doc.addFileToVFS("Arabic.ttf", fontBase64);
+  doc.addFont("Arabic.ttf", "Arabic", "normal");
+  doc.setFont("Arabic");
+  const width = doc.internal.pageSize.getWidth();
+  const height = doc.internal.pageSize.getHeight();
+  const margin = 28;
+  const tableWidth = width - margin * 2;
+  const columnWidth = tableWidth / Math.max(headers.length, 1);
+  const perPage = Math.max(12, Math.floor((height - 185) / 28));
+  const [headerAsset, watermarkAsset] = await Promise.all([
+    webAsset("/brand/combined-header.webp"),
+    webAsset("/brand/fanu-watermark.webp"),
+  ]);
+  const pages = Math.max(1, Math.ceil(rows.length / perPage));
+  for (let page = 0; page < pages; page++) {
+    if (page) doc.addPage();
+    if (watermarkAsset)
+      doc.addImage(
+        watermarkAsset,
+        "WEBP",
+        width / 2 - 80,
+        height / 2 - 95,
+        130,
+        160,
+        "table-watermark",
+        "FAST",
+      );
+    if (headerAsset)
+      doc.addImage(
+        headerAsset,
+        "WEBP",
+        width - 245,
+        16,
+        215,
+        34,
+        "table-header",
+        "FAST",
+      );
+    doc.setDrawColor("#F2AD21");
+    doc.line(margin, 60, width - margin, 60);
+    doc.setTextColor("#14213D");
+    doc.setFontSize(15);
+    doc.text(title, width - margin, 82, { align: "right" });
+    doc.setFontSize(9);
+    doc.setTextColor("#637188");
+    doc.text(`قسم الموارد البشرية – مسائي · ${period}`, width - margin, 100, {
+      align: "right",
+    });
+    headers.forEach((header, i) => {
+      const x = width - margin - (i + 1) * columnWidth;
+      doc.setFillColor("#EAF2FF");
+      doc.rect(x, 112, columnWidth, 36, "F");
+      doc.setTextColor("#14213D");
+      doc.setFontSize(8);
+      doc.text(
+        doc.splitTextToSize(String(header), columnWidth - 6),
+        x + columnWidth / 2,
+        127,
+        { align: "center" },
+      );
+    });
+    rows.slice(page * perPage, (page + 1) * perPage).forEach((row, ri) =>
+      row.forEach((value, ci) => {
+        const x = width - margin - (ci + 1) * columnWidth;
+        const y = 148 + ri * 28;
+        doc.setFillColor(ri % 2 ? "#F8FAFD" : "#FFFFFF");
+        doc.rect(x, y, columnWidth, 28, "F");
+        doc.setDrawColor("#DCE5F0");
+        doc.line(x, y + 28, x + columnWidth, y + 28);
+        doc.setTextColor("#24334B");
+        doc.setFontSize(8);
+        doc.text(
+          doc.splitTextToSize(String(value ?? "—"), columnWidth - 6),
+          x + columnWidth / 2,
+          y + 17,
+          { align: "center", maxWidth: columnWidth - 6 },
+        );
+      }),
+    );
+    doc.setDrawColor("#DCE5F0");
+    doc.line(margin, height - 28, width - margin, height - 28);
+    doc.setTextColor("#6E7D92");
+    doc.setFontSize(7.5);
+    doc.text("Designed by Suhaib Al-Kubaisi", margin, height - 14, {
+      align: "left",
+    });
+    doc.text(`${page + 1} / ${pages}`, width / 2, height - 14, {
+      align: "center",
+    });
+    doc.text("قسم الموارد البشرية – مسائي", width - margin, height - 14, {
+      align: "right",
+    });
   }
   return new Uint8Array(doc.output("arraybuffer"));
 }

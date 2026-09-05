@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "إدارة الموارد البشرية",
-  description: "الموظفون والموقف الشهري",
+  title: "قسم الموارد البشرية – مسائي",
+  description: "نظام فن النسيج لإدارة عمليات الموارد البشرية – الشفت المسائي",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

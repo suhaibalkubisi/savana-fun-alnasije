@@ -1,4 +1,10 @@
-import { employeeSchema, statusSchema } from "@/lib/hr/validation";
+import {
+  administrativeActionSchema,
+  administrativeActionTypeSchema,
+  employeeSchema,
+  statusBulkSchema,
+  statusSchema,
+} from "@/lib/hr/validation";
 import { z } from "zod";
 import {
   AppError,
@@ -40,7 +46,7 @@ export async function GET(request: Request) {
       [...params].filter(([k]) => k !== "kind"),
     );
     return json(
-      await rpc("hr_read", { p_kind: kind, p_filters: filters }, s.token),
+      await rpc("hr_read_v2", { p_kind: kind, p_filters: filters }, s.token),
     );
   } catch (e) {
     return errorResponse(e);
@@ -56,6 +62,9 @@ export async function POST(request: Request) {
     let schema: z.ZodTypeAny;
     if (action === "employee.save") schema = employeeSchema;
     else if (action === "status.save") schema = statusSchema;
+    else if (action === "status.bulk") schema = statusBulkSchema;
+    else if (action === "administrative_action.save")
+      schema = administrativeActionSchema;
     else if (action === "status.delete")
       schema = z.object({
         id: z.string().uuid(),
@@ -66,6 +75,14 @@ export async function POST(request: Request) {
       if (s.profile.role !== "ADMIN")
         throw new AppError("ليست لديك صلاحية لهذه العملية", 403);
       if (action === "department.save") schema = department;
+      else if (action === "administrative_action_type.save")
+        schema = administrativeActionTypeSchema;
+      else if (action === "administrative_action.delete")
+        schema = z.object({
+          id: z.string().uuid(),
+          version: z.number().int().positive(),
+          confirmed: z.literal(true),
+        });
       else if (["shift.save", "manager.save"].includes(action)) schema = lookup;
       else if (action === "user.save") schema = user;
       else if (action === "app.save")
@@ -78,7 +95,11 @@ export async function POST(request: Request) {
     const parsed = schema.safeParse(data);
     if (!parsed.success) throw new AppError(parsed.error.issues[0].message);
     return json(
-      await rpc("hr_write", { p_action: action, p_data: parsed.data }, s.token),
+      await rpc(
+        "hr_write_v2",
+        { p_action: action, p_data: parsed.data },
+        s.token,
+      ),
     );
   } catch (e) {
     return errorResponse(e);

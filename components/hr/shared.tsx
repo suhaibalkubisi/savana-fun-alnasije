@@ -100,12 +100,14 @@ export function SearchPicker({
   onChange,
   options,
   disabled = false,
+  inputId,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: Option[];
   disabled?: boolean;
+  inputId?: string;
 }) {
   const id = useId();
   const selected = options.find((o) => o.value === value) || null;
@@ -121,7 +123,7 @@ export function SearchPicker({
         disabled={disabled}
       >
         <ComboboxInput
-          id={id}
+          id={inputId || id}
           placeholder="بحث بالاسم أو الرقم"
           className="w-full h-11 bg-white"
           showClear

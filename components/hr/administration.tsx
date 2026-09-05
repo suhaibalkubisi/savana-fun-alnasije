@@ -25,6 +25,7 @@ import {
 import { api, changed, mutate, useData, useDebounced } from "@/lib/hr/api";
 import {
   auditDate,
+  actionStateLabels,
   departmentLabel,
   employmentLabels,
   statuses,
@@ -35,6 +36,7 @@ import {
   type Profile,
   type Reference,
   type ReviewIssue,
+  type AdministrativeActionType,
 } from "@/lib/hr/types";
 import {
   Choice,
@@ -120,6 +122,12 @@ const auditLabels: Record<string, string> = {
   email: "البريد الإلكتروني",
   employee_id: "الموظف المرتبط",
   value: "القيمة",
+  action_type_id: "نوع الإجراء",
+  action_date: "تاريخ الإجراء",
+  reason: "السبب",
+  description: "التفاصيل",
+  state: "حالة الإجراء",
+  related_status_record_id: "الحالة المرتبطة",
 };
 export function AuditPage() {
   const [search, setSearch] = useState("");
@@ -156,7 +164,41 @@ export function AuditPage() {
       );
     if (key === "status_type")
       return statuses[value as keyof typeof statuses]?.label || String(value);
+    if (key === "state")
+      return (
+        actionStateLabels[value as keyof typeof actionStateLabels] ||
+        String(value)
+      );
+    if (key === "action_type_id")
+      return (
+        ref.data?.action_types.find((item) => item.id === value)?.arabic_name ||
+        String(value)
+      );
     return String(value);
+  }
+  function friendly(log: AuditLog) {
+    const values = log.new_values || log.old_values;
+    const employeeId = values?.employee_id as string | undefined;
+    const employee = ref.data?.employees.find(
+      (item) => item.id === employeeId,
+    )?.name;
+    if (log.entity_type === "hr_status_records" && values) {
+      const label =
+        statuses[values.status_type as keyof typeof statuses]?.label || "حالة";
+      const date = String(values.record_date || "");
+      if (log.action === "soft_delete")
+        return `تم حذف ${label}${employee ? ` للموظف ${employee}` : ""} بتاريخ ${date} بواسطة ${log.actor_name}.`;
+      if (
+        log.action === "update" &&
+        log.old_values?.late_minutes !== log.new_values?.late_minutes &&
+        values.status_type === "late"
+      )
+        return `تم تعديل تأخير${employee ? ` ${employee}` : ""} بتاريخ ${date} من ${log.old_values?.late_minutes ?? 0} دقيقة إلى ${log.new_values?.late_minutes ?? 0} دقيقة بواسطة ${log.actor_name}.`;
+      return `تم ${log.action === "create" ? "تسجيل" : "تعديل"} ${label}${employee ? ` للموظف ${employee}` : ""} بتاريخ ${date} بواسطة ${log.actor_name}.`;
+    }
+    if (log.entity_type === "administrative_actions" && values)
+      return `تم ${log.action === "create" ? "إنشاء" : log.action === "soft_delete" ? "حذف" : "تعديل"} إجراء إداري${employee ? ` للموظف ${employee}` : ""} — ${String(values.reason || "")}.`;
+    return log.description;
   }
   return (
     <>
@@ -191,7 +233,7 @@ export function AuditPage() {
                 <TableRow key={x.id}>
                   <TableCell>{auditDate(x.created_at)}</TableCell>
                   <TableCell>{x.actor_name}</TableCell>
-                  <TableCell>{x.description}</TableCell>
+                  <TableCell>{friendly(x)}</TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
@@ -217,7 +259,9 @@ export function AuditPage() {
       <Dialog open={!!selected} onOpenChange={(v) => !v && setSelected(null)}>
         <DialogContent dir="rtl" className="audit-dialog">
           <DialogHeader>
-            <DialogTitle>{selected?.description}</DialogTitle>
+            <DialogTitle>
+              {selected ? friendly(selected) : "تفاصيل التعديل"}
+            </DialogTitle>
             <DialogDescription>
               {selected?.actor_name} ·{" "}
               {selected && auditDate(selected.created_at)}
@@ -452,12 +496,12 @@ function UserEditor({
     </Dialog>
   );
 }
-type SettingKind = "department" | "shift" | "manager";
+type SettingKind = "department" | "shift" | "manager" | "action_type";
 export function SettingsPage({ reference }: { reference: Reference }) {
   const [tab, setTab] = useState<SettingKind | "app" | "status">("department");
   const [edit, setEdit] = useState<{
     kind: SettingKind;
-    item?: Department | Lookup;
+    item?: Department | Lookup | AdministrativeActionType;
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const list =
@@ -465,7 +509,9 @@ export function SettingsPage({ reference }: { reference: Reference }) {
       ? reference.departments
       : tab === "shift"
         ? reference.shifts
-        : reference.managers;
+        : tab === "manager"
+          ? reference.managers
+          : reference.action_types;
   return (
     <>
       <PageTitle title="الإعدادات" />
@@ -480,12 +526,13 @@ export function SettingsPage({ reference }: { reference: Reference }) {
               <TabsTrigger value="department">الأقسام</TabsTrigger>
               <TabsTrigger value="shift">الشفتات</TabsTrigger>
               <TabsTrigger value="manager">المسؤولون المباشرون</TabsTrigger>
+              <TabsTrigger value="action_type">أنواع الإجراءات</TabsTrigger>
               <TabsTrigger value="status">أنواع الحالات</TabsTrigger>
               <TabsTrigger value="app">عام</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
-        {["department", "shift", "manager"].includes(tab) ? (
+        {["department", "shift", "manager", "action_type"].includes(tab) ? (
           <>
             <div className="panel-heading">
               <h2>
@@ -493,7 +540,9 @@ export function SettingsPage({ reference }: { reference: Reference }) {
                   ? "الأقسام وترتيب العرض"
                   : tab === "shift"
                     ? "الشفتات"
-                    : "المسؤولون المباشرون"}
+                    : tab === "manager"
+                      ? "المسؤولون المباشرون"
+                      : "أنواع الإجراءات الإدارية"}
               </h2>
               <Button
                 size="sm"
@@ -519,9 +568,14 @@ export function SettingsPage({ reference }: { reference: Reference }) {
                   <TableRow key={item.id}>
                     <TableCell>
                       <bdi>
-                        {"arabic_name" in item
-                          ? departmentLabel(item)
-                          : item.name}
+                        {tab === "department" &&
+                        "english_name" in item &&
+                        "arabic_name" in item &&
+                        "display_order" in item
+                          ? departmentLabel(item as Department)
+                          : "name" in item
+                            ? item.name
+                            : item.arabic_name}
                       </bdi>
                     </TableCell>
                     {"display_order" in item && (
@@ -619,7 +673,7 @@ function SettingEditor({
   onClose,
 }: {
   kind: SettingKind;
-  item?: Department | Lookup;
+  item?: Department | Lookup | AdministrativeActionType;
   reference: Reference;
   onClose: () => void;
 }) {
@@ -629,7 +683,11 @@ function SettingEditor({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const department = item && "arabic_name" in item ? item : undefined;
+  const department = item && "english_name" in item ? item : undefined;
+  const actionType =
+    item && "arabic_name" in item && !("english_name" in item)
+      ? item
+      : undefined;
   const lookup = item && "name" in item ? item : undefined;
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
@@ -641,7 +699,9 @@ function SettingEditor({
               ? "قسم"
               : kind === "shift"
                 ? "شفت"
-                : "مسؤول مباشر"}
+                : kind === "manager"
+                  ? "مسؤول مباشر"
+                  : "نوع إجراء إداري"}
           </DialogTitle>
           <DialogDescription className="sr-only">
             إعدادات النظام
@@ -662,20 +722,31 @@ function SettingEditor({
                     english_name: f.get("english_name"),
                     display_order: Number(f.get("display_order")),
                   }
-                : {
-                    name:
-                      kind === "manager" && linked
-                        ? reference.employees.find((e) => e.id === linked)!.name
-                        : f.get("name"),
-                    ...(kind === "manager"
-                      ? { employee_id: linked || null }
-                      : {}),
-                  }),
+                : kind === "action_type"
+                  ? {
+                      arabic_name: f.get("arabic_name"),
+                      display_order: Number(f.get("display_order")),
+                    }
+                  : {
+                      name:
+                        kind === "manager" && linked
+                          ? reference.employees.find((e) => e.id === linked)!
+                              .name
+                          : f.get("name"),
+                      ...(kind === "manager"
+                        ? { employee_id: linked || null }
+                        : {}),
+                    }),
             };
             setBusy(true);
             setError("");
             try {
-              await mutate(`${kind}.save`, data);
+              await mutate(
+                kind === "action_type"
+                  ? "administrative_action_type.save"
+                  : `${kind}.save`,
+                data,
+              );
               toast.success("تم حفظ الإعدادات");
               onClose();
             } catch (e) {
@@ -713,6 +784,30 @@ function SettingEditor({
                   defaultValue={
                     department?.display_order ??
                     reference.departments.length + 1
+                  }
+                  required
+                />
+              </Field>
+            </>
+          ) : kind === "action_type" ? (
+            <>
+              <Field label="اسم الإجراء">
+                <Input
+                  name="arabic_name"
+                  defaultValue={actionType?.arabic_name}
+                  required
+                  maxLength={100}
+                />
+              </Field>
+              <Field label="ترتيب العرض">
+                <Input
+                  name="display_order"
+                  type="number"
+                  min={0}
+                  max={10000}
+                  defaultValue={
+                    actionType?.display_order ??
+                    reference.action_types.length + 1
                   }
                   required
                 />

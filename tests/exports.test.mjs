@@ -13,7 +13,9 @@ await build({
   packages: "external",
   outfile: compiled.pathname,
 });
-const { excelBytes, pdfBytes } = await import(compiled.href);
+const { excelBytes, pdfBytes, tableExcelBytes, tablePdfBytes } = await import(
+  compiled.href
+);
 after(() => rm(compiled, { force: true }));
 test("Excel matrix exports real active database employees, valid days and weighted totals", () => {
   const zip = unzipSync(excelBytes(report, "الموقف الشامل", false));
@@ -26,20 +28,20 @@ test("Excel matrix exports real active database employees, valid days and weight
   assert.ok(sheet.includes("غ×2"));
   assert.ok(sheet.includes("غ×3"));
   assert.ok(!sheet.includes("<f>"));
-  assert.equal((sheet.match(/<row /g) || []).length, 197);
+  assert.equal((sheet.match(/<row /g) || []).length, 198);
 });
 test("Summary and department Excel export use the same filtered report values", () => {
   const zip = unzipSync(excelBytes(report, "ملخص الموظفين", true));
   const sheet = strFromU8(zip["xl/worksheets/sheet1.xml"]);
-  const header = sheet.match(/<row r="4".*?<\/row>/s)[0];
+  const header = sheet.match(/<row r="5".*?<\/row>/s)[0];
   assert.ok(
     header.indexOf("إجمالي الغياب المحتسب") < header.indexOf("الإجازات"),
   );
   assert.ok(
-    sheet.includes('I197" s="7"><v>6</v>') ||
-      /r="I197"[^>]*><v>6<\/v>/.test(sheet),
+    sheet.includes('I198" s="3"><v>6</v>') ||
+      /r="I198"[^>]*><v>6<\/v>/.test(sheet),
   );
-  assert.ok(/r="L197"[^>]*><v>27<\/v>/.test(sheet));
+  assert.ok(/r="L198"[^>]*><v>27<\/v>/.test(sheet));
   const id = report.rows[0].department_id;
   const rows = report.rows.filter((r) => r.department_id === id);
   const totals = Object.fromEntries(
@@ -53,7 +55,35 @@ test("Summary and department Excel export use the same filtered report values", 
       "xl/worksheets/sheet1.xml"
     ],
   );
-  assert.equal((department.match(/<row /g) || []).length, rows.length + 5);
+  assert.equal((department.match(/<row /g) || []).length, rows.length + 6);
+});
+test("Operational exports are genuine branded XLSX and Arabic PDF", async () => {
+  const zip = unzipSync(
+    tableExcelBytes({
+      title: "تقرير التأخيرات",
+      period: "سبتمبر 2026",
+      headers: ["الموظف", "الدقائق"],
+      rows: [["موظف اختبار", 27]],
+    }),
+  );
+  const sheet = strFromU8(zip["xl/worksheets/sheet1.xml"]);
+  assert.ok(sheet.includes('rightToLeft="1"'));
+  assert.ok(sheet.includes("قسم الموارد البشرية – مسائي"));
+  assert.ok(sheet.includes("Designed by Suhaib Al-Kubaisi"));
+  const font = (await readFile("public/fonts/DejaVuSans.ttf")).toString(
+    "base64",
+  );
+  const pdf = Buffer.from(
+    await tablePdfBytes({
+      title: "تقرير التأخيرات",
+      period: "سبتمبر 2026",
+      headers: ["الموظف", "الدقائق"],
+      rows: [["موظف اختبار", 27]],
+      fontBase64: font,
+    }),
+  ).toString("latin1");
+  assert.ok(pdf.startsWith("%PDF-"));
+  assert.ok(pdf.includes("/FontFile2"));
 });
 test("Arabic PDF exports use embedded font and paginate full source report", async () => {
   const font = (await readFile("public/fonts/DejaVuSans.ttf")).toString(
