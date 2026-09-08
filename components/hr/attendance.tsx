@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   Upload,
@@ -9,6 +10,8 @@ import {
   Printer,
   ChevronRight,
   ChevronLeft,
+  CheckCircle2,
+  PencilLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,21 +45,27 @@ import {
 type DayRow = {
   employee_id: string;
   employee_number: string | null;
+  person_code: string | null;
   name: string;
+  department_id: string;
   department: string;
   manager: string | null;
+  scheduled_start_minute: number | null;
   entry_minute: number | null;
   exit_minute: number | null;
   duration_minutes: number | null;
   status: string;
   late_minutes: number;
   manual_status: string | null;
+  status_record_id: string | null;
+  status_record_version: number | null;
   notes: string;
   procedure_text: string;
   note_id: string | null;
   note_version: number | null;
   expected: boolean;
   daily_note_text: string;
+  needs_review: boolean;
 };
 type MonthRow = {
   employee_id: string;
@@ -128,17 +137,21 @@ function ExportButtons({
   period,
   headers,
   rows,
+  columnWeights,
+  notesArea = false,
 }: {
   title: string;
   period: string;
   headers: string[];
   rows: (string | number)[][];
+  columnWeights?: number[];
+  notesArea?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   async function run(pdf: boolean) {
     setBusy(true);
     try {
-      const report = { title, period, headers, rows };
+      const report = { title, period, headers, rows, columnWeights, notesArea };
       download(
         pdf ? await tablePdfBytes(report) : tableExcelBytes(report),
         `${title}-${period}.${pdf ? "pdf" : "xlsx"}`,
@@ -232,21 +245,26 @@ export function AttendanceReport({
   const [date, setDate] = useState(baghdadDate()),
     [dep, setDep] = useState(""),
     [search, setSearch] = useState(""),
-    [status, setStatus] = useState("");
+    [quick, setQuick] = useState<Set<string> | null>(null),
+    [advanced, setAdvanced] = useState("");
   const [edit, setEdit] = useState<DayRow | null>(null),
     [notes, setNotes] = useState(""),
     [procedure, setProcedure] = useState(""),
+    [decision, setDecision] = useState(""),
+    [decisionMinutes, setDecisionMinutes] = useState(""),
     [busy, setBusy] = useState(false);
   const query = useData<{ rows: (DayRow & MonthRow)[] }>(
     `attendance.${monthly ? "monthly" : "daily"}`,
     { date, department_id: dep, search: useDebounced(search) },
   );
   const title = monthly ? "الداشبورد الشهري" : "الموقف اليومي";
-  const rows = (query.data?.rows || []).filter((r) =>
-    monthly
-      ? !search || `${r.name} ${r.employee_number}`.includes(search)
-      : !status || r.status === status,
-  );
+  const rawRows = query.data?.rows || [];
+  const group = (value: string) => value.startsWith("absence") ? "absence" : value;
+  const rows = rawRows.filter((r) => {
+    if (monthly) return !search || `${r.name} ${r.employee_number}`.includes(search);
+    if (advanced) return r.status === advanced;
+    return quick === null || quick.has(group(r.status));
+  });
   const headers = monthly
     ? [
         "رقم الموظف",
@@ -265,17 +283,19 @@ export function AttendanceReport({
         "دوام غير محدد",
       ]
     : [
+        "ت",
         "رقم الموظف",
+        "كود البصمة",
         "الموظف",
         "القسم",
         "المسؤول",
+        "وقت الدوام",
         "الدخول",
-        "الخروج التالي",
-        "الحالة",
         "دقائق التأخير",
-        "قرار HR",
-        "ملاحظات",
+        "الحالة",
         "الإجراء",
+        "قرار HR",
+        "الملاحظات",
       ];
   const values = rows.map((r) =>
     monthly
@@ -296,17 +316,19 @@ export function AttendanceReport({
           r.missing_schedule,
         ]
       : [
+          rows.indexOf(r) + 1,
           r.employee_number || "",
+          r.person_code || "",
           r.name,
           r.department,
-          r.manager || "",
+          r.manager || "غير محدد",
+          time(r.scheduled_start_minute),
           time(r.entry_minute),
-          time(r.exit_minute),
-          labels[r.status] || r.status,
           r.late_minutes,
+          labels[r.status] || r.status,
+          r.procedure_text,
           labels[r.manual_status || ""] || "",
           r.notes,
-          r.procedure_text,
         ],
   );
   const total = (key: keyof MonthRow) =>
@@ -329,8 +351,27 @@ export function AttendanceReport({
         notes,
         procedure_text: procedure,
       });
+      if (decision) {
+        await mutate("status.save", {
+          id: edit.status_record_id || undefined,
+          version: edit.status_record_version || undefined,
+          employee_id: edit.employee_id,
+          department_id: edit.department_id,
+          record_date: date,
+          status_type: decision,
+          late_minutes: decision === "late" ? Number(decisionMinutes) : null,
+          notes: notes || null,
+        });
+      } else if (edit.status_record_id && edit.status_record_version) {
+        await mutate("status.delete", {
+          id: edit.status_record_id,
+          version: edit.status_record_version,
+          confirmed: true,
+        });
+      }
       setEdit(null);
-      toast.success("تم حفظ الملاحظة");
+      await query.refresh();
+      toast.success("تم حفظ التعديل");
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -347,6 +388,8 @@ export function AttendanceReport({
             period={monthly ? date.slice(0, 7) : date}
             headers={headers}
             rows={values}
+            columnWeights={monthly ? undefined : [4,8,8,15,16,13,9,9,8,9,24,11,18]}
+            notesArea={!monthly}
           />
         }
       />
@@ -394,14 +437,26 @@ export function AttendanceReport({
         />
         <SearchBox value={search} onChange={setSearch} />
         {!monthly && (
-          <Choice
-            label="الحالة"
-            value={status}
-            onChange={setStatus}
-            options={Object.entries(labels)
-              .slice(0, 10)
-              .map(([value, label]) => ({ value, label }))}
-          />
+          <div className="daily-filter-card">
+            <span>التصفية السريعة</span>
+            <div className="quick-filter-row">
+              {[["present", "حاضر"], ["late", "تأخير"], ["absence", "غياب"]].map(([value, label]) => (
+                <Button key={value} type="button" size="sm"
+                  variant={quick?.has(value) ? "default" : "outline"}
+                  onClick={() => setQuick((current) => {
+                    const next = new Set(current || []);
+                    if (next.has(value)) next.delete(value); else next.add(value);
+                    return next;
+                  })}>{label}</Button>
+              ))}
+              <Button type="button" size="sm" variant="ghost" onClick={() => setQuick(null)}>تحديد الكل</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setQuick(new Set())}>مسح الكل</Button>
+            </div>
+          </div>
+        )}
+        {!monthly && (
+          <Choice label="تصفية متقدمة" value={advanced} onChange={setAdvanced}
+            options={Object.entries(labels).slice(0, 9).map(([value, label]) => ({ value, label }))} />
         )}
       </div>
       <LoadState
@@ -430,8 +485,8 @@ export function AttendanceReport({
                     count("absence") + count("absence2") + count("absence3"),
                   ],
                   ["إجازة", count("leave")],
-                  ["بلا دخول", count("no_entry")],
-                  ["دوام غير محدد", count("missing_schedule")],
+                  ["بلا بصمة دخول", count("no_entry")],
+                  ["يحتاج مراجعة", rawRows.filter((r) => r.needs_review).length],
                 ]
           }
         />
@@ -448,9 +503,11 @@ export function AttendanceReport({
                       setEdit(rows[i]);
                       setNotes(rows[i].daily_note_text);
                       setProcedure(rows[i].procedure_text);
+                      setDecision(rows[i].manual_status || "");
+                      setDecisionMinutes(String(rows[i].late_minutes || ""));
                     }}
                   >
-                    ملاحظة / إجراء
+                    <PencilLine size={15} /> تعديل
                   </Button>,
                 ]
               : v,
@@ -476,8 +533,23 @@ export function AttendanceReport({
               onChange={(e) => setProcedure(e.target.value)}
             />
           </Field>
-          <Button disabled={busy} onClick={save}>
-            حفظ
+          <Field label="قرار HR النهائي">
+            <div className="status-choice-grid">
+              {[["", "بدون قرار"], ["absence", "غياب"], ["absence2", "غياب ×2"], ["absence3", "غياب ×3"], ["leave", "إجازة"], ["late", "تأخير"]].map(([value, label]) => (
+                <Button key={value || "none"} type="button" size="sm"
+                  variant={decision === value ? "default" : "outline"}
+                  onClick={() => setDecision(value)}>{label}</Button>
+              ))}
+            </div>
+          </Field>
+          {decision === "late" && (
+            <Field label="دقائق التأخير">
+              <Input type="number" min={0} max={10080} value={decisionMinutes}
+                onChange={(e) => setDecisionMinutes(e.target.value)} required />
+            </Field>
+          )}
+          <Button disabled={busy || (decision === "late" && !decisionMinutes)} onClick={save}>
+            <CheckCircle2 size={17} /> {busy ? "جار الحفظ…" : "حفظ التعديلات"}
           </Button>
         </DialogContent>
       </Dialog>
@@ -621,6 +693,18 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
               ["الأيام", current.summary.days || 0],
             ]}
           />
+          {(current.state === "applied" || current.state === "preview") && (
+            <section className="attendance-next-actions">
+              <h2>{current.state === "applied" ? "تمت معالجة البصمة" : "راجع النتائج قبل الاعتماد"}</h2>
+              <div className="actions">
+                <Button asChild variant="outline"><Link href="/daily-position">افتح الموقف اليومي</Link></Button>
+                <Button asChild variant="outline"><Link href="/daily-position?status=late">راجع المتأخرين</Link></Button>
+                <Button asChild variant="outline"><Link href="/daily-position?status=no_entry">راجع بدون بصمة دخول</Link></Button>
+                <Button asChild variant="outline"><Link href="/fingerprint-issues">راجع مشاكل المطابقة</Link></Button>
+                <Button asChild variant="outline"><Link href="/status">عدّل حالات HR</Link></Button>
+              </div>
+            </section>
+          )}
           <LoadState
             loading={preview.loading}
             error={preview.error}

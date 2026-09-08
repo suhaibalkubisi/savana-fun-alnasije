@@ -56,4 +56,13 @@ export const attendanceSchemas: Record<string, z.ZodTypeAny> = {
     notes: z.string().max(2000),
     procedure_text: z.string().max(2000),
   }),
+  "employee.delete_permanent": z.object({
+    source_employee_id: z.string().uuid(),
+    confirmed: z.literal(true),
+  }),
+  "employee.merge": z.object({
+    source_employee_id: z.string().uuid(),
+    target_employee_id: z.string().uuid(),
+    confirmed: z.literal(true),
+  }),
 };

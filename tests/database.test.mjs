@@ -57,6 +57,45 @@ const attendanceWrite = async (action, data) =>
 const attendanceRead = async (kind, filters) =>
   (await db.query("select public.attendance_read($1,$2) data", [kind, filters]))
     .rows[0].data;
+const attendanceWriteV2 = async (action, data) =>
+  (await db.query("select public.attendance_write_v2($1,$2) data", [action, data]))
+    .rows[0].data;
+const attendanceReadV2 = async (kind, filters = {}) =>
+  (await db.query("select public.attendance_read_v2($1,$2) data", [kind, filters]))
+    .rows[0].data;
+
+test("phase 2 daily position exposes schedule, person code and review fields", async () => {
+  await who("admin");
+  const ref = await read("reference");
+  const person = await write("employee.save", {
+    name: "اختبار موقف يومي مرحلة ثانية",
+    employee_number: "PH2-DAY",
+    department_id: ref.departments[0].id,
+    employment_status: "active",
+  });
+  const report = await attendanceReadV2("daily", { date: "2099-01-01", search: "PH2-DAY" });
+  assert.equal(report.rows.length, 1);
+  assert.ok("scheduled_start_minute" in report.rows[0]);
+  assert.ok("person_code" in report.rows[0]);
+  assert.ok("needs_review" in report.rows[0]);
+  await write("employee.save", { ...person, employment_status: "inactive" });
+});
+
+test("duplicate cleanup is ADMIN-only and hard delete refuses linked history", async () => {
+  await who("admin");
+  const ref = await read("reference");
+  const first = await write("employee.save", { name: "اسم تنظيف مكرر", employee_number: "PH2-DUP-A", department_id: ref.departments[0].id, employment_status: "active" });
+  const second = await write("employee.save", { name: "اسم تنظيف مكرر", employee_number: "PH2-DUP-B", department_id: ref.departments[0].id, employment_status: "active" });
+  const suspects = await attendanceReadV2("employee_duplicates");
+  assert.equal(suspects.rows.filter((row) => row.normalized_name === "اسمتنظيفمكرر").length, 2);
+  await who("viewer");
+  await assert.rejects(attendanceWriteV2("employee.delete_permanent", { source_employee_id: second.id, confirmed: true }), /صلاحية/);
+  await who("admin");
+  await attendanceWriteV2("employee.delete_permanent", { source_employee_id: second.id, confirmed: true });
+  await write("status.save", { employee_id: first.id, department_id: first.department_id, record_date: "2099-02-01", status_type: "absence", late_minutes: null, notes: null });
+  await assert.rejects(attendanceWriteV2("employee.delete_permanent", { source_employee_id: first.id, confirmed: true }), /سجلات مرتبطة/);
+  await write("employee.save", { ...first, employment_status: "inactive" });
+});
 test("attendance foundations preserve employee data and deny direct writes", async () => {
   await who("viewer");
   for (const table of [

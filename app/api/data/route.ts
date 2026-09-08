@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     );
     return json(
       await rpc(
-        kind.startsWith("attendance.") ? "attendance_read" : "hr_read_v2",
+        kind.startsWith("attendance.") ? "attendance_read_v2" : "hr_read_v2",
         { p_kind: kind.replace(/^attendance\./, ""), p_filters: filters },
         s.token,
       ),
@@ -67,7 +67,10 @@ export async function POST(request: Request) {
     let schema: z.ZodTypeAny;
     if (typeof action === "string" && action.startsWith("attendance.")) {
       const operation = action.slice(11);
-      if (operation === "rule.save" && s.profile.role !== "ADMIN")
+      if (
+        (operation === "rule.save" || operation.startsWith("employee.")) &&
+        s.profile.role !== "ADMIN"
+      )
         throw new AppError("ليست لديك صلاحية لهذه العملية", 403);
       const validator = attendanceSchemas[operation];
       if (!validator) throw new AppError("طلب غير صالح");
@@ -75,7 +78,7 @@ export async function POST(request: Request) {
       if (!parsed.success) throw new AppError("بيانات غير صالحة");
       return json(
         await rpc(
-          "attendance_write",
+          "attendance_write_v2",
           { p_action: operation, p_data: parsed.data },
           s.token,
         ),

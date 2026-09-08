@@ -363,9 +363,9 @@ export async function pdfBytes(
       let x = width - margin;
       headers.forEach((h, i) => {
         x -= base[i];
-        doc.setFillColor("#EAF2FF");
+        doc.setFillColor("#0B2B55");
         doc.rect(x, 132, base[i], 43, "F");
-        doc.setTextColor("#25324A");
+        doc.setTextColor("#FFFFFF");
         doc.setFontSize(9);
         const lines =
           base[i] < 90
@@ -381,11 +381,11 @@ export async function pdfBytes(
         const last = offset + ri === allRows.length - 1;
         r.forEach((v, ci) => {
           x -= base[ci];
-          doc.setFillColor(last ? "#E9EDF8" : ri % 2 ? "#F7F8FC" : "#FFFFFF");
+          doc.setFillColor(last ? "#D9E5F3" : ri % 2 ? "#F1F5FA" : "#FFFFFF");
           doc.rect(x, y, base[ci], 30, "F");
-          doc.setDrawColor("#E2E6EF");
-          doc.line(x, y + 30, x + base[ci], y + 30);
-          doc.setTextColor("#25324A");
+          doc.setDrawColor("#B8C5D6");
+          doc.rect(x, y, base[ci], 30, "S");
+          doc.setTextColor("#10233F");
           doc.setFontSize(10);
           const lines =
             !summary && ci >= 3 && ci < 3 + end - start + 1
@@ -423,12 +423,16 @@ export function tableExcelBytes({
   headers,
   rows,
   sheetName = "التقرير",
+  columnWeights,
+  notesArea = false,
 }: {
   title: string;
   period: string;
   headers: string[];
   rows: (string | number)[][];
   sheetName?: string;
+  columnWeights?: number[];
+  notesArea?: boolean;
 }) {
   const safeSheet =
     sheetName.replace(/[\\/*?:\[\]]/g, " ").slice(0, 31) || "التقرير";
@@ -439,6 +443,7 @@ export function tableExcelBytes({
     [],
     headers,
     ...rows,
+    ...(notesArea ? [[], ["ملاحظات"], [], [], []] : []),
   ];
   const last = col(Math.max(headers.length - 1, 0));
   const files: Record<string, Uint8Array> = {};
@@ -481,7 +486,7 @@ export function tableExcelBytes({
   );
   add(
     "xl/worksheets/sheet1.xml",
-    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${last}${grid.length}"/><sheetViews><sheetView workbookViewId="0" rightToLeft="1" showGridLines="0"><pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/><cols>${headers.map((h, i) => `<col min="${i + 1}" max="${i + 1}" width="${Math.min(42, Math.max(14, String(h).length + 8))}" customWidth="1"/>`).join("")}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="A5:${last}${grid.length}"/><mergeCells count="3"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/><mergeCell ref="A3:${last}3"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.45" header="0.15" footer="0.15"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/><headerFooter><oddFooter>&amp;LDesigned by Suhaib Al-Kubaisi&amp;C&amp;P / &amp;N&amp;Rقسم الموارد البشرية – مسائي</oddFooter></headerFooter></worksheet>`,
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${last}${grid.length}"/><sheetViews><sheetView workbookViewId="0" rightToLeft="1" showGridLines="0"><pane xSplit="3" ySplit="5" topLeftCell="D6" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/><cols>${headers.map((h, i) => `<col min="${i + 1}" max="${i + 1}" width="${columnWeights?.[i] ? Math.min(48, Math.max(7, columnWeights[i] * 1.6)) : Math.min(42, Math.max(14, String(h).length + 8))}" customWidth="1"/>`).join("")}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="A5:${last}${5 + rows.length}"/><mergeCells count="3"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/><mergeCell ref="A3:${last}3"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.45" header="0.15" footer="0.15"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/><headerFooter><oddFooter>&amp;LDesigned by Suhaib Al-Kubaisi&amp;C&amp;P / &amp;N&amp;Rقسم الموارد البشرية – مسائي</oddFooter></headerFooter></worksheet>`,
   );
   return zipSync(files, { level: 6 });
 }
@@ -493,6 +498,8 @@ export async function tablePdfBytes({
   rows,
   fontBase64,
   landscape = true,
+  columnWeights,
+  notesArea = false,
 }: {
   title: string;
   period: string;
@@ -500,12 +507,14 @@ export async function tablePdfBytes({
   rows: (string | number)[][];
   fontBase64?: string;
   landscape?: boolean;
+  columnWeights?: number[];
+  notesArea?: boolean;
 }) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({
     orientation: landscape ? "landscape" : "portrait",
     unit: "pt",
-    format: "a4",
+    format: headers.length > 12 ? "a3" : "a4",
     compress: true,
   });
   if (!fontBase64) {
@@ -524,8 +533,12 @@ export async function tablePdfBytes({
   const height = doc.internal.pageSize.getHeight();
   const margin = 28;
   const tableWidth = width - margin * 2;
-  const columnWidth = tableWidth / Math.max(headers.length, 1);
-  const perPage = Math.max(12, Math.floor((height - 185) / 28));
+  const weights = columnWeights?.length === headers.length
+    ? columnWeights
+    : Array(headers.length).fill(1);
+  const totalWeight = weights.reduce((sum, value) => sum + value, 0);
+  const widths = weights.map((value) => tableWidth * value / totalWeight);
+  const perPage = Math.max(10, Math.floor((height - (notesArea ? 315 : 185)) / 30));
   const [headerAsset, watermarkAsset] = await Promise.all([
     webAsset("/brand/combined-header.webp"),
     webAsset("/brand/fanu-watermark.webp"),
@@ -565,37 +578,55 @@ export async function tablePdfBytes({
     doc.text(`قسم الموارد البشرية – مسائي · ${period}`, width - margin, 100, {
       align: "right",
     });
+    let headerX = width - margin;
     headers.forEach((header, i) => {
-      const x = width - margin - (i + 1) * columnWidth;
-      doc.setFillColor("#EAF2FF");
-      doc.rect(x, 112, columnWidth, 36, "F");
-      doc.setTextColor("#14213D");
-      doc.setFontSize(8);
+      headerX -= widths[i];
+      const x = headerX;
+      doc.setFillColor("#0B2B55");
+      doc.rect(x, 112, widths[i], 40, "F");
+      doc.setDrawColor("#FFFFFF");
+      doc.rect(x, 112, widths[i], 40, "S");
+      doc.setTextColor("#FFFFFF");
+      doc.setFontSize(8.5);
       doc.text(
-        doc.splitTextToSize(String(header), columnWidth - 6),
-        x + columnWidth / 2,
+        doc.splitTextToSize(String(header), widths[i] - 7),
+        x + widths[i] / 2,
         127,
         { align: "center" },
       );
     });
-    rows.slice(page * perPage, (page + 1) * perPage).forEach((row, ri) =>
+    const pageRows = rows.slice(page * perPage, (page + 1) * perPage);
+    pageRows.forEach((row, ri) => {
+      let rowX = width - margin;
       row.forEach((value, ci) => {
-        const x = width - margin - (ci + 1) * columnWidth;
-        const y = 148 + ri * 28;
-        doc.setFillColor(ri % 2 ? "#F8FAFD" : "#FFFFFF");
-        doc.rect(x, y, columnWidth, 28, "F");
-        doc.setDrawColor("#DCE5F0");
-        doc.line(x, y + 28, x + columnWidth, y + 28);
-        doc.setTextColor("#24334B");
-        doc.setFontSize(8);
+        rowX -= widths[ci];
+        const x = rowX;
+        const y = 152 + ri * 30;
+        doc.setFillColor(ri % 2 ? "#F1F5FA" : "#FFFFFF");
+        doc.rect(x, y, widths[ci], 30, "F");
+        doc.setDrawColor("#B8C5D6");
+        doc.rect(x, y, widths[ci], 30, "S");
+        doc.setTextColor("#10233F");
+        doc.setFontSize(8.5);
         doc.text(
-          doc.splitTextToSize(String(value ?? "—"), columnWidth - 6),
-          x + columnWidth / 2,
-          y + 17,
-          { align: "center", maxWidth: columnWidth - 6 },
+          doc.splitTextToSize(String(value ?? "—"), widths[ci] - 7),
+          x + widths[ci] / 2,
+          y + 18,
+          { align: "center", maxWidth: widths[ci] - 7 },
         );
-      }),
-    );
+      });
+    });
+    if (notesArea && page === pages - 1) {
+      const notesY = 170 + pageRows.length * 30;
+      doc.setTextColor("#0B2B55");
+      doc.setFontSize(13);
+      doc.text("ملاحظات", width - margin, notesY, { align: "right" });
+      doc.setDrawColor("#7F91A8");
+      doc.setLineWidth(0.8);
+      doc.roundedRect(margin, notesY + 12, tableWidth, 112, 4, 4, "S");
+      for (let line = 1; line < 4; line++)
+        doc.line(margin + 12, notesY + 12 + line * 26, width - margin - 12, notesY + 12 + line * 26);
+    }
     doc.setDrawColor("#DCE5F0");
     doc.line(margin, height - 28, width - margin, height - 28);
     doc.setTextColor("#6E7D92");
