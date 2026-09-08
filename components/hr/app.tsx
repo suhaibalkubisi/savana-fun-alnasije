@@ -66,6 +66,12 @@ import {
 } from "./administration";
 import { ImportPage } from "./import";
 import {
+  AttendanceReport,
+  FingerprintImport,
+  FingerprintIssues,
+  AttendanceRules,
+} from "./attendance";
+import {
   AbsenceLeavePage,
   AdministrativeActionsPage,
   CentralReportsPage,
@@ -73,6 +79,18 @@ import {
 } from "./operations";
 const navigation = [
   { path: "/", label: "الرئيسية", icon: LayoutDashboard, group: "مساحة العمل" },
+  {
+    path: "/daily-dashboard",
+    label: "الداشبورد اليومي",
+    icon: LayoutDashboard,
+    group: "مساحة العمل",
+  },
+  {
+    path: "/monthly-dashboard",
+    label: "الداشبورد الشهري",
+    icon: ChartNoAxesCombined,
+    group: "مساحة العمل",
+  },
   { path: "/employees", label: "الموظفون", icon: Users, group: "مساحة العمل" },
   {
     path: "/status",
@@ -82,6 +100,39 @@ const navigation = [
     group: "العمليات",
   },
   { path: "/lateness", label: "التأخيرات", icon: Timer, group: "العمليات" },
+  {
+    path: "/fingerprint-daily",
+    label: "البصمة اليومية",
+    icon: CalendarPlus,
+    group: "العمليات",
+    write: true,
+  },
+  {
+    path: "/fingerprint-monthly",
+    label: "البصمة الشهرية",
+    icon: CalendarPlus,
+    group: "العمليات",
+    write: true,
+  },
+  {
+    path: "/daily-position",
+    label: "الموقف اليومي",
+    icon: Table2,
+    group: "التقارير",
+  },
+  {
+    path: "/fingerprint-issues",
+    label: "مشاكل البصمة",
+    icon: ShieldCheck,
+    group: "المراجعة",
+  },
+  {
+    path: "/attendance-settings",
+    label: "دوام الأقسام",
+    icon: Timer,
+    group: "الإدارة",
+    admin: true,
+  },
   {
     path: "/absence-leave",
     label: "الغيابات والإجازات",
@@ -466,6 +517,27 @@ function Workspace({ user }: { user: Profile }) {
       />
     );
   else if (path === "/status") content = <StatusPage reference={ref.data} />;
+  else if (
+    ["/daily-position", "/daily-dashboard", "/monthly-dashboard"].includes(path)
+  )
+    content = (
+      <AttendanceReport
+        reference={ref.data}
+        monthly={path === "/monthly-dashboard"}
+        canWrite={user.role !== "VIEWER"}
+      />
+    );
+  else if (["/fingerprint-daily", "/fingerprint-monthly"].includes(path))
+    content = <FingerprintImport monthly={path === "/fingerprint-monthly"} />;
+  else if (path === "/fingerprint-issues")
+    content = (
+      <FingerprintIssues
+        reference={ref.data}
+        canWrite={user.role !== "VIEWER"}
+      />
+    );
+  else if (path === "/attendance-settings")
+    content = <AttendanceRules reference={ref.data} />;
   else if (path === "/lateness")
     content = <LatenessPage reference={ref.data} />;
   else if (path === "/absence-leave")

@@ -51,6 +51,126 @@ async function write(action, data) {
   ).rows[0].data;
 }
 let e, e2, dep1, dep2, late;
+const attendanceWrite = async (action, data) =>
+  (await db.query("select public.attendance_write($1,$2) data", [action, data]))
+    .rows[0].data;
+const attendanceRead = async (kind, filters) =>
+  (await db.query("select public.attendance_read($1,$2) data", [kind, filters]))
+    .rows[0].data;
+test("attendance foundations preserve employee data and deny direct writes", async () => {
+  await who("viewer");
+  for (const table of [
+    "attendance_imports",
+    "fingerprint_identities",
+    "fingerprint_source_rows",
+    "fingerprint_issues",
+    "attendance_department_rules",
+    "attendance_daily_notes",
+  ]) {
+    await assert.rejects(
+      db.query(`select * from public.${table}`),
+      /permission denied/,
+    );
+  }
+  await assert.rejects(attendanceWrite("import.apply", {}), /صلاحية/);
+});
+test("fingerprint preview is atomic, idempotent and excludes unapplied punches", async () => {
+  await who("admin");
+  const ref = await read("reference");
+  const department = ref.departments[0];
+  const person = await write("employee.save", {
+    name: "اختبار بصمة فريد",
+    employee_number: "FP-TEST",
+    department_id: department.id,
+    employment_status: "active",
+  });
+  await attendanceWrite("rule.save", {
+    department_id: department.id,
+    effective_from: "2098-01-01",
+    start_minute: 960,
+    grace_minutes: 5,
+    entry_window_start: 720,
+    entry_window_end: 1439,
+    working_weekdays: [0, 1, 2, 3, 4, 5, 6],
+    default_manager_id: null,
+  });
+  const payload = {
+    source_name: "test.xls",
+    source_hash: "a".repeat(64),
+    import_kind: "daily",
+    period_start: "2098-09-06",
+    period_end: "2098-09-07",
+    rows: [
+      {
+        source_sheet: "Punch Record",
+        source_row: 2,
+        calendar_date: "2098-09-06",
+        person_code: "FP-TEST",
+        source_name: person.name,
+        raw_values: ["01:31", "16:27"],
+        punch_minutes: [91, 987],
+        invalid: false,
+      },
+      {
+        source_sheet: "Punch Record",
+        source_row: 3,
+        calendar_date: "2098-09-07",
+        person_code: "FP-TEST",
+        source_name: person.name,
+        raw_values: ["01:35"],
+        punch_minutes: [95],
+        invalid: false,
+      },
+    ],
+  };
+  let batch = await attendanceWrite("import.preview", payload);
+  assert.equal(batch.summary.matched, 2);
+  assert.equal(
+    (await attendanceWrite("import.preview", payload)).duplicate,
+    true,
+  );
+  let row = (await attendanceRead("daily", { date: "2098-09-06" })).rows.find(
+    (x) => x.employee_id === person.id,
+  );
+  assert.equal(row.status, "no_entry");
+  assert.equal(row.late_minutes, 0);
+  await assert.rejects(
+    attendanceWrite("import.apply", { id: batch.id }),
+    /الإصدار/,
+  );
+  batch = await attendanceWrite("import.apply", {
+    id: batch.id,
+    version: batch.version,
+  });
+  row = (await attendanceRead("daily", { date: "2098-09-06" })).rows.find(
+    (x) => x.employee_id === person.id,
+  );
+  assert.equal(row.status, "late");
+  assert.equal(row.late_minutes, 27);
+  assert.equal(row.entry_minute, 987);
+  assert.equal(row.exit_minute, 95);
+  assert.equal(row.duration_minutes, 548);
+  await write("status.save", {
+    employee_id: person.id,
+    department_id: department.id,
+    record_date: "2098-09-06",
+    status_type: "leave",
+    late_minutes: null,
+  });
+  row = (await attendanceRead("daily", { date: "2098-09-06" })).rows.find(
+    (x) => x.employee_id === person.id,
+  );
+  assert.equal(row.status, "leave");
+  assert.equal(row.late_minutes, 0);
+  const monthly = (
+    await attendanceRead("monthly", { date: "2098-09-01" })
+  ).rows.find((x) => x.employee_id === person.id);
+  assert.equal(monthly.leave, 1);
+  assert.equal(monthly.weighted, 0);
+  await write("employee.save", { ...person, employment_status: "inactive" });
+  await who("hr");
+  await assert.rejects(attendanceWrite("rule.save", {}), /صلاحية/);
+});
 test("AHH entire workbook imports exactly 192 active, 13 resigned, 1 long leave", async () => {
   await who("admin");
   const all = await read("dashboard");

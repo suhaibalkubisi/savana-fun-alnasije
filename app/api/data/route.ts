@@ -6,6 +6,7 @@ import {
   statusSchema,
 } from "@/lib/hr/validation";
 import { z } from "zod";
+import { attendanceSchemas } from "@/lib/hr/attendance-validation";
 import {
   AppError,
   body,
@@ -46,7 +47,11 @@ export async function GET(request: Request) {
       [...params].filter(([k]) => k !== "kind"),
     );
     return json(
-      await rpc("hr_read_v2", { p_kind: kind, p_filters: filters }, s.token),
+      await rpc(
+        kind.startsWith("attendance.") ? "attendance_read" : "hr_read_v2",
+        { p_kind: kind.replace(/^attendance\./, ""), p_filters: filters },
+        s.token,
+      ),
     );
   } catch (e) {
     return errorResponse(e);
@@ -56,10 +61,26 @@ export async function POST(request: Request) {
   try {
     protectMutation(request);
     const s = await session();
-    const { action, data } = await body(request);
+    const { action, data } = await body(request, 8_000_000);
     if (s.profile.role === "VIEWER")
       throw new AppError("ليست لديك صلاحية لهذه العملية", 403);
     let schema: z.ZodTypeAny;
+    if (typeof action === "string" && action.startsWith("attendance.")) {
+      const operation = action.slice(11);
+      if (operation === "rule.save" && s.profile.role !== "ADMIN")
+        throw new AppError("ليست لديك صلاحية لهذه العملية", 403);
+      const validator = attendanceSchemas[operation];
+      if (!validator) throw new AppError("طلب غير صالح");
+      const parsed = validator.safeParse(data);
+      if (!parsed.success) throw new AppError("بيانات غير صالحة");
+      return json(
+        await rpc(
+          "attendance_write",
+          { p_action: operation, p_data: parsed.data },
+          s.token,
+        ),
+      );
+    }
     if (action === "employee.save") schema = employeeSchema;
     else if (action === "status.save") schema = statusSchema;
     else if (action === "status.bulk") schema = statusBulkSchema;

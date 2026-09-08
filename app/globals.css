@@ -43,13 +43,13 @@
   --chart-4: #ffb900;
   --chart-5: #fe9a00;
   --radius: 0.9rem;
-  --sidebar: #071b38;
-  --sidebar-foreground: #eaf2ff;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #263b58;
   --sidebar-primary: #ffffff;
   --sidebar-primary-foreground: #fafafa;
-  --sidebar-accent: #12315c;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #16365f;
+  --sidebar-accent: #edf4ff;
+  --sidebar-accent-foreground: #0f5dc6;
+  --sidebar-border: #e5ebf3;
   --sidebar-ring: #a1a1a1;
 }
 
@@ -252,10 +252,49 @@ p {
 .hr-sidebar {
   --sidebar-width: 276px;
 }
+.attendance-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  padding: 28px;
+  margin-bottom: 28px;
+  background: #fff;
+  border: 1px dashed #b3cae8;
+  border-radius: 18px;
+  color: #164d98;
+}
+.attendance-upload h2 {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.attendance-upload > .field {
+  min-width: 180px;
+  flex: 1;
+}
+.attendance-metrics {
+  margin: 20px 0;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+}
+.attendance-metrics article {
+  border-inline-start: 3px solid #0f5dc6;
+}
+@media (max-width: 640px) {
+  .attendance-upload {
+    padding: 18px;
+    gap: 16px;
+  }
+  .attendance-upload > .field {
+    min-width: 100%;
+  }
+  .attendance-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .hr-sidebar [data-slot="sidebar-inner"] {
-  border-left: 1px solid #173962;
-  background: linear-gradient(180deg, #081d3d 0%, #06172f 100%);
-  color: #eef5ff;
+  border-left: 1px solid #e5ebf3;
+  background: #fff;
+  color: #263b58;
 }
 .hr-sidebar [data-slot="sidebar-header"] {
   padding: 30px 23px 24px;
@@ -299,7 +338,7 @@ p {
 .brand strong {
   font-size: 17px;
   display: block;
-  color: #fff;
+  color: #143462;
 }
 .brand small {
   display: block;
@@ -318,18 +357,18 @@ p {
   border-radius: 8px !important;
   font-size: 14px !important;
   gap: 12px !important;
-  color: #b9c8de;
+  color: #566981;
   margin-bottom: 3px;
 }
 .nav-item[data-active="true"] {
-  background: #ffffff14 !important;
-  color: #fff;
+  background: #edf4ff !important;
+  color: #0f5dc6;
   font-weight: 700;
-  border-right: 3px solid #f2ad21;
+  border-right: 3px solid #0f5dc6;
 }
 .nav-item:hover {
-  background: #ffffff0d;
-  color: #fff;
+  background: #f4f7fc;
+  color: #0f5dc6;
 }
 .sidebar-user {
   display: flex;
@@ -2175,10 +2214,10 @@ p {
   color: #11213c;
 }
 .sidebar-user strong {
-  color: #fff;
+  color: #243b5c;
 }
 .hr-sidebar [data-slot="sidebar-footer"] {
-  border-color: #17385f;
+  border-color: #e5ebf3;
 }
 .avatar {
   background: #17365d;
