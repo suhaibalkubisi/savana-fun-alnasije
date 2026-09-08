@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/combobox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { clock12Parts, minutesFromClock12 } from "@/lib/hr/time-format.mjs";
 import {
   Pagination,
   PaginationContent,
@@ -38,6 +39,63 @@ import {
   type StatusType,
 } from "@/lib/hr/types";
 export type Option = { value: string; label: string };
+export function TimeField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (minutes: number) => void;
+}) {
+  const parts = clock12Parts(value);
+  const number = new Intl.NumberFormat("ar-IQ", { minimumIntegerDigits: 2 });
+  return (
+    <fieldset className="clock-field">
+      <legend>{label}</legend>
+      <div className="clock-field-controls">
+        <Choice
+          label="الساعة"
+          value={String(parts.hour)}
+          empty="الساعة"
+          onChange={(v) =>
+            v &&
+            onChange(minutesFromClock12(Number(v), parts.minute, parts.period))
+          }
+          options={Array.from({ length: 12 }, (_, i) => ({
+            value: String(i + 1),
+            label: number.format(i + 1),
+          }))}
+        />
+        <Choice
+          label="الدقيقة"
+          value={String(parts.minute)}
+          empty="الدقيقة"
+          onChange={(v) =>
+            v &&
+            onChange(minutesFromClock12(parts.hour, Number(v), parts.period))
+          }
+          options={Array.from({ length: 60 }, (_, i) => ({
+            value: String(i),
+            label: number.format(i),
+          }))}
+        />
+        <Choice
+          label="الفترة"
+          value={parts.period}
+          empty="الفترة"
+          onChange={(v) =>
+            v && onChange(minutesFromClock12(parts.hour, parts.minute, v))
+          }
+          options={[
+            { value: "AM", label: "صباحاً" },
+            { value: "PM", label: "مساءً" },
+          ]}
+        />
+      </div>
+    </fieldset>
+  );
+}
 export function Field({
   label,
   children,
@@ -173,7 +231,6 @@ export function PageTitle({
   return (
     <div className="page-title no-print">
       <div>
-        <p className="eyebrow">قسم الموارد البشرية</p>
         <h1>{title}</h1>
         {subtitle && <p className="subtitle">{subtitle}</p>}
       </div>

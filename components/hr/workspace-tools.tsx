@@ -33,6 +33,7 @@ import {
   effectiveDepartmentRule,
 } from "@/lib/hr/operational-summary.mjs";
 import { Field, LoadState, PageTitle } from "./shared";
+import { formatClock12 } from "@/lib/hr/time-format.mjs";
 
 type DailyPerson = {
   employee_id: string;
@@ -107,11 +108,12 @@ export function WorkspaceTools({
     <div className="workspace-tools">
       <Button
         variant="outline"
+        className="global-search-trigger"
         onClick={() => setSearchOpen(true)}
         aria-label="البحث العام"
       >
         <Search size={18} />
-        <span className="tools-label">بحث</span>
+        <span className="tools-label">ابحث عن موظف، قسم أو مسؤول…</span>
       </Button>
       {canWrite && (
         <>
@@ -426,9 +428,7 @@ export function OrganizationPage({
                     <div>
                       <dt>بداية الدوام</dt>
                       <dd dir="ltr">
-                        {r
-                          ? `${String(Math.floor(r.start_minute / 60)).padStart(2, "0")}:${String(r.start_minute % 60).padStart(2, "0")}`
-                          : "—"}
+                        {r ? formatClock12(r.start_minute) : "—"}
                       </dd>
                     </div>
                     <div>

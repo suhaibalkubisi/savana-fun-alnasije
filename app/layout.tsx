@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./workspace-theme.css";
 
 export const metadata: Metadata = {
   title: "قسم الموارد البشرية – مسائي | FANU ALNASIJ",
@@ -23,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased hr-product">{children}</body>
     </html>
   );
 }

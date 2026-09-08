@@ -33,6 +33,7 @@ import {
 import { mutate, useData, useDebounced } from "@/lib/hr/api";
 import { baghdadDate, departmentLabel, type Reference } from "@/lib/hr/types";
 import { download, tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
+import { formatClock12 } from "@/lib/hr/time-format.mjs";
 import {
   Choice,
   Field,
@@ -41,6 +42,7 @@ import {
   SearchBox,
   SearchPicker,
   Pager,
+  TimeField,
 } from "./shared";
 
 type DayRow = {
@@ -114,10 +116,7 @@ const labels: Record<string, string> = {
   ambiguous: "ملتبس",
   invalid: "غير صالح",
 };
-const time = (v: number | null) =>
-  v === null
-    ? "—"
-    : `${String(Math.floor(v / 60)).padStart(2, "0")}:${String(v % 60).padStart(2, "0")}`;
+const time = formatClock12;
 function PrintHeader({ title, period }: { title: string; period: string }) {
   return (
     <div className="print-brand">
@@ -225,7 +224,20 @@ function Metrics({ items }: { items: [string, number][] }) {
   return (
     <section className="metric-strip attendance-metrics">
       {items.map(([label, value]) => (
-        <article key={label}>
+        <article
+          key={label}
+          data-tone={
+            label.includes("غياب")
+              ? "red"
+              : label.includes("تأخير") || label.includes("متأخر")
+                ? "amber"
+                : label.includes("حاضر")
+                  ? "green"
+                  : label.includes("بصمة") || label.includes("مراجعة")
+                    ? "gray"
+                    : "blue"
+          }
+        >
           <span>{label}</span>
           <strong>{value}</strong>
         </article>
@@ -1116,16 +1128,12 @@ export function AttendanceRules({ reference }: { reference: Reference }) {
               ["entry_window_end", "نهاية نافذة الدخول"],
             ] as const
           ).map(([key, label]) => (
-            <Field key={key} label={label}>
-              <Input
-                type="time"
-                value={time(rule?.[key] ?? 0)}
-                onChange={(e) => {
-                  const [h, m] = e.target.value.split(":").map(Number);
-                  update(key, h * 60 + m);
-                }}
-              />
-            </Field>
+            <TimeField
+              key={key}
+              label={label}
+              value={rule?.[key] ?? 0}
+              onChange={(v) => update(key, v)}
+            />
           ))}
           <Field label="دقائق السماح">
             <Input

@@ -200,6 +200,7 @@ export function auditDate(value: string) {
   return new Intl.DateTimeFormat("ar-IQ", {
     dateStyle: "medium",
     timeStyle: "short",
+    hour12: true,
     timeZone: "Asia/Baghdad",
   }).format(new Date(value));
 }

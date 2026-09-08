@@ -34,6 +34,9 @@ import {
   EyeOff,
   ListChecks,
   Network,
+  Fingerprint,
+  ClipboardCheck,
+  Moon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -372,7 +375,14 @@ export function HRApp() {
     );
   return (
     <>
-      <SidebarProvider>
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "17rem",
+            "--sidebar-width-icon": "4.75rem",
+          } as React.CSSProperties
+        }
+      >
         <Navigation
           user={user}
           onLogout={async () => {
@@ -423,100 +433,117 @@ function Login({
   }
   return (
     <main className="login-page">
-      <div className="login-watermark" aria-hidden="true" />
-      <div className="login-brand" aria-label="فن النسيج">
-        <Image
-          src="/brand/fanu-logo.webp"
-          alt="فن النسيج — FANU ALNASIJ BY ZMC"
-          width={280}
-          height={320}
-          priority
-          unoptimized
-        />
-      </div>
-      <section className="login-card">
-        <div className="login-identity">
-          <Image
-            src="/brand/hr-title.webp"
-            alt="قسم الموارد البشرية — مسائي"
-            width={1000}
-            height={247}
-            priority
-            unoptimized
-          />
-          <p className="associated-brand" dir="ltr">
-            SAVANA
-          </p>
+      <aside className="login-company" aria-label="فن النسيج">
+        <div className="login-company-top">
+          <span dir="ltr">FANU ALNASIJ</span>
+          <span className="evening-tag">
+            <Moon size={15} /> مسائي
+          </span>
         </div>
-        <div className="login-heading">
-          <div className="login-lock">
-            <LockKeyhole size={21} />
-          </div>
-          <h1>تسجيل الدخول</h1>
-        </div>
-        <form onSubmit={submit}>
-          <Field label="البريد الإلكتروني">
-            <Input
-              name="email"
-              type="email"
-              dir="ltr"
-              autoComplete="username"
-              placeholder="name@company.com"
-              required
+        <div className="login-company-identity">
+          <div className="login-brand">
+            <Image
+              src="/brand/fanu-logo.webp"
+              alt="فن النسيج — FANU ALNASIJ BY ZMC"
+              width={280}
+              height={320}
+              priority
+              unoptimized
             />
-          </Field>
-          <div className="password-field">
-            <Field label="كلمة المرور">
+          </div>
+          <h2>قسم الموارد البشرية</h2>
+          <p>الشفت المسائي</p>
+        </div>
+        <div className="login-company-footer">
+          <span>فن النسيج</span>
+          <span dir="ltr">BY ZMC</span>
+        </div>
+      </aside>
+      <div className="login-workspace">
+        <section className="login-card">
+          <div className="login-identity">
+            <Image
+              src="/brand/hr-title.webp"
+              alt="قسم الموارد البشرية — مسائي"
+              width={1000}
+              height={247}
+              priority
+              unoptimized
+            />
+            <p className="associated-brand" dir="ltr">
+              SAVANA
+            </p>
+          </div>
+          <div className="login-heading">
+            <div className="login-lock">
+              <LockKeyhole size={21} />
+            </div>
+            <h1>تسجيل الدخول</h1>
+          </div>
+          <form onSubmit={submit}>
+            <Field label="البريد الإلكتروني">
               <Input
-                name="password"
-                type={showPassword ? "text" : "password"}
+                name="email"
+                type="email"
                 dir="ltr"
-                autoComplete="current-password"
+                autoComplete="username"
+                placeholder="name@company.com"
                 required
               />
             </Field>
+            <div className="password-field">
+              <Field label="كلمة المرور">
+                <Input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  dir="ltr"
+                  autoComplete="current-password"
+                  required
+                />
+              </Field>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="password-toggle"
+                aria-label={
+                  showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"
+                }
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </Button>
+            </div>
+            {(!configured || localError || error) && (
+              <p role="alert" className="form-error">
+                {!configured ? "الخدمة غير مهيأة حالياً" : localError || error}
+              </p>
+            )}
             <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="password-toggle"
-              aria-label={
-                showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"
-              }
-              aria-pressed={showPassword}
-              onClick={() => setShowPassword(!showPassword)}
+              className="w-full"
+              type="submit"
+              disabled={busy || !configured}
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {busy ? "جار تسجيل الدخول…" : "تسجيل الدخول"}
+              <ArrowUpLeft size={17} />
             </Button>
-          </div>
-          {(!configured || localError || error) && (
-            <p role="alert" className="form-error">
-              {!configured ? "الخدمة غير مهيأة حالياً" : localError || error}
-            </p>
+          </form>
+          {error && (
+            <Button variant="ghost" onClick={retry}>
+              إعادة المحاولة
+            </Button>
           )}
-          <Button
-            className="w-full"
-            type="submit"
-            disabled={busy || !configured}
-          >
-            {busy ? "جار تسجيل الدخول…" : "تسجيل الدخول"}
-            <ArrowUpLeft size={17} />
-          </Button>
-        </form>
-        {error && (
-          <Button variant="ghost" onClick={retry}>
-            إعادة المحاولة
-          </Button>
-        )}
-      </section>
-      <Image
-        className="login-credit"
-        src="/brand/designed-by.webp"
-        alt="Designed by Suhaib Al-Kubaisi"
-        width={640}
-        height={23}
-        unoptimized
-      />
+        </section>
+        <Image
+          className="login-credit"
+          src="/brand/designed-by.webp"
+          alt="Designed by Suhaib Al-Kubaisi"
+          width={640}
+          height={23}
+          unoptimized
+        />
+      </div>
     </main>
   );
 }
@@ -532,7 +559,7 @@ function Navigation({
   const path = usePathname();
   const { setOpenMobile } = useSidebar();
   return (
-    <Sidebar side="right" className="hr-sidebar">
+    <Sidebar side="right" collapsible="icon" className="hr-sidebar">
       <SidebarHeader>
         <Link href="/" className="brand">
           <Image
@@ -544,10 +571,14 @@ function Navigation({
             unoptimized
           />
           <div>
-            <strong>قسم الموارد البشرية</strong>
-            <small>الشفت المسائي</small>
+            <strong dir="ltr">FANU ALNASIJ</strong>
+            <small>قسم الموارد البشرية</small>
           </div>
         </Link>
+        <div className="sidebar-shift">
+          <Moon size={15} />
+          <span>الشفت المسائي</span>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
@@ -569,6 +600,7 @@ function Navigation({
                     (n.path === "/employees" && path.startsWith("/employees/"))
                   }
                   className="nav-item"
+                  tooltip={n.label}
                 >
                   <Link href={n.path} onClick={() => setOpenMobile(false)}>
                     <n.icon size={19} />
@@ -717,9 +749,10 @@ function Workspace({ user }: { user: Profile }) {
       <header className="topbar no-print">
         <div className="topbar-title">
           <SidebarTrigger aria-label="فتح أو طي القائمة" />
-          <span>{ref.data?.app_name || "قسم الموارد البشرية – مسائي"}</span>
-          <span className="topbar-divider" />
-          <span className="topbar-muted">{nav?.label || "الموظفون"}</span>
+          <div className="topbar-context">
+            <span>{ref.data?.app_name || "قسم الموارد البشرية – مسائي"}</span>
+            <strong>{nav?.label || "الموظفون"}</strong>
+          </div>
         </div>
         <div className="header-date">
           {new Intl.DateTimeFormat("ar-IQ", {
@@ -733,6 +766,15 @@ function Workspace({ user }: { user: Profile }) {
             canWrite={user.role !== "VIEWER"}
           />
         )}
+        <div className="topbar-account">
+          <span className="avatar">{user.name.slice(0, 1)}</span>
+          <div>
+            <strong>{user.name}</strong>
+            <small>
+              {user.role === "VIEWER" ? "عرض فقط" : "الموارد البشرية"}
+            </small>
+          </div>
+        </div>
       </header>
       <div className="workspace" key={path}>
         <PageBoundary>
@@ -778,7 +820,7 @@ function Dashboard({ canWrite }: { canWrite: boolean }) {
   return (
     <>
       <PageTitle
-        title="نظرة عامة"
+        title="مساحة العمل"
         subtitle={monthLabel(baghdadDate().slice(0, 7))}
         actions={
           canWrite && (
@@ -807,9 +849,44 @@ function Dashboard({ canWrite }: { canWrite: boolean }) {
         error={q.error}
         retry={q.refresh}
       >
+        <div className="operation-launchpad">
+          <div className="operation-launchpad-heading">
+            <span className="evening-tag">
+              <Moon size={16} /> الشفت المسائي
+            </span>
+            <h2>التشغيل اليومي</h2>
+          </div>
+          <div className="operation-launchpad-links">
+            {canWrite && (
+              <Link href="/fingerprint-daily">
+                <Fingerprint size={24} />
+                <span>
+                  رفع البصمة اليومية<small>استيراد ومراجعة الحضور</small>
+                </span>
+                <ArrowUpLeft size={18} />
+              </Link>
+            )}
+            <Link href="/daily-position">
+              <Table2 size={24} />
+              <span>
+                الموقف اليومي<small>الحضور وقرارات HR</small>
+              </span>
+              <ArrowUpLeft size={18} />
+            </Link>
+            {canWrite && (
+              <Link href="/tasks">
+                <ClipboardCheck size={24} />
+                <span>
+                  مهام الموارد البشرية<small>الحالات التي تحتاج متابعة</small>
+                </span>
+                <ArrowUpLeft size={18} />
+              </Link>
+            )}
+          </div>
+        </div>
         <section className="kpi-grid">
           {cards.map(([label, key, Icon, color]) => (
-            <article className="kpi-card" key={key}>
+            <article className={`kpi-card metric-${color}`} key={key}>
               <div className={`kpi-icon ${color}`}>
                 <Icon size={20} />
               </div>

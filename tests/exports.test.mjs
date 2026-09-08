@@ -4,6 +4,7 @@ import { readFile, rm } from "node:fs/promises";
 import { build } from "esbuild";
 import { unzipSync, strFromU8 } from "fflate";
 import { report } from "./export-fixture.mjs";
+import { formatClock12 } from "../lib/hr/time-format.mjs";
 const compiled = new URL("./.export-check.mjs", import.meta.url);
 await build({
   entryPoints: ["lib/hr/exports.ts"],
@@ -17,6 +18,24 @@ const { excelBytes, pdfBytes, tableExcelBytes, tablePdfBytes } = await import(
   compiled.href
 );
 after(() => rm(compiled, { force: true }));
+test("daily Excel keeps twelve-hour punch labels and numeric lateness editable", () => {
+  const sheet = strFromU8(
+    unzipSync(
+      tableExcelBytes({
+        title: "الموقف اليومي",
+        period: "2026-09-08",
+        headers: ["وقت الدوام", "وقت الدخول", "وقت الخروج", "دقائق التأخير"],
+        rows: [
+          [formatClock12(960), formatClock12(987), formatClock12(1518), 27],
+        ],
+      }),
+    )["xl/worksheets/sheet1.xml"],
+  );
+  assert.ok(sheet.includes("٠٤:٠٠ م"));
+  assert.ok(sheet.includes("٠٤:٢٧ م"));
+  assert.ok(sheet.includes("٠١:١٨ ص (+١ يوم)"));
+  assert.match(sheet, /<v>27<\/v>/);
+});
 test("Excel matrix exports real active database employees, valid days and weighted totals", () => {
   const zip = unzipSync(excelBytes(report, "الموقف الشامل", false));
   const sheet = strFromU8(zip["xl/worksheets/sheet1.xml"]);
