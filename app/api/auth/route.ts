@@ -1,4 +1,5 @@
 import { loginSchema } from "@/lib/hr/validation";
+import { authenticationFailure } from "@/lib/server/auth-error.mjs";
 import {
   AppError,
   body,
@@ -67,13 +68,13 @@ export async function POST(request: Request) {
       !r.data?.access_token ||
       !r.data.refresh_token ||
       typeof r.data.expires_in !== "number"
-    )
-      throw new AppError(
-        r.response.status === 429
-          ? "محاولات كثيرة. حاول لاحقاً"
-          : "البريد الإلكتروني أو كلمة المرور غير صحيحة",
-        r.response.status === 429 ? 429 : 401,
+    ) {
+      const failure = authenticationFailure(
+        r.response.status,
+        r.data?.error_code ?? r.data?.code,
       );
+      throw new AppError(failure.message, failure.status);
+    }
     await setSession(
       {
         access_token: r.data.access_token,

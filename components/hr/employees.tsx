@@ -75,9 +75,17 @@ export function EmployeesPage({
 }) {
   const params = useSearchParams();
   const [search, setSearch] = useState("");
-  const [dep, setDep] = useState("");
+  const [dep, setDep] = useState(
+    reference.departments.some((d) => d.id === params.get("department_id"))
+      ? params.get("department_id")!
+      : "",
+  );
   const [shift, setShift] = useState("");
-  const [manager, setManager] = useState("");
+  const [manager, setManager] = useState(
+    reference.managers.some((m) => m.id === params.get("manager_id"))
+      ? params.get("manager_id")!
+      : "",
+  );
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [duplicatesOpen, setDuplicatesOpen] = useState(false);
@@ -107,11 +115,17 @@ export function EmployeesPage({
             <>
               {user.role === "ADMIN" && (
                 <>
-                  <Button variant="outline" onClick={() => setDuplicatesOpen(true)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDuplicatesOpen(true)}
+                  >
                     <ScanSearch size={17} /> كشف التكرار
                   </Button>
                   <Button asChild variant="outline">
-                    <Link href="/import"><Upload size={17} />استيراد Excel</Link>
+                    <Link href="/import">
+                      <Upload size={17} />
+                      استيراد Excel
+                    </Link>
                   </Button>
                 </>
               )}
@@ -228,29 +242,47 @@ export function EmployeesPage({
           onClose={() => setEdit(undefined)}
         />
       )}
-      {duplicatesOpen && <DuplicateEmployees onClose={() => setDuplicatesOpen(false)} />}
+      {duplicatesOpen && (
+        <DuplicateEmployees onClose={() => setDuplicatesOpen(false)} />
+      )}
     </>
   );
 }
 
 type DuplicateEmployee = {
-  id: string; name: string; employee_number: string | null; person_code: string | null;
-  department: string; employment_status: string; normalized_name: string;
-  status_count: number; fingerprint_count: number; action_count: number; note_count: number;
+  id: string;
+  name: string;
+  employee_number: string | null;
+  person_code: string | null;
+  department: string;
+  employment_status: string;
+  normalized_name: string;
+  status_count: number;
+  fingerprint_count: number;
+  action_count: number;
+  note_count: number;
 };
 function DuplicateEmployees({ onClose }: { onClose: () => void }) {
-  const q = useData<{ rows: DuplicateEmployee[] }>("attendance.employee_duplicates");
+  const q = useData<{ rows: DuplicateEmployee[] }>(
+    "attendance.employee_duplicates",
+  );
   const [source, setSource] = useState("");
   const [target, setTarget] = useState("");
   const [busy, setBusy] = useState(false);
   const rows = q.data?.rows || [];
   const selected = rows.find((row) => row.id === source);
-  const linked = selected ? selected.status_count + selected.fingerprint_count + selected.action_count + selected.note_count : 0;
+  const linked = selected
+    ? selected.status_count +
+      selected.fingerprint_count +
+      selected.action_count +
+      selected.note_count
+    : 0;
   async function execute(action: "merge" | "delete_permanent") {
     if (!source || (action === "merge" && !target)) return;
-    const message = action === "merge"
-      ? "سيتم نقل الروابط الآمنة إلى الموظف الصحيح ثم إزالة السجل المكرر. هل أنت متأكد؟"
-      : "سيتم حذف السجل نهائياً لأنه بلا روابط. هل أنت متأكد؟";
+    const message =
+      action === "merge"
+        ? "سيتم نقل الروابط الآمنة إلى الموظف الصحيح ثم إزالة السجل المكرر. هل أنت متأكد؟"
+        : "سيتم حذف السجل نهائياً لأنه بلا روابط. هل أنت متأكد؟";
     if (!window.confirm(message)) return;
     setBusy(true);
     try {
@@ -259,31 +291,90 @@ function DuplicateEmployees({ onClose }: { onClose: () => void }) {
         target_employee_id: action === "merge" ? target : undefined,
         confirmed: true,
       });
-      toast.success(action === "merge" ? "تم دمج الموظفين" : "تم حذف السجل المكرر");
-      setSource(""); setTarget(""); await q.refresh();
-    } catch (error) { toast.error((error as Error).message); }
-    finally { setBusy(false); }
+      toast.success(
+        action === "merge" ? "تم دمج الموظفين" : "تم حذف السجل المكرر",
+      );
+      setSource("");
+      setTarget("");
+      await q.refresh();
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="employee-dialog" dir="rtl">
-        <DialogHeader><DialogTitle>كشف وتنظيف الموظفين المكررين</DialogTitle>
-          <DialogDescription>التطابق هنا للمراجعة فقط ولا يتم دمج الأسماء تلقائياً.</DialogDescription>
+        <DialogHeader>
+          <DialogTitle>كشف وتنظيف الموظفين المكررين</DialogTitle>
+          <DialogDescription>
+            التطابق هنا للمراجعة فقط ولا يتم دمج الأسماء تلقائياً.
+          </DialogDescription>
         </DialogHeader>
-        <LoadState loading={q.loading} error={q.error} retry={q.refresh} empty={!rows.length} emptyText="لا توجد أسماء مكررة مشتبهة">
+        <LoadState
+          loading={q.loading}
+          error={q.error}
+          retry={q.refresh}
+          empty={!rows.length}
+          emptyText="لا توجد أسماء مكررة مشتبهة"
+        >
           <div className="form-stack">
-            <Choice label="السجل المكرر" value={source} onChange={setSource}
-              options={rows.map((row) => ({ value: row.id, label: `${row.name} — ${row.employee_number || "بلا رقم"} — ${row.department}` }))} />
-            {selected && <div className="duplicate-summary">
-              <strong>{selected.name}</strong><span>كود البصمة: {selected.person_code || "غير محدد"}</span>
-              <span>الحالات: {selected.status_count} · البصمة: {selected.fingerprint_count} · الإجراءات: {selected.action_count} · الملاحظات: {selected.note_count}</span>
-            </div>}
-            <Choice label="الموظف الصحيح للدمج" value={target} onChange={setTarget}
-              options={rows.filter((row) => row.id !== source && (!selected || row.normalized_name === selected.normalized_name)).map((row) => ({ value: row.id, label: `${row.name} — ${row.employee_number || "بلا رقم"} — ${row.department}` }))} />
+            <Choice
+              label="السجل المكرر"
+              value={source}
+              onChange={setSource}
+              options={rows.map((row) => ({
+                value: row.id,
+                label: `${row.name} — ${row.employee_number || "بلا رقم"} — ${row.department}`,
+              }))}
+            />
+            {selected && (
+              <div className="duplicate-summary">
+                <strong>{selected.name}</strong>
+                <span>كود البصمة: {selected.person_code || "غير محدد"}</span>
+                <span>
+                  الحالات: {selected.status_count} · البصمة:{" "}
+                  {selected.fingerprint_count} · الإجراءات:{" "}
+                  {selected.action_count} · الملاحظات: {selected.note_count}
+                </span>
+              </div>
+            )}
+            <Choice
+              label="الموظف الصحيح للدمج"
+              value={target}
+              onChange={setTarget}
+              options={rows
+                .filter(
+                  (row) =>
+                    row.id !== source &&
+                    (!selected ||
+                      row.normalized_name === selected.normalized_name),
+                )
+                .map((row) => ({
+                  value: row.id,
+                  label: `${row.name} — ${row.employee_number || "بلا رقم"} — ${row.department}`,
+                }))}
+            />
             <div className="form-actions">
-              <Button disabled={busy || !source || !target} onClick={() => void execute("merge")}><Merge size={17}/>دمج آمن</Button>
-              <Button variant="destructive" disabled={busy || !source || linked > 0} onClick={() => void execute("delete_permanent")}><Trash2 size={17}/>حذف نهائي بلا روابط</Button>
-              <Button variant="outline" onClick={onClose}>إلغاء</Button>
+              <Button
+                disabled={busy || !source || !target}
+                onClick={() => void execute("merge")}
+              >
+                <Merge size={17} />
+                دمج آمن
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={busy || !source || linked > 0}
+                onClick={() => void execute("delete_permanent")}
+              >
+                <Trash2 size={17} />
+                حذف نهائي بلا روابط
+              </Button>
+              <Button variant="outline" onClick={onClose}>
+                إلغاء
+              </Button>
             </div>
           </div>
         </LoadState>

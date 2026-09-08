@@ -240,10 +240,9 @@ export async function pdfBytes(
   const height = doc.internal.pageSize.getHeight();
   const margin = 34;
   const usable = width - 2 * margin;
-  const [headerAsset, watermarkAsset, savannaAsset] = await Promise.all([
+  const [headerAsset, watermarkAsset] = await Promise.all([
     webAsset("/brand/combined-header.webp"),
     webAsset("/brand/fanu-watermark.webp"),
-    webAsset("/brand/savanna.webp"),
   ]);
   const dayCount = daysInMonth(report.month);
   const segments = summary
@@ -336,17 +335,9 @@ export async function pdfBytes(
           "fanu-header",
           "FAST",
         );
-      if (savannaAsset)
-        doc.addImage(
-          savannaAsset,
-          "WEBP",
-          margin,
-          27,
-          104,
-          15,
-          "savanna",
-          "FAST",
-        );
+      doc.setFontSize(17);
+      doc.setTextColor("#8B641C");
+      doc.text("SAVANA", margin, 39);
       doc.setDrawColor("#F2AD21");
       doc.setLineWidth(1.2);
       doc.line(margin, 74, width - margin, 74);
@@ -533,12 +524,16 @@ export async function tablePdfBytes({
   const height = doc.internal.pageSize.getHeight();
   const margin = 28;
   const tableWidth = width - margin * 2;
-  const weights = columnWeights?.length === headers.length
-    ? columnWeights
-    : Array(headers.length).fill(1);
+  const weights =
+    columnWeights?.length === headers.length
+      ? columnWeights
+      : Array(headers.length).fill(1);
   const totalWeight = weights.reduce((sum, value) => sum + value, 0);
-  const widths = weights.map((value) => tableWidth * value / totalWeight);
-  const perPage = Math.max(10, Math.floor((height - (notesArea ? 315 : 185)) / 30));
+  const widths = weights.map((value) => (tableWidth * value) / totalWeight);
+  const perPage = Math.max(
+    10,
+    Math.floor((height - (notesArea ? 315 : 185)) / 30),
+  );
   const [headerAsset, watermarkAsset] = await Promise.all([
     webAsset("/brand/combined-header.webp"),
     webAsset("/brand/fanu-watermark.webp"),
@@ -625,7 +620,12 @@ export async function tablePdfBytes({
       doc.setLineWidth(0.8);
       doc.roundedRect(margin, notesY + 12, tableWidth, 112, 4, 4, "S");
       for (let line = 1; line < 4; line++)
-        doc.line(margin + 12, notesY + 12 + line * 26, width - margin - 12, notesY + 12 + line * 26);
+        doc.line(
+          margin + 12,
+          notesY + 12 + line * 26,
+          width - margin - 12,
+          notesY + 12 + line * 26,
+        );
     }
     doc.setDrawColor("#DCE5F0");
     doc.line(margin, height - 28, width - margin, height - 28);

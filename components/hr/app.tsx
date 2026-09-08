@@ -1,5 +1,13 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useState,
+  lazy,
+  Suspense,
+  Component,
+  type ReactNode,
+  type FormEvent,
+} from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -22,6 +30,10 @@ import {
   CalendarX2,
   Gavel,
   FileBarChart,
+  Eye,
+  EyeOff,
+  ListChecks,
+  Network,
 } from "lucide-react";
 import {
   Sidebar,
@@ -55,30 +67,101 @@ import {
   type AdministrativeAction,
 } from "@/lib/hr/types";
 import { LoadState, PageTitle, StatusBadge, Field } from "./shared";
-import { EmployeesPage, EmployeeDetail } from "./employees";
-import { StatusPage } from "./status";
-import { ReportPage } from "./reports";
-import {
-  AuditPage,
-  ReviewPage,
-  SettingsPage,
-  UsersPage,
-} from "./administration";
-import { ImportPage } from "./import";
-import {
-  AttendanceReport,
-  FingerprintImport,
-  FingerprintIssues,
-  AttendanceRules,
-} from "./attendance";
-import {
-  AbsenceLeavePage,
-  AdministrativeActionsPage,
-  CentralReportsPage,
-  LatenessPage,
-} from "./operations";
+import { WorkspaceTools } from "./workspace-tools";
+const EmployeesPage = lazy(() =>
+  import("./employees").then((m) => ({ default: m.EmployeesPage })),
+);
+const EmployeeDetail = lazy(() =>
+  import("./employees").then((m) => ({ default: m.EmployeeDetail })),
+);
+const StatusPage = lazy(() =>
+  import("./status").then((m) => ({ default: m.StatusPage })),
+);
+const ReportPage = lazy(() =>
+  import("./reports").then((m) => ({ default: m.ReportPage })),
+);
+const AuditPage = lazy(() =>
+  import("./administration").then((m) => ({ default: m.AuditPage })),
+);
+const ReviewPage = lazy(() =>
+  import("./administration").then((m) => ({ default: m.ReviewPage })),
+);
+const SettingsPage = lazy(() =>
+  import("./administration").then((m) => ({ default: m.SettingsPage })),
+);
+const UsersPage = lazy(() =>
+  import("./administration").then((m) => ({ default: m.UsersPage })),
+);
+const ImportPage = lazy(() =>
+  import("./import").then((m) => ({ default: m.ImportPage })),
+);
+const OperationsCenter = lazy(() =>
+  import("./workspace-tools").then((m) => ({ default: m.OperationsCenter })),
+);
+const OrganizationPage = lazy(() =>
+  import("./workspace-tools").then((m) => ({ default: m.OrganizationPage })),
+);
+const AttendanceReport = lazy(() =>
+  import("./attendance").then((m) => ({ default: m.AttendanceReport })),
+);
+const FingerprintImport = lazy(() =>
+  import("./attendance").then((m) => ({ default: m.FingerprintImport })),
+);
+const FingerprintIssues = lazy(() =>
+  import("./attendance").then((m) => ({ default: m.FingerprintIssues })),
+);
+const AttendanceRules = lazy(() =>
+  import("./attendance").then((m) => ({ default: m.AttendanceRules })),
+);
+const AbsenceLeavePage = lazy(() =>
+  import("./operations").then((m) => ({ default: m.AbsenceLeavePage })),
+);
+const AdministrativeActionsPage = lazy(() =>
+  import("./operations").then((m) => ({
+    default: m.AdministrativeActionsPage,
+  })),
+);
+const CentralReportsPage = lazy(() =>
+  import("./operations").then((m) => ({ default: m.CentralReportsPage })),
+);
+const LatenessPage = lazy(() =>
+  import("./operations").then((m) => ({ default: m.LatenessPage })),
+);
+
+class PageBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? (
+      <div className="error-state" role="alert">
+        <p>تعذر عرض الصفحة. أعد تحميلها للمحاولة مجدداً</p>
+        <Button onClick={() => window.location.reload()}>إعادة التحميل</Button>
+      </div>
+    ) : (
+      this.props.children
+    );
+  }
+}
 const navigation = [
   { path: "/", label: "الرئيسية", icon: LayoutDashboard, group: "مساحة العمل" },
+  {
+    path: "/tasks",
+    label: "مهام الموارد البشرية",
+    icon: ListChecks,
+    group: "مساحة العمل",
+    write: true,
+  },
+  {
+    path: "/organization",
+    label: "الأقسام والمسؤولون",
+    icon: Network,
+    group: "مساحة العمل",
+  },
   {
     path: "/daily-dashboard",
     label: "الداشبورد اليومي",
@@ -193,6 +276,40 @@ const navigation = [
     group: "الإدارة",
   },
 ];
+const navigationSections = [
+  { label: "مساحة العمل", paths: ["/", "/tasks"] },
+  {
+    label: "التشغيل اليومي",
+    paths: ["/daily-dashboard", "/daily-position", "/status"],
+  },
+  {
+    label: "البصمة والحضور",
+    paths: [
+      "/fingerprint-daily",
+      "/fingerprint-monthly",
+      "/fingerprint-issues",
+    ],
+  },
+  { label: "الموظفون", paths: ["/employees", "/organization", "/actions"] },
+  {
+    label: "التقارير الشهرية",
+    paths: ["/monthly-dashboard", "/monthly", "/departments", "/summary"],
+  },
+  {
+    label: "التقارير والمتابعة",
+    paths: ["/lateness", "/absence-leave", "/reports", "/review"],
+  },
+  {
+    label: "الإدارة",
+    paths: ["/attendance-settings", "/audit", "/users", "/settings"],
+  },
+];
+const organizedNavigation = navigationSections.flatMap((section) =>
+  section.paths.flatMap((path) => {
+    const item = navigation.find((n) => n.path === path);
+    return item ? [{ ...item, group: section.label }] : [];
+  }),
+);
 export function HRApp() {
   const [user, setUser] = useState<Profile | null>(null);
   const [configured, setConfigured] = useState(true);
@@ -286,6 +403,7 @@ function Login({
 }) {
   const [busy, setBusy] = useState(false);
   const [localError, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -326,15 +444,9 @@ function Login({
             priority
             unoptimized
           />
-          <Image
-            className="login-savanna"
-            src="/brand/savanna.webp"
-            alt="savanna"
-            width={700}
-            height={101}
-            priority
-            unoptimized
-          />
+          <p className="associated-brand" dir="ltr">
+            SAVANA
+          </p>
         </div>
         <div className="login-heading">
           <div className="login-lock">
@@ -353,15 +465,30 @@ function Login({
               required
             />
           </Field>
-          <Field label="كلمة المرور">
-            <Input
-              name="password"
-              type="password"
-              dir="ltr"
-              autoComplete="current-password"
-              required
-            />
-          </Field>
+          <div className="password-field">
+            <Field label="كلمة المرور">
+              <Input
+                name="password"
+                type={showPassword ? "text" : "password"}
+                dir="ltr"
+                autoComplete="current-password"
+                required
+              />
+            </Field>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="password-toggle"
+              aria-label={
+                showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"
+              }
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </Button>
+          </div>
           {(!configured || localError || error) && (
             <p role="alert" className="form-error">
               {!configured ? "الخدمة غير مهيأة حالياً" : localError || error}
@@ -424,7 +551,7 @@ function Navigation({
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {navigation
+          {organizedNavigation
             .filter(
               (n) =>
                 (!n.admin || user.role === "ADMIN") &&
@@ -459,7 +586,7 @@ function Navigation({
             <strong>{user.name}</strong>
             <small>
               {user.role === "ADMIN"
-                ? "مدير النظام"
+                ? "الموارد البشرية · صلاحية كاملة"
                 : user.role === "HR"
                   ? "الموارد البشرية"
                   : "عرض فقط"}
@@ -506,6 +633,14 @@ function Workspace({ user }: { user: Profile }) {
     );
   else if (path === "/")
     content = <Dashboard canWrite={user.role !== "VIEWER"} />;
+  else if (path === "/tasks") content = <OperationsCenter />;
+  else if (path === "/organization")
+    content = (
+      <OrganizationPage
+        reference={ref.data}
+        canConfigure={user.role === "ADMIN"}
+      />
+    );
   else if (path === "/employees")
     content = <EmployeesPage reference={ref.data} user={user} />;
   else if (path.startsWith("/employees/"))
@@ -581,7 +716,7 @@ function Workspace({ user }: { user: Profile }) {
     <>
       <header className="topbar no-print">
         <div className="topbar-title">
-          <SidebarTrigger aria-label="القائمة" className="mobile-toggle" />
+          <SidebarTrigger aria-label="فتح أو طي القائمة" />
           <span>{ref.data?.app_name || "قسم الموارد البشرية – مسائي"}</span>
           <span className="topbar-divider" />
           <span className="topbar-muted">{nav?.label || "الموظفون"}</span>
@@ -592,9 +727,19 @@ function Workspace({ user }: { user: Profile }) {
             timeZone: "Asia/Baghdad",
           }).format(new Date())}
         </div>
+        {ref.data && (
+          <WorkspaceTools
+            reference={ref.data}
+            canWrite={user.role !== "VIEWER"}
+          />
+        )}
       </header>
       <div className="workspace" key={path}>
-        {content}
+        <PageBoundary>
+          <Suspense fallback={<LoadState loading>{null}</LoadState>}>
+            {content}
+          </Suspense>
+        </PageBoundary>
       </div>
     </>
   );

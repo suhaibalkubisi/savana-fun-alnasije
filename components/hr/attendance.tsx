@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -242,11 +243,24 @@ export function AttendanceReport({
   monthly?: boolean;
   canWrite?: boolean;
 }) {
-  const [date, setDate] = useState(baghdadDate()),
-    [dep, setDep] = useState(""),
+  const params = useSearchParams();
+  const [date, setDate] = useState(
+      /^\d{4}-\d{2}-\d{2}$/.test(params.get("date") || "")
+        ? params.get("date")!
+        : baghdadDate(),
+    ),
+    [dep, setDep] = useState(
+      reference.departments.some((d) => d.id === params.get("department_id"))
+        ? params.get("department_id")!
+        : "",
+    ),
     [search, setSearch] = useState(""),
     [quick, setQuick] = useState<Set<string> | null>(null),
-    [advanced, setAdvanced] = useState("");
+    [advanced, setAdvanced] = useState(
+      Object.hasOwn(labels, params.get("status") || "")
+        ? params.get("status")!
+        : "",
+    );
   const [edit, setEdit] = useState<DayRow | null>(null),
     [notes, setNotes] = useState(""),
     [procedure, setProcedure] = useState(""),
@@ -259,9 +273,11 @@ export function AttendanceReport({
   );
   const title = monthly ? "الداشبورد الشهري" : "الموقف اليومي";
   const rawRows = query.data?.rows || [];
-  const group = (value: string) => value.startsWith("absence") ? "absence" : value;
+  const group = (value: string) =>
+    value.startsWith("absence") ? "absence" : value;
   const rows = rawRows.filter((r) => {
-    if (monthly) return !search || `${r.name} ${r.employee_number}`.includes(search);
+    if (monthly)
+      return !search || `${r.name} ${r.employee_number}`.includes(search);
     if (advanced) return r.status === advanced;
     return quick === null || quick.has(group(r.status));
   });
@@ -388,7 +404,11 @@ export function AttendanceReport({
             period={monthly ? date.slice(0, 7) : date}
             headers={headers}
             rows={values}
-            columnWeights={monthly ? undefined : [4,8,8,15,16,13,9,9,8,9,24,11,18]}
+            columnWeights={
+              monthly
+                ? undefined
+                : [4, 8, 8, 15, 16, 13, 9, 9, 8, 9, 24, 11, 18]
+            }
             notesArea={!monthly}
           />
         }
@@ -440,23 +460,56 @@ export function AttendanceReport({
           <div className="daily-filter-card">
             <span>التصفية السريعة</span>
             <div className="quick-filter-row">
-              {[["present", "حاضر"], ["late", "تأخير"], ["absence", "غياب"]].map(([value, label]) => (
-                <Button key={value} type="button" size="sm"
+              {[
+                ["present", "حاضر"],
+                ["late", "تأخير"],
+                ["absence", "غياب"],
+              ].map(([value, label]) => (
+                <Button
+                  key={value}
+                  type="button"
+                  size="sm"
                   variant={quick?.has(value) ? "default" : "outline"}
-                  onClick={() => setQuick((current) => {
-                    const next = new Set(current || []);
-                    if (next.has(value)) next.delete(value); else next.add(value);
-                    return next;
-                  })}>{label}</Button>
+                  onClick={() =>
+                    setQuick((current) => {
+                      const next = new Set(current || []);
+                      if (next.has(value)) next.delete(value);
+                      else next.add(value);
+                      return next;
+                    })
+                  }
+                >
+                  {label}
+                </Button>
               ))}
-              <Button type="button" size="sm" variant="ghost" onClick={() => setQuick(null)}>تحديد الكل</Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => setQuick(new Set())}>مسح الكل</Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setQuick(null)}
+              >
+                تحديد الكل
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setQuick(new Set())}
+              >
+                مسح الكل
+              </Button>
             </div>
           </div>
         )}
         {!monthly && (
-          <Choice label="تصفية متقدمة" value={advanced} onChange={setAdvanced}
-            options={Object.entries(labels).slice(0, 9).map(([value, label]) => ({ value, label }))} />
+          <Choice
+            label="تصفية متقدمة"
+            value={advanced}
+            onChange={setAdvanced}
+            options={Object.entries(labels)
+              .slice(0, 9)
+              .map(([value, label]) => ({ value, label }))}
+          />
         )}
       </div>
       <LoadState
@@ -486,7 +539,10 @@ export function AttendanceReport({
                   ],
                   ["إجازة", count("leave")],
                   ["بلا بصمة دخول", count("no_entry")],
-                  ["يحتاج مراجعة", rawRows.filter((r) => r.needs_review).length],
+                  [
+                    "يحتاج مراجعة",
+                    rawRows.filter((r) => r.needs_review).length,
+                  ],
                 ]
           }
         />
@@ -535,20 +591,42 @@ export function AttendanceReport({
           </Field>
           <Field label="قرار HR النهائي">
             <div className="status-choice-grid">
-              {[["", "بدون قرار"], ["absence", "غياب"], ["absence2", "غياب ×2"], ["absence3", "غياب ×3"], ["leave", "إجازة"], ["late", "تأخير"]].map(([value, label]) => (
-                <Button key={value || "none"} type="button" size="sm"
+              {[
+                ["", "بدون قرار"],
+                ["absence", "غياب"],
+                ["absence2", "غياب ×2"],
+                ["absence3", "غياب ×3"],
+                ["leave", "إجازة"],
+                ["late", "تأخير"],
+              ].map(([value, label]) => (
+                <Button
+                  key={value || "none"}
+                  type="button"
+                  size="sm"
                   variant={decision === value ? "default" : "outline"}
-                  onClick={() => setDecision(value)}>{label}</Button>
+                  onClick={() => setDecision(value)}
+                >
+                  {label}
+                </Button>
               ))}
             </div>
           </Field>
           {decision === "late" && (
             <Field label="دقائق التأخير">
-              <Input type="number" min={0} max={10080} value={decisionMinutes}
-                onChange={(e) => setDecisionMinutes(e.target.value)} required />
+              <Input
+                type="number"
+                min={0}
+                max={10080}
+                value={decisionMinutes}
+                onChange={(e) => setDecisionMinutes(e.target.value)}
+                required
+              />
             </Field>
           )}
-          <Button disabled={busy || (decision === "late" && !decisionMinutes)} onClick={save}>
+          <Button
+            disabled={busy || (decision === "late" && !decisionMinutes)}
+            onClick={save}
+          >
             <CheckCircle2 size={17} /> {busy ? "جار الحفظ…" : "حفظ التعديلات"}
           </Button>
         </DialogContent>
@@ -695,13 +773,29 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
           />
           {(current.state === "applied" || current.state === "preview") && (
             <section className="attendance-next-actions">
-              <h2>{current.state === "applied" ? "تمت معالجة البصمة" : "راجع النتائج قبل الاعتماد"}</h2>
+              <h2>
+                {current.state === "applied"
+                  ? "تمت معالجة البصمة"
+                  : "راجع النتائج قبل الاعتماد"}
+              </h2>
               <div className="actions">
-                <Button asChild variant="outline"><Link href="/daily-position">افتح الموقف اليومي</Link></Button>
-                <Button asChild variant="outline"><Link href="/daily-position?status=late">راجع المتأخرين</Link></Button>
-                <Button asChild variant="outline"><Link href="/daily-position?status=no_entry">راجع بدون بصمة دخول</Link></Button>
-                <Button asChild variant="outline"><Link href="/fingerprint-issues">راجع مشاكل المطابقة</Link></Button>
-                <Button asChild variant="outline"><Link href="/status">عدّل حالات HR</Link></Button>
+                <Button asChild variant="outline">
+                  <Link href="/daily-position">افتح الموقف اليومي</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/daily-position?status=late">راجع المتأخرين</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/daily-position?status=no_entry">
+                    راجع بدون بصمة دخول
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/fingerprint-issues">راجع مشاكل المطابقة</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/status">عدّل حالات HR</Link>
+                </Button>
               </div>
             </section>
           )}

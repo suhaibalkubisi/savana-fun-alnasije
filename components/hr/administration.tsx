@@ -344,7 +344,7 @@ export function UsersPage() {
                   </TableCell>
                   <TableCell>
                     {u.role === "ADMIN"
-                      ? "مدير النظام"
+                      ? "الموارد البشرية · صلاحية كاملة"
                       : u.role === "HR"
                         ? "موارد بشرية"
                         : "مشاهدة فقط"}
@@ -469,7 +469,7 @@ function UserEditor({
             onChange={(v) => setRole(v as Profile["role"])}
             empty="اختر الصلاحية"
             options={[
-              { value: "ADMIN", label: "مدير النظام" },
+              { value: "ADMIN", label: "الموارد البشرية · صلاحية كاملة" },
               { value: "HR", label: "موارد بشرية" },
               { value: "VIEWER", label: "مشاهدة فقط" },
             ]}

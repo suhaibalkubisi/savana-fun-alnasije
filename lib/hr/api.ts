@@ -1,14 +1,24 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 export async function api<T>(path: string, body?: unknown): Promise<T> {
-  const response = await fetch(path, {
-    method: body ? "POST" : "GET",
-    headers: body
-      ? { "Content-Type": "application/json", "x-hr-request": "1" }
-      : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method: body ? "POST" : "GET",
+      headers: body
+        ? { "Content-Type": "application/json", "x-hr-request": "1" }
+        : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+      signal: AbortSignal.timeout(45000),
+    });
+  } catch {
+    throw new Error(
+      body
+        ? "لم تصل نتيجة الطلب. تحقق من السجل قبل إعادة المحاولة لتجنب التكرار"
+        : "تعذر تحميل البيانات. تحقق من الاتصال وأعد المحاولة",
+    );
+  }
   const data = await response
     .json()
     .catch(() => ({ error: "تعذر قراءة الاستجابة" }));
@@ -59,6 +69,7 @@ export function useData<T>(
     };
   }, [query, key, enabled]);
   useEffect(() => {
+    if (!enabled) return;
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") refresh();
     }, 30000);
@@ -69,7 +80,7 @@ export function useData<T>(
       window.removeEventListener("hr-data-changed", refresh);
       window.removeEventListener("focus", refresh);
     };
-  }, [refresh]);
+  }, [refresh, enabled]);
   return {
     data: result.data,
     loading: enabled && result.key !== key,

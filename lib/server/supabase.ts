@@ -38,10 +38,18 @@ export async function upstream(
   const c = requireConfig();
   const key = admin ? c.secretKey : c.publishableKey;
   if (!key) throw new AppError("إدارة الحسابات غير مهيأة", 503);
-  const response = await fetch(`${c.url}${path}`, {
-    ...options,
-    headers: supabaseHeaders(c, { token, admin, headers: options.headers }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${c.url}${path}`, {
+      ...options,
+      headers: supabaseHeaders(c, { token, admin, headers: options.headers }),
+    });
+  } catch {
+    throw new AppError(
+      "تعذر الاتصال بالخدمة. تحقق من الاتصال ثم حاول مجدداً",
+      503,
+    );
+  }
   const data = (await response.json().catch(() => null)) as
     | ({
         access_token?: string;
@@ -157,9 +165,7 @@ export function errorResponse(error: unknown) {
     );
   console.error(
     "HR request failed",
-    error instanceof Error
-      ? `${error.name}: ${error.message}`
-      : "unknown",
+    error instanceof Error ? `${error.name}: ${error.message}` : "unknown",
   );
   return Response.json(
     { error: "تعذر إكمال العملية. حاول مرة أخرى" },

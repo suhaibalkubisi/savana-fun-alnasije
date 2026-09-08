@@ -594,11 +594,19 @@ export function AdministrativeActionsPage({
   const initialEmployee = params.get("employee_id") || "";
   const initialRecord = params.get("record_id") || "";
   const initialDate = params.get("date") || baghdadDate();
-  const [month, setMonth] = useState(initialDate.slice(0, 7));
+  const [month, setMonth] = useState(
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(params.get("month") || "")
+      ? params.get("month")!
+      : initialDate.slice(0, 7),
+  );
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("");
   const [type, setType] = useState("");
-  const [state, setState] = useState("");
+  const [state, setState] = useState(
+    ["active", "closed", "cancelled"].includes(params.get("state") || "")
+      ? params.get("state")!
+      : "",
+  );
   const [page, setPage] = useState(1);
   const [editor, setEditor] = useState<AdministrativeAction | null | undefined>(
     initialEmployee && canWrite ? null : undefined,
