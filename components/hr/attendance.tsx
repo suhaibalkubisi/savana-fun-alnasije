@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Image from "next/image";
+import { BrandImage } from "./brand-image";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -120,12 +120,9 @@ const time = formatClock12;
 function PrintHeader({ title, period }: { title: string; period: string }) {
   return (
     <div className="print-brand">
-      <Image
-        src="/brand/combined-header.webp"
-        alt="فن النسيج — قسم الموارد البشرية"
-        width={1200}
-        height={191}
-        unoptimized
+      <BrandImage
+        kind="header"
+        alt="فن النسيج — قسم الموارد البشرية – مسائي — SAVANA"
       />
       <h1>{title}</h1>
       <p>{period}</p>

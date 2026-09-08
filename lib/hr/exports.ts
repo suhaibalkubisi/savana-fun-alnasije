@@ -1,4 +1,6 @@
 import { zipSync, strToU8 } from "fflate";
+import type { jsPDF } from "jspdf";
+import { brandAssets, type BrandKind } from "./brand";
 import {
   daysInMonth,
   monthLabel,
@@ -201,10 +203,55 @@ async function webAsset(path: string) {
     let binary = "";
     for (let i = 0; i < bytes.length; i += 8192)
       binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-    return `data:image/webp;base64,${btoa(binary)}`;
+    const mime = path.endsWith(".png")
+      ? "png"
+      : path.endsWith(".jpeg")
+        ? "jpeg"
+        : "webp";
+    return `data:image/${mime};base64,${btoa(binary)}`;
   } catch {
     return null;
   }
+}
+function drawBrand(
+  doc: jsPDF,
+  kind: BrandKind,
+  data: string | null,
+  x: number,
+  y: number,
+  width: number,
+) {
+  if (!data) return;
+  const asset = brandAssets[kind];
+  const [left, top, cropWidth, cropHeight] = asset.crop;
+  const scale = width / cropWidth;
+  doc.saveGraphicsState();
+  doc.rect(x, y, width, cropHeight * scale);
+  doc.clip();
+  doc.discardPath();
+  doc.addImage(
+    data,
+    asset.format,
+    x - left * scale,
+    y - top * scale,
+    asset.width * scale,
+    asset.height * scale,
+    `official-${kind}`,
+    "FAST",
+  );
+  doc.restoreGraphicsState();
+}
+function fillReportCell(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  doc.saveGraphicsState();
+  doc.setGState(doc.GState({ opacity: 0.7 }));
+  doc.rect(x, y, width, height, "F");
+  doc.restoreGraphicsState();
 }
 export async function pdfBytes(
   report: Report,
@@ -240,9 +287,10 @@ export async function pdfBytes(
   const height = doc.internal.pageSize.getHeight();
   const margin = 34;
   const usable = width - 2 * margin;
-  const [headerAsset, watermarkAsset] = await Promise.all([
-    webAsset("/brand/combined-header.webp"),
-    webAsset("/brand/fanu-watermark.webp"),
+  const [headerAsset, watermarkAsset, savanaAsset] = await Promise.all([
+    webAsset(brandAssets.header.src),
+    webAsset(brandAssets.watermark.src),
+    webAsset(brandAssets.savana.src),
   ]);
   const dayCount = daysInMonth(report.month);
   const segments = summary
@@ -313,31 +361,10 @@ export async function pdfBytes(
     allRows.push(total);
     for (let offset = 0; offset < allRows.length; offset += perPage) {
       if (page++) doc.addPage();
-      if (watermarkAsset)
-        doc.addImage(
-          watermarkAsset,
-          "WEBP",
-          width / 2 - 105,
-          280,
-          175,
-          215,
-          "fanu-watermark",
-          "FAST",
-        );
-      if (headerAsset)
-        doc.addImage(
-          headerAsset,
-          "WEBP",
-          width - 320,
-          18,
-          286,
-          46,
-          "fanu-header",
-          "FAST",
-        );
-      doc.setFontSize(17);
-      doc.setTextColor("#8B641C");
-      doc.text("SAVANA", margin, 39);
+      drawBrand(doc, "watermark", watermarkAsset, width / 2 - 90, 270, 180);
+      drawBrand(doc, "header", headerAsset, width - 320, 16, 286);
+      // SAVANA is the supplied original wordmark, never substitute typed text.
+      drawBrand(doc, "savana", savanaAsset, margin, 28, 110);
       doc.setDrawColor("#F2AD21");
       doc.setLineWidth(1.2);
       doc.line(margin, 74, width - margin, 74);
@@ -373,7 +400,7 @@ export async function pdfBytes(
         r.forEach((v, ci) => {
           x -= base[ci];
           doc.setFillColor(last ? "#D9E5F3" : ri % 2 ? "#F1F5FA" : "#FFFFFF");
-          doc.rect(x, y, base[ci], 30, "F");
+          fillReportCell(doc, x, y, base[ci], 30);
           doc.setDrawColor("#B8C5D6");
           doc.rect(x, y, base[ci], 30, "S");
           doc.setTextColor("#10233F");
@@ -535,34 +562,21 @@ export async function tablePdfBytes({
     Math.floor((height - (notesArea ? 315 : 185)) / 30),
   );
   const [headerAsset, watermarkAsset] = await Promise.all([
-    webAsset("/brand/combined-header.webp"),
-    webAsset("/brand/fanu-watermark.webp"),
+    webAsset(brandAssets.header.src),
+    webAsset(brandAssets.watermark.src),
   ]);
   const pages = Math.max(1, Math.ceil(rows.length / perPage));
   for (let page = 0; page < pages; page++) {
     if (page) doc.addPage();
-    if (watermarkAsset)
-      doc.addImage(
-        watermarkAsset,
-        "WEBP",
-        width / 2 - 80,
-        height / 2 - 95,
-        130,
-        160,
-        "table-watermark",
-        "FAST",
-      );
-    if (headerAsset)
-      doc.addImage(
-        headerAsset,
-        "WEBP",
-        width - 245,
-        16,
-        215,
-        34,
-        "table-header",
-        "FAST",
-      );
+    drawBrand(
+      doc,
+      "watermark",
+      watermarkAsset,
+      width / 2 - 70,
+      height / 2 - 80,
+      140,
+    );
+    drawBrand(doc, "header", headerAsset, width - 270, 12, 240);
     doc.setDrawColor("#F2AD21");
     doc.line(margin, 60, width - margin, 60);
     doc.setTextColor("#14213D");
@@ -598,7 +612,7 @@ export async function tablePdfBytes({
         const x = rowX;
         const y = 152 + ri * 30;
         doc.setFillColor(ri % 2 ? "#F1F5FA" : "#FFFFFF");
-        doc.rect(x, y, widths[ci], 30, "F");
+        fillReportCell(doc, x, y, widths[ci], 30);
         doc.setDrawColor("#B8C5D6");
         doc.rect(x, y, widths[ci], 30, "S");
         doc.setTextColor("#10233F");

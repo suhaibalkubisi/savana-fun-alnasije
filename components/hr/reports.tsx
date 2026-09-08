@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { BrandImage } from "./brand-image";
 import { FileSpreadsheet, FileDown, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -178,12 +178,9 @@ export function ReportPage({
       />
       <section className="panel report-panel report-surface">
         <div className="print-brand">
-          <Image
-            src="/brand/combined-header.webp"
-            alt="فن النسيج — قسم الموارد البشرية"
-            width={1200}
-            height={191}
-            unoptimized
+          <BrandImage
+            kind="header"
+            alt="فن النسيج — قسم الموارد البشرية – مسائي — SAVANA"
           />
           <h1>{title}</h1>
           <p>

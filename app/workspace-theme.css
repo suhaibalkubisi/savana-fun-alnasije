@@ -7,6 +7,45 @@
 }
 
 @media screen {
+  .hr-product .auth-brand-art { width: 62px; margin: 0 auto 20px; }
+  .hr-product .login-company .login-brand {
+    width: 280px;
+    height: auto;
+    padding: 20px;
+  }
+  .hr-product .login-brand .brand-artwork {
+    width: 100%;
+  }
+  .hr-product .login-identity .brand-artwork {
+    width: 100%;
+  }
+  .hr-product .login-identity .savana-wordmark {
+    width: 132px;
+    margin: 18px auto 0;
+  }
+  .hr-product .sidebar-company-art {
+    width: 220px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: #fff;
+  }
+  .hr-product .sidebar-symbol-art {
+    display: none !important;
+  }
+  .hr-product .sidebar-savana-art {
+    width: 100px;
+    margin: 0 auto 14px;
+    border-radius: 4px;
+  }
+  .hr-product [data-collapsible="icon"] .sidebar-company-art,
+  .hr-product [data-collapsible="icon"] .sidebar-savana-art {
+    display: none !important;
+  }
+  .hr-product [data-collapsible="icon"] .sidebar-symbol-art {
+    display: block !important;
+    width: 42px;
+    border-radius: 6px;
+  }
   .hr-product {
     --background: #f1f4f9;
     --foreground: #16243b;
@@ -1061,6 +1100,14 @@
   }
 }
 @media screen and (max-width: 767px) {
+  .hr-product .login-company .login-brand {
+    width: 110px;
+    height: auto;
+    padding: 6px;
+  }
+  .hr-product .login-company .login-company-identity {
+    grid-template-columns: 110px 1fr;
+  }
   .hr-product .topbar {
     min-height: 72px;
     padding: 12px 16px;
@@ -1180,7 +1227,17 @@
     flex: 1;
   }
   .hr-product .login-identity {
-    display: none;
+    display: block;
+    padding: 0;
+    margin: 0 0 22px;
+    border: 0;
+  }
+  .hr-product .login-identity > .brand-artwork:first-child {
+    display: none !important;
+  }
+  .hr-product .login-identity .savana-wordmark {
+    width: 115px;
+    margin: 0;
   }
   .hr-product .login-card {
     max-width: 430px;
@@ -1188,6 +1245,30 @@
   .hr-product .login-credit {
     margin-top: 32px;
     width: 215px;
+  }
+}
+@media print {
+  .print-brand > .brand-artwork {
+    width: 120mm;
+    max-width: 100%;
+    margin: 0 auto 4mm;
+  }
+  .print-brand .brand-artwork img {
+    margin: 0;
+    object-fit: initial;
+  }
+  .print-brand::before {
+    content: "";
+    position: fixed;
+    width: 50mm;
+    height: 50mm;
+    left: calc(50% - 25mm);
+    top: 40%;
+    background: url("/brand/fanu-watermark-20260908.jpeg") center / contain
+      no-repeat;
+    opacity: 0.18;
+    z-index: 0;
+    pointer-events: none;
   }
 }
 @media screen and (prefers-reduced-motion: reduce) {

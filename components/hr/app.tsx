@@ -71,6 +71,7 @@ import {
 } from "@/lib/hr/types";
 import { LoadState, PageTitle, StatusBadge, Field } from "./shared";
 import { WorkspaceTools } from "./workspace-tools";
+import { BrandImage } from "./brand-image";
 const EmployeesPage = lazy(() =>
   import("./employees").then((m) => ({ default: m.EmployeesPage })),
 );
@@ -357,7 +358,7 @@ export function HRApp() {
   if (loading)
     return (
       <div className="auth-loading">
-        <div className="brand-icon">HR</div>
+        <BrandImage kind="symbol" alt="فن النسيج" className="auth-brand-art" priority />
         <LoadState loading>{null}</LoadState>
       </div>
     );
@@ -442,13 +443,10 @@ function Login({
         </div>
         <div className="login-company-identity">
           <div className="login-brand">
-            <Image
-              src="/brand/fanu-logo.webp"
+            <BrandImage
+              kind="company"
               alt="فن النسيج — FANU ALNASIJ BY ZMC"
-              width={280}
-              height={320}
               priority
-              unoptimized
             />
           </div>
           <h2>قسم الموارد البشرية</h2>
@@ -462,17 +460,17 @@ function Login({
       <div className="login-workspace">
         <section className="login-card">
           <div className="login-identity">
-            <Image
-              src="/brand/hr-title.webp"
+            <BrandImage
+              kind="title"
               alt="قسم الموارد البشرية — مسائي"
-              width={1000}
-              height={247}
               priority
-              unoptimized
             />
-            <p className="associated-brand" dir="ltr">
-              SAVANA
-            </p>
+            <BrandImage
+              kind="savana"
+              alt="SAVANA"
+              className="savana-wordmark"
+              priority
+            />
           </div>
           <div className="login-heading">
             <div className="login-lock">
@@ -562,18 +560,16 @@ function Navigation({
     <Sidebar side="right" collapsible="icon" className="hr-sidebar">
       <SidebarHeader>
         <Link href="/" className="brand">
-          <Image
-            className="sidebar-logo"
-            src="/brand/fanu-logo.webp"
-            alt="فن النسيج"
-            width={280}
-            height={320}
-            unoptimized
+          <BrandImage
+            kind="company"
+            alt="فن النسيج — FANU ALNASIJ BY ZMC"
+            className="sidebar-company-art"
           />
-          <div>
-            <strong dir="ltr">FANU ALNASIJ</strong>
-            <small>قسم الموارد البشرية</small>
-          </div>
+          <BrandImage
+            kind="symbol"
+            alt="فن النسيج"
+            className="sidebar-symbol-art"
+          />
         </Link>
         <div className="sidebar-shift">
           <Moon size={15} />
@@ -612,6 +608,7 @@ function Navigation({
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
+        <BrandImage kind="savana" alt="SAVANA" className="sidebar-savana-art" />
         <div className="sidebar-user">
           <div className="avatar">{user.name.slice(0, 1)}</div>
           <div>
