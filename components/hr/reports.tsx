@@ -29,7 +29,7 @@ import {
   type Totals,
 } from "@/lib/hr/types";
 import {
-  download,
+  triggerDownload,
   excelBytes,
   pdfBytes,
   summaryHeaders,
@@ -79,7 +79,17 @@ export function ReportPage({
   const [inactive, setInactive] = useState(
     params.get("include_inactive") === "true",
   );
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
+  const [readyFile, setReadyFile] = useState<{
+    url: string;
+    name: string;
+    label: string;
+  } | null>(null);
+  useEffect(() => {
+    return () => {
+      if (readyFile) URL.revokeObjectURL(readyFile.url);
+    };
+  }, [readyFile]);
   const delayed = useDebounced(search);
   const title =
     mode === "summary"
@@ -115,29 +125,40 @@ export function ReportPage({
       router.replace(target, { scroll: false });
   }, [month, dep, delayed, shift, manager, inactive, path, router]);
   async function exportFile(format: "excel" | "pdf") {
-    if (!q.data) return;
-    setExporting(true);
+    if (!q.data || exporting) return;
+    setExporting(format);
     try {
       const reportTitle = dep
         ? `${title} · ${reference.departments.find((d) => d.id === dep) ? departmentLabel(reference.departments.find((d) => d.id === dep)!) : ""}`
         : title;
-      if (format === "excel")
-        download(
-          excelBytes(q.data, reportTitle, summary),
-          `HR_${mode}_${month}.xlsx`,
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        );
-      else
-        download(
-          await pdfBytes(q.data, reportTitle, summary),
-          `HR_${mode}_${month}.pdf`,
-          "application/pdf",
-        );
-      toast.success("تم تصدير التقرير");
-    } catch (e) {
-      toast.error((e as Error).message);
+      const bytes =
+        format === "excel"
+          ? excelBytes(q.data, reportTitle, summary)
+          : await pdfBytes(q.data, reportTitle, summary);
+      const name = `HR_${mode}_${month}.${format === "excel" ? "xlsx" : "pdf"}`;
+      const type =
+        format === "excel"
+          ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          : "application/pdf";
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type }));
+      setReadyFile({
+        url,
+        name,
+        label: `${reportTitle} · ${monthLabel(month)}`,
+      });
+      // Keep a real user-clickable link when automatic downloads are blocked.
+      try {
+        triggerDownload(url, name);
+      } catch {
+        /* The direct link remains available. */
+      }
+      toast.success("التقرير جاهز. إذا لم يبدأ التنزيل اضغط رابط الملف أدناه");
+    } catch {
+      toast.error(
+        "تعذر تجهيز التقرير. تحقق من الاتصال واضغط Excel أو PDF للمحاولة مجدداً",
+      );
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   }
   const days = month ? daysInMonth(month) : 0;
@@ -151,19 +172,19 @@ export function ReportPage({
           <>
             <Button
               variant="outline"
-              disabled={!q.data || exporting || q.loading}
+              disabled={!q.data || !!exporting || q.loading}
               onClick={() => void exportFile("excel")}
             >
               <FileSpreadsheet size={17} />
-              Excel
+              {exporting === "excel" ? "جار تجهيز Excel…" : "Excel"}
             </Button>
             <Button
               variant="outline"
-              disabled={!q.data || exporting || q.loading}
+              disabled={!q.data || !!exporting || q.loading}
               onClick={() => void exportFile("pdf")}
             >
               <FileDown size={17} />
-              {exporting ? "جار التصدير…" : "PDF"}
+              {exporting === "pdf" ? "جار تجهيز PDF…" : "PDF"}
             </Button>
             <Button
               variant="outline"
@@ -176,6 +197,27 @@ export function ReportPage({
           </>
         }
       />
+      {readyFile && (
+        <div
+          className="panel no-print flex flex-wrap items-center justify-between gap-3 p-4"
+          role="status"
+        >
+          <div>
+            <p className="font-bold">الملف جاهز للتنزيل</p>
+            <p className="text-sm">{readyFile.label}</p>
+          </div>
+          <a
+            href={readyFile.url}
+            download={readyFile.name}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 font-bold text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+          >
+            <FileDown size={18} />
+            تنزيل {readyFile.name.endsWith(".pdf") ? "PDF" : "Excel"}
+          </a>
+        </div>
+      )}
       <section className="panel report-panel report-surface">
         <div className="print-brand">
           <BrandImage

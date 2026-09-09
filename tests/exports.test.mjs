@@ -14,10 +14,46 @@ await build({
   packages: "external",
   outfile: compiled.pathname,
 });
-const { excelBytes, pdfBytes, tableExcelBytes, tablePdfBytes } = await import(
-  compiled.href
-);
+const {
+  excelBytes,
+  pdfBytes,
+  tableExcelBytes,
+  tablePdfBytes,
+  triggerDownload,
+} = await import(compiled.href);
 after(() => rm(compiled, { force: true }));
+test("browser download attaches its link and leaves the prepared URL available for retry", () => {
+  const previous = globalThis.document;
+  let attached = false;
+  let clicked = false;
+  const anchor = {
+    click() {
+      assert.equal(attached, true);
+      assert.equal(this.href, "blob:prepared-monthly-report");
+      assert.equal(this.download, "HR_monthly_2026-09.pdf");
+      clicked = true;
+    },
+    remove() {
+      attached = false;
+    },
+  };
+  globalThis.document = {
+    createElement: () => anchor,
+    body: {
+      appendChild() {
+        attached = true;
+      },
+    },
+  };
+  try {
+    triggerDownload("blob:prepared-monthly-report", "HR_monthly_2026-09.pdf");
+    assert.equal(clicked, true);
+    assert.equal(attached, false);
+  } finally {
+    if (previous === undefined) delete globalThis.document;
+    else globalThis.document = previous;
+  }
+});
 test("daily Excel keeps twelve-hour punch labels and numeric lateness editable", () => {
   const sheet = strFromU8(
     unzipSync(

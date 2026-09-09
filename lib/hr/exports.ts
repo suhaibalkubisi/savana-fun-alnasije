@@ -186,18 +186,30 @@ export function excelBytes(report: Report, title: string, summary = false) {
   );
   return zipSync(files, { level: 6 });
 }
-export function download(bytes: Uint8Array, name: string, type: string) {
-  const blob = new Blob([bytes as BlobPart], { type });
-  const url = URL.createObjectURL(blob);
+export function triggerDownload(url: string, name: string) {
   const a = document.createElement("a");
   a.href = url;
   a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  a.hidden = true;
+  document.body.appendChild(a);
+  try {
+    a.click();
+  } finally {
+    a.remove();
+  }
+}
+export function download(bytes: Uint8Array, name: string, type: string) {
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type }));
+  try {
+    triggerDownload(url, name);
+  } finally {
+    // Give mobile browsers time to take ownership of larger reports.
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
 }
 async function webAsset(path: string) {
   try {
-    const response = await fetch(path);
+    const response = await fetch(path, { signal: AbortSignal.timeout(15000) });
     if (!response.ok) return null;
     const bytes = new Uint8Array(await response.arrayBuffer());
     let binary = "";
@@ -267,7 +279,9 @@ export async function pdfBytes(
     compress: true,
   });
   if (!fontBase64) {
-    const r = await fetch("/fonts/DejaVuSans.ttf");
+    const r = await fetch("/fonts/DejaVuSans.ttf", {
+      signal: AbortSignal.timeout(30000),
+    });
     if (!r.ok) throw new Error("تعذر تحميل خط التقرير");
     const bytes = new Uint8Array(await r.arrayBuffer());
     let binary = "";
