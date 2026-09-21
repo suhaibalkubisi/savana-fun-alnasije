@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     );
     return json(
       await rpc(
-        kind.startsWith("attendance.") ? "attendance_read_v2" : "hr_read_v2",
+        kind.startsWith("attendance.") ? "attendance_read_v3" : "hr_read_v3",
         { p_kind: kind.replace(/^attendance\./, ""), p_filters: filters },
         s.token,
       ),
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       if (!parsed.success) throw new AppError("بيانات غير صالحة");
       return json(
         await rpc(
-          "attendance_write_v2",
+          "attendance_write_v3",
           { p_action: operation, p_data: parsed.data },
           s.token,
         ),

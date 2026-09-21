@@ -8,8 +8,7 @@ const ids = {
   hr: "22222222-2222-4222-8222-222222222222",
   viewer: "33333333-3333-4333-8333-333333333333",
 };
-before(async () => {
-  db = new PGlite();
+async function initializeDatabase(db) {
   await db.exec(
     `create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`,
   );
@@ -30,7 +29,27 @@ before(async () => {
       [name === "admin" ? "ADMIN" : name === "hr" ? "HR" : "VIEWER", id],
     );
   }
+}
+before(async () => {
+  db = new PGlite();
+  await initializeDatabase(db);
 });
+
+// Standalone regressions must not leak fixtures into the legacy scenario suite.
+function regressionTest(name, run) {
+  test(name, async () => {
+    const sharedDatabase = db;
+    const isolatedDatabase = new PGlite();
+    db = isolatedDatabase;
+    try {
+      await initializeDatabase(isolatedDatabase);
+      await run();
+    } finally {
+      db = sharedDatabase;
+      await isolatedDatabase.close();
+    }
+  });
+}
 after(async () => {
   await db?.close();
 });
@@ -64,8 +83,17 @@ const attendanceWriteV2 = async (action, data) =>
 const attendanceReadV2 = async (kind, filters = {}) =>
   (await db.query("select public.attendance_read_v2($1,$2) data", [kind, filters]))
     .rows[0].data;
+const attendanceWriteV3 = async (action, data) =>
+  (await db.query("select public.attendance_write_v3($1,$2) data", [action, data]))
+    .rows[0].data;
+const attendanceReadV3 = async (kind, filters = {}) =>
+  (await db.query("select public.attendance_read_v3($1,$2) data", [kind, filters]))
+    .rows[0].data;
+const readV3 = async (kind, filters = {}) =>
+  (await db.query("select public.hr_read_v3($1,$2) data", [kind, filters]))
+    .rows[0].data;
 
-test("phase 2 daily position exposes schedule, person code and review fields", async () => {
+regressionTest("phase 2 daily position exposes schedule, person code and review fields", async () => {
   await who("admin");
   const ref = await read("reference");
   const person = await write("employee.save", {
@@ -82,7 +110,7 @@ test("phase 2 daily position exposes schedule, person code and review fields", a
   await write("employee.save", { ...person, employment_status: "inactive" });
 });
 
-test("duplicate cleanup is ADMIN-only and hard delete refuses linked history", async () => {
+regressionTest("duplicate cleanup is ADMIN-only and hard delete refuses linked history", async () => {
   await who("admin");
   const ref = await read("reference");
   const first = await write("employee.save", { name: "اسم تنظيف مكرر", employee_number: "PH2-DUP-A", department_id: ref.departments[0].id, employment_status: "active" });
@@ -97,7 +125,7 @@ test("duplicate cleanup is ADMIN-only and hard delete refuses linked history", a
   await assert.rejects(attendanceWriteV2("employee.delete_permanent", { source_employee_id: first.id, confirmed: true }), /سجلات مرتبطة/);
   await write("employee.save", { ...first, employment_status: "inactive" });
 });
-test("attendance foundations preserve employee data and deny direct writes", async () => {
+regressionTest("attendance foundations preserve employee data and deny direct writes", async () => {
   await who("viewer");
   for (const table of [
     "attendance_imports",
@@ -114,7 +142,7 @@ test("attendance foundations preserve employee data and deny direct writes", asy
   }
   await assert.rejects(attendanceWrite("import.apply", {}), /صلاحية/);
 });
-test("fingerprint preview is atomic, idempotent and excludes unapplied punches", async () => {
+regressionTest("fingerprint preview is atomic, idempotent and excludes unapplied punches", async () => {
   await who("admin");
   const ref = await read("reference");
   const department = ref.departments[0];
@@ -211,6 +239,180 @@ test("fingerprint preview is atomic, idempotent and excludes unapplied punches",
   await who("hr");
   await assert.rejects(attendanceWrite("rule.save", {}), /صلاحية/);
 });
+regressionTest("monthly approval is explicit, unique, and cross-midnight punches stay on the workday", async () => {
+  await who("admin");
+  const ref = await read("reference");
+  const department = ref.departments[1];
+  const person = await write("employee.save", { name:"اختبار اعتماد شهري", employee_number:"MONTH-APPROVE", department_id:department.id, employment_status:"active" });
+  await attendanceWrite("rule.save", { department_id:department.id,effective_from:"2097-01-01",start_minute:960,grace_minutes:5,entry_window_start:720,entry_window_end:1439,working_weekdays:[0,1,2,3,4,5,6],default_manager_id:null });
+  const payload={source_name:"month.xls",source_hash:"b".repeat(64),import_kind:"monthly",period_start:"2097-09-01",period_end:"2097-09-30",rows:[
+    {source_sheet:"Monthly",source_row:2,calendar_date:"2097-09-06",person_code:"MONTH-APPROVE",source_name:person.name,raw_values:["16:05","01:18"],punch_minutes:[78,965],invalid:false},
+  ]};
+  let batch=await attendanceWriteV3("import.preview",payload);
+  assert.equal((await attendanceReadV3("monthly_fingerprint",{date:"2097-09-01"})).approved_import,null);
+  batch=await attendanceWriteV3("import.review",{id:batch.id,version:batch.lifecycle_version});
+  batch=await attendanceWriteV3("import.approve",{id:batch.import_id,version:batch.lifecycle_version});
+  const monthly=await attendanceReadV3("monthly_fingerprint",{date:"2097-09-01",department_id:department.id});
+  assert.equal(monthly.approved_import.id,batch.import_id);
+  const row=monthly.rows.find((item)=>item.employee_id===person.id);
+  assert.equal(row.cells["6"].entry,965);
+  assert.equal(row.cells["6"].exit,78);
+  assert.equal(row.cells["6"].duration,553);
+});
+
+regressionTest("comprehensive position follows UUID status edits and soft deletion for resigned history", async () => {
+  await who("hr");
+  const ref=await read("reference");
+  let person=await write("employee.save",{name:"اختبار الموقف الشامل",employee_number:"COMP-UUID",department_id:ref.departments[0].id,employment_status:"active"});
+  let status=await write("status.save",{employee_id:person.id,department_id:person.department_id,record_date:"2096-05-11",status_type:"absence2",late_minutes:null});
+  const createdReport=await readV3("report",{month:"2096-05",employee_id:person.id});
+  assert.equal(createdReport.month,"2096-05");
+  assert.equal(createdReport.rows[0].id,person.id);
+  assert.deepEqual(createdReport.rows[0].cells,{"11":"absence2"});
+  status=await write("status.save",{...status,department_id:person.department_id,status_type:"leave",late_minutes:null});
+  const editedReport=await readV3("report",{month:"2096-05",employee_id:person.id});
+  assert.equal(editedReport.rows[0].id,person.id);
+  assert.deepEqual(editedReport.rows[0].cells,{"11":"leave"});
+  person=await write("employee.save",{...person,employment_status:"resigned"});
+  const historicalReport=await readV3("report",{month:"2096-05",employee_id:person.id});
+  assert.equal(historicalReport.rows[0].id,person.id);
+  assert.equal(historicalReport.rows[0].employment_status,"resigned");
+  assert.deepEqual(historicalReport.rows[0].cells,{"11":"leave"});
+  await write("status.delete",{id:status.id,version:status.version,confirmed:true});
+  assert.equal((await readV3("report",{month:"2096-05",employee_id:person.id})).rows.length,0);
+  const deletedReport=await readV3("report",{month:"2096-05",employee_id:person.id,include_inactive:true});
+  assert.equal(deletedReport.rows[0].id,person.id);
+  assert.deepEqual(deletedReport.rows[0].cells,{});
+  assert.equal(deletedReport.totals.leave,0);
+});
+async function fingerprintFixture() {
+  await who("admin");
+  const department = (await read("reference")).departments[0];
+  const person = await write("employee.save", { name: "اختبار تغطية البصمة", employee_number: "COVERAGE", department_id: department.id, employment_status: "active" });
+  await attendanceWrite("rule.save", { department_id: department.id, effective_from: "2026-09-01", start_minute: 960, grace_minutes: 5, entry_window_start: 720, entry_window_end: 1439, working_weekdays: [0,1,2,3,4,5,6], default_manager_id: null });
+  return { person, department };
+}
+function fingerprintPayload(person, overrides = {}) {
+  return { source_name: "coverage.xls", source_hash: "c".repeat(64), import_kind: "daily", period_start: "2026-09-06", period_end: "2026-09-06", rows: [{ source_sheet: "Punch Record", source_row: 2, calendar_date: "2026-09-06", person_code: person.employee_number, source_name: person.name, raw_values: ["16:05"], punch_minutes: [965], invalid: false }], ...overrides };
+}
+// Inspect evidence as the disposable database owner, then restore the HR actor.
+async function inspectFixture(sql, params = []) {
+  await db.exec("reset role");
+  try { return (await db.query(sql, params)).rows; }
+  finally { await who("hr"); }
+}
+regressionTest("missing exit keeps the entry pending and never invents absence", async () => {
+  const { person } = await fingerprintFixture();
+  const batch = await attendanceWriteV3("import.preview", fingerprintPayload(person));
+  await attendanceWriteV3("import.apply", { id: batch.id, version: batch.version });
+  const row = (await attendanceReadV3("daily", { date: "2026-09-06" })).rows.find(r => r.employee_id === person.id);
+  assert.equal(row.entry_minute, 965);
+  assert.equal(row.exit_minute, null);
+  assert.equal(row.duration_minutes, null);
+  assert.equal(row.attendance_state, "pending_exit");
+  assert.equal(row.status, "present");
+  assert.equal((await inspectFixture("select count(*)::int n from public.hr_status_records where employee_id=$1", [person.id]))[0].n, 0);
+});
+regressionTest("unmatched fingerprint preserves evidence without assigning or overwriting HR data", async () => {
+  const { person } = await fingerprintFixture();
+  await write("status.save", { employee_id: person.id, department_id: person.department_id, record_date: "2026-09-06", status_type: "leave", late_minutes: null });
+  const payload = fingerprintPayload({ name: "اسم غير موجود إطلاقا", employee_number: "UNKNOWN" });
+  const batch = await attendanceWriteV3("import.preview", payload);
+  const issue = (await attendanceReadV3("issues")).rows.find(r => r.import_id === batch.id);
+  assert.equal(issue.issue_type, "unmatched");
+  assert.equal(issue.state, "open");
+  const source = (await inspectFixture("select * from public.fingerprint_source_rows where import_id=$1", [batch.id]))[0];
+  assert.equal(source.employee_id, null);
+  assert.deepEqual(source.raw_values, payload.rows[0].raw_values);
+  assert.deepEqual(source.punch_minutes, [965]);
+  assert.equal(source.person_code, "UNKNOWN");
+  await attendanceWriteV3("import.apply", { id: batch.id, version: batch.version });
+  const row = (await attendanceReadV3("daily", { date: "2026-09-06" })).rows.find(r => r.employee_id === person.id);
+  assert.equal(row.status, "leave");
+  assert.equal(row.entry_minute, null);
+});
+regressionTest("ambiguous normalized names require human confirmation", async () => {
+  const { person } = await fingerprintFixture();
+  const second = await write("employee.save", { name: person.name, employee_number: "SECOND", department_id: person.department_id, employment_status: "active" });
+  const batch = await attendanceWriteV3("import.preview", fingerprintPayload({ ...person, employee_number: "DEVICE" }));
+  const issue = (await attendanceReadV3("issues")).rows.find(r => r.import_id === batch.id);
+  assert.equal(issue.issue_type, "ambiguous");
+  assert.deepEqual(issue.candidates.map(r => r.id).sort(), [person.id, second.id].sort());
+  assert.equal((await inspectFixture("select employee_id from public.fingerprint_source_rows where id=$1", [issue.source_row_id]))[0].employee_id, null);
+  const retried = await attendanceWriteV3("issue.reprocess", { id: issue.id, version: issue.version });
+  assert.equal(retried.state, "open");
+});
+regressionTest("confirmed Person Code mapping persists for subsequent ambiguous-name records with audit", async () => {
+  const { person } = await fingerprintFixture();
+  await write("employee.save", { name: person.name, employee_number: "SECOND", department_id: person.department_id, employment_status: "active" });
+  const payload = fingerprintPayload({ ...person, employee_number: "DEVICE" });
+  const batch = await attendanceWriteV3("import.preview", payload);
+  const issue = (await attendanceReadV3("issues")).rows.find(r => r.import_id === batch.id);
+  await who("hr");
+  await attendanceWriteV3("issue.resolve", { id: issue.id, version: issue.version, employee_id: person.id, state: "resolved", resolution_note: "تأكيد الموارد البشرية" });
+  const next = await attendanceWriteV3("import.preview", { ...payload, source_hash: "d".repeat(64) });
+  assert.equal(next.summary.matched, 1);
+  assert.equal(next.summary.ambiguous, 0);
+  const source = (await inspectFixture("select * from public.fingerprint_source_rows where import_id=$1", [next.id]))[0];
+  assert.equal(source.employee_id, person.id);
+  const identity = (await inspectFixture("select * from public.fingerprint_identities where person_code='DEVICE'"))[0];
+  assert.equal(identity.employee_id, person.id);
+  const audit = await inspectFixture("select * from public.audit_logs where entity_id=$1", [identity.id]);
+  assert.ok(audit.some(r => r.actor_id === ids.hr && r.new_values.employee_id === person.id));
+});
+regressionTest("duplicate monthly import preserves one approved batch and unchanged attendance totals", async () => {
+  const { person } = await fingerprintFixture();
+  const payload = fingerprintPayload(person, { import_kind: "monthly", period_start: "2026-09-01", period_end: "2026-09-30" });
+  payload.rows[0].punch_minutes = [78,965];
+  payload.rows[0].raw_values = ["16:05", "01:18"];
+  let batch = await attendanceWriteV3("import.preview", payload);
+  batch = await attendanceWriteV3("import.review", { id: batch.id, version: batch.lifecycle_version });
+  batch = await attendanceWriteV3("import.approve", { id: batch.id, version: batch.lifecycle_version });
+  const before = await attendanceReadV3("monthly_fingerprint", { date: "2026-09-01" });
+  const duplicate = await attendanceWriteV3("import.preview", payload);
+  assert.equal(duplicate.duplicate, true);
+  assert.equal(duplicate.id, batch.id);
+  assert.deepEqual(await attendanceReadV3("monthly_fingerprint", { date: "2026-09-01" }), before);
+  assert.equal((await inspectFixture("select count(*)::int n from public.fingerprint_source_rows where import_id=$1", [batch.id]))[0].n, 1);
+  const equivalent = await attendanceWriteV3("import.preview", { ...payload, source_hash: "e".repeat(64) });
+  const reviewed = await attendanceWriteV3("import.review", { id: equivalent.id, version: equivalent.lifecycle_version });
+  await assert.rejects(attendanceWriteV3("import.approve", { id: reviewed.id, version: reviewed.lifecycle_version }), /ملف شهري معتمد/);
+  assert.deepEqual(await attendanceReadV3("monthly_fingerprint", { date: "2026-09-01" }), before);
+});
+regressionTest("issue reprocessing recomputes applied attendance from preserved evidence and audits resolution", async () => {
+  const { person } = await fingerprintFixture();
+  const payload = fingerprintPayload({ name: "اسم الجهاز غير المطابق", employee_number: "DEVICE" });
+  const first = await attendanceWriteV3("import.preview", payload);
+  const affected = await attendanceWriteV3("import.preview", { ...payload, source_hash: "f".repeat(64) });
+  await attendanceWriteV3("import.apply", { id: affected.id, version: affected.version });
+  const issues = (await attendanceReadV3("issues")).rows;
+  const confirmation = issues.find(r => r.import_id === first.id);
+  const issue = issues.find(r => r.import_id === affected.id);
+  assert.equal((await attendanceReadV3("daily", { date: "2026-09-06" })).rows.find(r => r.employee_id === person.id).entry_minute, null);
+  await who("hr");
+  await attendanceWriteV3("issue.resolve", { id: confirmation.id, version: confirmation.version, employee_id: person.id, state: "resolved", resolution_note: "تأكيد UUID" });
+  await who("viewer");
+  await assert.rejects(attendanceWriteV3("issue.reprocess", { id: issue.id, version: issue.version }), /صلاحية/);
+  await who("hr");
+  await assert.rejects(attendanceWriteV3("issue.reprocess", { id: issue.id }), /تعديل/);
+  const resolved = await attendanceWriteV3("issue.reprocess", { id: issue.id, version: issue.version });
+  assert.equal(resolved.state, "resolved");
+  await assert.rejects(attendanceWriteV3("issue.reprocess", { id: issue.id, version: issue.version }), /تعديل/);
+  const row = (await attendanceReadV3("daily", { date: "2026-09-06" })).rows.find(r => r.employee_id === person.id);
+  assert.equal(row.entry_minute, 965);
+  assert.equal(row.attendance_state, "pending_exit");
+  const source = (await inspectFixture("select * from public.fingerprint_source_rows where id=$1", [issue.source_row_id]))[0];
+  assert.equal(source.employee_id, person.id);
+  assert.equal(source.match_state, "confirmed");
+  assert.deepEqual(source.raw_values, payload.rows[0].raw_values);
+  assert.deepEqual(source.punch_minutes, [965]);
+  assert.equal((await inspectFixture("select to_char(calendar_date,'YYYY-MM-DD') as evidence_date from public.fingerprint_source_rows where id=$1", [source.id]))[0].evidence_date, "2026-09-06");
+  const imports = await attendanceReadV3("imports");
+  assert.equal(imports.find(r => r.id === affected.id).summary.matched, 1);
+  const audit = await inspectFixture("select * from public.audit_logs where entity_id=$1", [issue.id]);
+  assert.ok(audit.some(r => r.actor_id === ids.hr && r.old_values?.state === "open" && r.new_values.state === "resolved"));
+});
+
 test("synthetic seed preserves 192 active, 13 resigned, 1 long leave and duplicate identities", async () => {
   await who("admin");
   const all = await read("dashboard");

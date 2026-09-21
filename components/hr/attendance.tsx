@@ -31,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { mutate, useData, useDebounced } from "@/lib/hr/api";
-import { baghdadDate, departmentLabel, type Reference } from "@/lib/hr/types";
+import { baghdadDate, daysInMonth, departmentLabel, type Reference } from "@/lib/hr/types";
 import { download, tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
 import { formatClock12 } from "@/lib/hr/time-format.mjs";
 import {
@@ -57,6 +57,7 @@ type DayRow = {
   entry_minute: number | null;
   exit_minute: number | null;
   duration_minutes: number | null;
+  attendance_state: string;
   status: string;
   late_minutes: number;
   manual_status: string | null;
@@ -86,6 +87,7 @@ type MonthRow = {
   leave: number;
   no_entry: number;
   missing_schedule: number;
+  cells?: Record<string, { entry: number | null; exit: number | null; duration: number | null; state: string }>;
 };
 type Batch = {
   id: string;
@@ -95,6 +97,8 @@ type Batch = {
   period_start: string;
   period_end: string;
   summary: Record<string, number>;
+  lifecycle_state?: string;
+  lifecycle_version?: number;
 };
 const labels: Record<string, string> = {
   present: "حاضر",
@@ -109,6 +113,10 @@ const labels: Record<string, string> = {
   preview: "معاينة",
   applied: "تم الاعتماد",
   cancelled: "ملغي",
+  reviewed: "تمت المراجعة",
+  approved: "معتمد",
+  superseded: "مستبدل",
+  pending_exit: "بانتظار بصمة الخروج",
   code: "رمز الشخص",
   unique_name: "اسم مطابق",
   confirmed: "ربط معتمد",
@@ -276,11 +284,11 @@ export function AttendanceReport({
     [decision, setDecision] = useState(""),
     [decisionMinutes, setDecisionMinutes] = useState(""),
     [busy, setBusy] = useState(false);
-  const query = useData<{ rows: (DayRow & MonthRow)[] }>(
-    `attendance.${monthly ? "monthly" : "daily"}`,
+  const query = useData<{ rows: (DayRow & MonthRow)[]; approved_import?: { id: string; source_name: string; approved_at: string } | null }>(
+    `attendance.${monthly ? "monthly_fingerprint" : "daily"}`,
     { date, department_id: dep, search: useDebounced(search) },
   );
-  const title = monthly ? "الداشبورد الشهري" : "الموقف اليومي";
+  const title = monthly ? "الحضور الشهري بالبصمة" : "الموقف اليومي";
   const rawRows = query.data?.rows || [];
   const group = (value: string) =>
     value.startsWith("absence") ? "absence" : value;
@@ -290,23 +298,9 @@ export function AttendanceReport({
     if (advanced) return r.status === advanced;
     return quick === null || quick.has(group(r.status));
   });
+  const monthDays = monthly ? daysInMonth(date.slice(0, 7)) : 0;
   const headers = monthly
-    ? [
-        "رقم الموظف",
-        "الموظف",
-        "القسم",
-        "المسؤول",
-        "حضور",
-        "تأخيرات",
-        "دقائق التأخير",
-        "غياب",
-        "غياب ×2",
-        "غياب ×3",
-        "الغياب المحتسب",
-        "إجازة",
-        "بلا دخول",
-        "دوام غير محدد",
-      ]
+    ? ["رقم الموظف", "الموظف", "القسم", ...Array.from({ length: monthDays }, (_, i) => String(i + 1))]
     : [
         "ت",
         "رقم الموظف",
@@ -316,6 +310,8 @@ export function AttendanceReport({
         "المسؤول",
         "وقت الدوام",
         "الدخول",
+        "الخروج",
+        "مدة العمل",
         "دقائق التأخير",
         "الحالة",
         "الإجراء",
@@ -324,22 +320,11 @@ export function AttendanceReport({
       ];
   const values = rows.map((r) =>
     monthly
-      ? [
-          r.employee_number || "",
-          r.name,
-          r.department,
-          r.manager || "",
-          r.present,
-          r.late,
-          r.late_minutes,
-          r.absence,
-          r.absence2,
-          r.absence3,
-          r.weighted,
-          r.leave,
-          r.no_entry,
-          r.missing_schedule,
-        ]
+      ? [r.employee_number || "", r.name, r.department, ...Array.from({ length: monthDays }, (_, i) => {
+          const cell = r.cells?.[String(i + 1)];
+          if (cell?.entry == null) return "—";
+          return `د ${time(cell.entry)}\nخ ${cell.exit == null ? "بانتظار الخروج" : time(cell.exit)}`;
+        })]
       : [
           rows.indexOf(r) + 1,
           r.employee_number || "",
@@ -349,6 +334,8 @@ export function AttendanceReport({
           r.manager || "غير محدد",
           time(r.scheduled_start_minute),
           time(r.entry_minute),
+          r.exit_minute == null ? (r.entry_minute == null ? "—" : "بانتظار بصمة الخروج") : time(r.exit_minute),
+          r.duration_minutes == null ? "—" : `${Math.floor(r.duration_minutes / 60)}:${String(r.duration_minutes % 60).padStart(2, "0")}`,
           r.late_minutes,
           labels[r.status] || r.status,
           r.procedure_text,
@@ -528,15 +515,8 @@ export function AttendanceReport({
       >
         <Metrics
           items={
-            monthly
-              ? [
-                  ["الموظفون", rows.length],
-                  ["التأخيرات", total("late")],
-                  ["دقائق التأخير", total("late_minutes")],
-                  ["الغياب المحتسب", total("weighted")],
-                  ["الإجازات", total("leave")],
-                  ["بلا دخول", total("no_entry")],
-                ]
+              monthly
+                ? [["الموظفون", rows.length], ["أيام الشهر", monthDays], ["مصدر شهري معتمد", query.data?.approved_import ? 1 : 0]]
               : [
                   ["المتوقعون", rows.filter((r) => r.expected).length],
                   ["حاضر", count("present")],
@@ -693,20 +673,20 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
       setBusy(false);
     }
   }
-  async function apply(cancel = false) {
+  async function transition(action: "review" | "approve" | "apply" | "cancel") {
     if (!batch) return;
     setBusy(true);
     try {
       setBatch(
         await mutate<Batch>(
-          `attendance.import.${cancel ? "cancel" : "apply"}`,
+          `attendance.import.${action}`,
           {
             id: batch.id,
-            version: preview.data?.batch.version || batch.version,
+            version: batch.lifecycle_version || preview.data?.batch.lifecycle_version || preview.data?.batch.version || batch.version,
           },
         ),
       );
-      toast.success(cancel ? "تم إلغاء الاستيراد" : "تم اعتماد البصمة");
+      toast.success(action === "cancel" ? "تم إلغاء الاستيراد" : action === "review" ? "اكتملت مراجعة الملف" : "تم اعتماد البصمة");
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -749,25 +729,25 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
           <PageTitle
             title={current.source_name}
             actions={
-              current.state === "preview" ? (
+              (current.lifecycle_state || current.state) === "preview" ? (
                 <div className="flex gap-2">
                   <Button
                     disabled={busy || preview.loading}
-                    onClick={() => apply()}
+                    onClick={() => transition(monthly ? "review" : "apply")}
                   >
-                    تأكيد واعتماد الاستيراد
+                    {monthly ? "إنهاء المراجعة" : "تأكيد واعتماد الاستيراد"}
                   </Button>
                   <Button
                     variant="outline"
                     disabled={busy}
-                    onClick={() => apply(true)}
+                    onClick={() => transition("cancel")}
                   >
                     إلغاء
                   </Button>
                 </div>
-              ) : (
-                <span>{labels[current.state]}</span>
-              )
+              ) : (current.lifecycle_state || current.state) === "reviewed" ? (
+                <Button disabled={busy} onClick={() => transition("approve")}>اعتماد الملف الشهري</Button>
+              ) : <span>{labels[current.lifecycle_state || current.state]}</span>
             }
           />
           <Metrics
@@ -859,7 +839,7 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
             b.source_name,
             b.period_start,
             b.period_end,
-            labels[b.state],
+            labels[b.lifecycle_state || b.state],
             <Button
               key={b.id}
               variant="ghost"
@@ -885,6 +865,9 @@ type Issue = {
   calendar_date: string;
   details: string;
   state: string;
+  punch_minutes: number[];
+  raw_values: string[];
+  candidates: { id: string; name: string; employee_number: string | null; department: string }[];
 };
 export function FingerprintIssues({
   reference,
@@ -981,11 +964,17 @@ export function FingerprintIssues({
           <DialogHeader>
             <DialogTitle>{issue?.source_name}</DialogTitle>
           </DialogHeader>
+          <div className="text-sm space-y-1">
+            <p>كود الشخص: {issue?.person_code || "غير موجود"}</p>
+            <p>التاريخ: {issue?.calendar_date}</p>
+            <p>البصمات: {issue?.punch_minutes?.map(time).join(" / ") || "لا توجد"}</p>
+            <p>{issue?.details}</p>
+          </div>
           <SearchPicker
             label="الموظف الصحيح"
             value={employee}
             onChange={setEmployee}
-            options={reference.employees.map((e) => ({
+            options={(issue?.candidates?.length ? issue.candidates : reference.employees).map((e) => ({
               value: e.id,
               label: `${e.name} — ${e.department} — ${e.employee_number || e.id.slice(0, 8)}`,
             }))}

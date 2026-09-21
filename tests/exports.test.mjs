@@ -1,6 +1,7 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { readFile, rm } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { unzipSync, strFromU8 } from "fflate";
 import { report } from "./export-fixture.mjs";
@@ -12,7 +13,7 @@ await build({
   platform: "node",
   format: "esm",
   packages: "external",
-  outfile: compiled.pathname,
+  outfile: fileURLToPath(compiled),
 });
 const {
   excelBytes,
