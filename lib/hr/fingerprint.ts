@@ -11,6 +11,19 @@ export type FingerprintRow = {
   invalid: boolean;
 };
 const clean = (v: unknown) => String(v ?? "").trim();
+const normalizedHeader = (v: unknown) =>
+  clean(v).replace(/\s+/g, " ").toLowerCase();
+const headerAliases = {
+  code: ["person code", "person id", "employee code", "رقم الشخص", "كود الشخص"],
+  name: ["name", "employee name", "اسم الموظف", "الاسم"],
+  date: ["punch date", "date", "تاريخ البصمة", "التاريخ"],
+  first: ["first time punch", "first punch", "وقت اول بصمة", "أول بصمة"],
+  last: ["last time punch", "last punch", "وقت اخر بصمة", "آخر بصمة"],
+} as const;
+function headerIndex(headers: string[], aliases: readonly string[]) {
+  const normalized = headers.map(normalizedHeader);
+  return normalized.findIndex((header) => aliases.includes(header));
+}
 function dateValue(v: string) {
   if (
     !/^\d{4}-\d{2}-\d{2}$/.test(v) ||
@@ -24,10 +37,15 @@ function punches(values: string[]) {
   let invalid = false;
   for (const value of values) {
     if (!value || value === "-" || value === "--") continue;
-    for (const token of value.split(/[\s,;]+/).filter(Boolean)) {
-      const m = token.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-      if (!m || +m[1] > 23 || +m[2] > 59) invalid = true;
-      else result.push(+m[1] * 60 + +m[2]);
+    const normalized = value.replace(/(\d{1,2}:\d{2}(?::\d{2})?)\s+(am|pm)/gi, "$1$2");
+    for (const token of normalized.split(/[\s,;،|]+/).filter(Boolean)) {
+      const m = token.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?$/i);
+      if (!m || +m[1] > (m[3] ? 12 : 23) || +m[2] > 59) invalid = true;
+      else {
+        let hour = +m[1];
+        if (m[3]) hour = (hour % 12) + (m[3].toLowerCase() === "pm" ? 12 : 0);
+        result.push(hour * 60 + +m[2]);
+      }
     }
   }
   return { punch_minutes: [...new Set(result)].sort((a, b) => a - b), invalid };
@@ -63,32 +81,40 @@ export function parseFingerprint(
       raw: false,
       defval: "",
     });
-    const headerIndex = grid.findIndex(
-      (r) =>
-        r.map(clean).includes("Person Code") && r.map(clean).includes("Name"),
-    );
-    if (headerIndex < 0) {
-      warnings.push(`ورقة غير مدعومة: ${sheetName}`);
+    const headerRow = grid.findIndex((r) => {
+      const values = r.map(clean);
+      return (
+        headerIndex(values, headerAliases.code) >= 0 &&
+        headerIndex(values, headerAliases.name) >= 0
+      );
+    });
+    if (headerRow < 0) {
+      warnings.push(`تعذر العثور على عمودي كود الشخص واسم الموظف في ورقة ${sheetName}`);
       continue;
     }
-    const headers = grid[headerIndex].map(clean);
-    const code = headers.indexOf("Person Code"),
-      name = headers.indexOf("Name"),
-      date = headers.indexOf("Punch Date");
+    const headers = grid[headerRow].map(clean);
+    const code = headerIndex(headers, headerAliases.code),
+      name = headerIndex(headers, headerAliases.name),
+      date = headerIndex(headers, headerAliases.date);
     if (kind === "daily" && date < 0)
       throw new Error("اختر ملف البصمة اليومية");
     if (kind === "monthly" && date >= 0)
       throw new Error("اختر ملف البصمة الشهرية");
     const dayColumns = headers
-      .map((h, i) => ({ h, i }))
-      .filter((x) => /^\d{2}-\d{2}$/.test(x.h));
+      .map((h, i) => {
+        const match = h.match(/^(\d{1,2})[-\/]([0-3]?\d)$/);
+        return match
+          ? { h: `${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`, i }
+          : null;
+      })
+      .filter((value): value is { h: string; i: number } => !!value);
     if (kind === "monthly" && !dayColumns.length)
       throw new Error("أعمدة أيام الشهر غير موجودة");
-    const first = headers.indexOf("First Time Punch"),
-      last = headers.indexOf("Last Time Punch");
+    const first = headerIndex(headers, headerAliases.first),
+      last = headerIndex(headers, headerAliases.last);
     if (kind === "daily" && (first < 0 || last < 0))
       throw new Error("أعمدة البصمة غير موجودة");
-    for (let i = headerIndex + 1; i < grid.length; i++) {
+    for (let i = headerRow + 1; i < grid.length; i++) {
       const raw = grid[i].map(clean);
       if (!raw[code] && !raw[name]) continue;
       const cells =
@@ -125,7 +151,11 @@ export function parseFingerprint(
     }
   }
   if (!rows.length || rows.length > 20000)
-    throw new Error("لا توجد صفوف صالحة أو الملف كبير جداً");
+    throw new Error(
+      warnings.length
+        ? `لم تتم قراءة أي صف من ملف البصمة. ${warnings.join("؛ ")}`
+        : "لا توجد صفوف صالحة أو الملف كبير جداً",
+    );
   const dates = rows.map((r) => r.calendar_date).sort();
   return {
     rows,
