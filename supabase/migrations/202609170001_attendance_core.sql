@@ -31,16 +31,16 @@ create trigger touch_attendance before insert or update on public.attendance_imp
 create trigger audit_attendance after insert or update on public.attendance_import_reviews
  for each row execute function hr_private.audit();
 
-with ranked as (
- select i.*,row_number() over(partition by date_trunc('month',i.period_start) order by i.updated_at desc,i.id) approved_rank
- from public.attendance_imports i where i.import_kind='monthly'
+with applied_ranked as (
+ select i.id,row_number() over(partition by date_trunc('month',i.period_start) order by i.updated_at desc,i.id) approved_rank
+ from public.attendance_imports i where i.import_kind='monthly' and i.state='applied'
 )
 insert into public.attendance_import_reviews(import_id,period_month,lifecycle_state,reviewed_at,approved_at,created_by,updated_by)
 select i.id,date_trunc('month',i.period_start)::date,
- case when i.state='applied' and i.approved_rank=1 then 'approved' when i.state='applied' then 'superseded' when i.state='cancelled' then 'cancelled' else 'preview' end,
+ case when i.state='applied' and a.approved_rank=1 then 'approved' when i.state='applied' then 'superseded' when i.state='cancelled' then 'cancelled' else 'preview' end,
  case when i.state='applied' then i.updated_at end,
- case when i.state='applied' and i.approved_rank=1 then i.updated_at end,i.created_by,i.updated_by
-from ranked i
+ case when i.state='applied' and a.approved_rank=1 then i.updated_at end,i.created_by,i.updated_by
+from public.attendance_imports i left join applied_ranked a on a.id=i.id
 where i.import_kind='monthly'
 and not exists(select 1 from public.attendance_import_reviews r where r.import_id=i.id)
 ;
