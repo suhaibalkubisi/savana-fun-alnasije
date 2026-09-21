@@ -19,11 +19,11 @@ No credentials are committed. Copy `.env.example` for local configuration. On Si
 The three application values do not provide a PostgreSQL migration connection. Applying DDL requires a database-owner connection or authorized Supabase management access.
 
 1. Apply `supabase/migrations/202609040001_hr.sql` as the database migration owner to a clean Supabase project.
-2. Apply an authorized private employee seed separately. Production employee data is intentionally excluded from this public repository.
+2. For an authorized new installation only, obtain any approved initial employee data separately. The public `supabase/seed.sql` is TEST ONLY and must never be applied to production. Existing production data must not be re-imported or reset.
 3. Run `node scripts/bootstrap-admin.mjs` from a trusted interactive terminal with the server variables set. It requests an admin email, name, and hidden password. It refuses to replace an existing active administrator.
 4. Disable public signups in Supabase Auth, enable a suitable password policy and production auth rate limits, and keep the database backup/PITR settings appropriate to the organization's retention policy. The profile trigger still creates any unexpected signup as disabled VIEWER, so signup alone never grants access.
 
-AHH.xlsx was fully analyzed: 206 records, 192 active, 13 resigned, one long leave, ten departments, one exact duplicate name occurring in two departments. Employee numbers, shifts, and direct-manager relationships are absent and remain NULL. Source supervisors are selectable manager entries, without inferring reporting relationships. `data/import-summary.json` retains provenance; `data/initial-employees.json` and the seed are server/deployment data and are never imported into the browser bundle.
+The original private import had 206 records, 192 active, 13 resigned, one long leave, ten departments and one duplicate name across two departments. Its employee source files and production seed are excluded from this public repository. The test-only seed preserves these structural assumptions using synthetic identities. It is not evidence of the contents of the current live database. See [development support provenance](docs/development-support.md).
 
 ## Validation and packaging
 
@@ -34,7 +34,7 @@ AHH.xlsx was fully analyzed: 206 records, 192 active, 13 resigned, one long leav
 - `npm run build` (the bundled verified Worker build)
 - `npm run build:vercel` (standard Next.js build for a Vercel deployment)
 
-Sites deployment uses its native version and deployment workflow. For Vercel, set build command `npm run build:vercel`, configure the same server variables and use the PostgreSQL migrations above. The app uses only Next-compatible APIs except the environment binding adapter; `next.config.ts` aliases that adapter for the standard Next build.
+Sites deployment uses its native version and deployment workflow. The public `.openai/hosting.json` retains only the original non-secret local binding settings; it intentionally excludes the production project identifier and is not a deployment association. This development-support change does not deploy, create a Site or change the existing Site configuration. Authorized production deployment must use the original private project configuration. For Vercel, set build command `npm run build:vercel`, configure the same server variables and use the PostgreSQL migrations above. The app uses only Next-compatible APIs except the environment binding adapter; `next.config.ts` aliases that adapter for the standard Next build.
 
 ## Permissions and integrity
 
@@ -48,6 +48,6 @@ PDF reports use A3 landscape and split the month into 1–15 and 16–month-end 
 
 ## Remaining deployment gate
 
-A live Supabase project, its encrypted environment values, applied migrations and authorized private seed and a first administrator are required for operational publication. Local schema, code, and isolated tests are not proof of a live database or live authentication. Configure these before calling the system production ready. Perform live login/logout, refresh-token, multi-account, and database-backup verification after connection.
+A live Supabase project, its encrypted environment values, applied migrations, authorized private initial data where required, and a first administrator are required for operational publication. The public test seed must not be used for this. Local schema, code, and isolated tests are not proof of a live database or live authentication. Configure these before calling the system production ready. Perform live login/logout, refresh-token, multi-account, and database-backup verification after connection.
 
 Reference documentation: https://supabase.com/docs/guides/getting-started/api-keys and https://supabase.com/docs/guides/database/functions

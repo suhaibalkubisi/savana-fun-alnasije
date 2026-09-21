@@ -1,1 +1,5 @@
-{\n  "total": 206,\n  "counts": { "active": 192, "resigned": 13, "long_leave": 1 },\n  "note": "Names, identifiers, source hashes and the employee dataset are intentionally excluded."\n}\n
+{
+  "total": 206,
+  "counts": { "active": 192, "resigned": 13, "long_leave": 1 },
+  "note": "Names, identifiers, source hashes and the employee dataset are intentionally excluded."
+}

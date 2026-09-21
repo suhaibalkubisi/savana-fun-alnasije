@@ -10,6 +10,7 @@ for (const file of (await readdir("supabase/migrations"))
   .filter((name) => name.endsWith(".sql"))
   .sort())
   await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
+await db.exec("set hr.test_fixture = 'on'");
 await db.exec(await readFile("supabase/seed.sql", "utf8"));
 await db.query("insert into auth.users values($1,$2,$3)", [
   admin,

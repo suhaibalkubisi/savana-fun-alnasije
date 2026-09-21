@@ -1,1 +1,4 @@
--- Production employee seed data is private and is not stored in this public repository.\n-- Apply only an authorized seed through the approved deployment process.\n
+-- Production employee seed data is private and is not stored in this public repository.
+-- supabase/seed.sql is a sanitized TEST-ONLY fixture, not a production dump.
+-- npm run test:db uses a disposable PGlite database and opts in automatically.
+-- Never load this fixture into a live Supabase project.

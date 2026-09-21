@@ -17,6 +17,7 @@ before(async () => {
     .filter((name) => name.endsWith(".sql"))
     .sort())
     await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
+  await db.exec("set hr.test_fixture = 'on'");
   await db.exec(await readFile("supabase/seed.sql", "utf8"));
   for (const [name, id] of Object.entries(ids)) {
     await db.query("insert into auth.users values($1,$2,$3)", [
@@ -210,7 +211,7 @@ test("fingerprint preview is atomic, idempotent and excludes unapplied punches",
   await who("hr");
   await assert.rejects(attendanceWrite("rule.save", {}), /صلاحية/);
 });
-test("AHH entire workbook imports exactly 192 active, 13 resigned, 1 long leave", async () => {
+test("synthetic seed preserves 192 active, 13 resigned, 1 long leave and duplicate identities", async () => {
   await who("admin");
   const all = await read("dashboard");
   assert.equal(all.active, 192);
@@ -223,7 +224,7 @@ test("AHH entire workbook imports exactly 192 active, 13 resigned, 1 long leave"
     1,
   );
   assert.equal(
-    (await read("employees", { search: "خلدون حسين علي" })).total,
+    (await read("employees", { search: "موظف اختبار 067" })).total,
     2,
   );
 });
