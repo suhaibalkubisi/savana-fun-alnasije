@@ -25,6 +25,12 @@ for (const scenario of cases) {
       const preceding = (await readdir("supabase/migrations"))
         .filter(name => name.endsWith(".sql") && name < migration).sort();
       for (const name of preceding) await db.exec(await readFile(`supabase/migrations/${name}`, "utf8"));
+      await db.exec("set hr.test_fixture = 'on'");
+      await db.exec(await readFile("supabase/seed.sql", "utf8"));
+      const employee = (await db.query("select id,department_id from public.employees where employment_status='active' order by id limit 1")).rows[0];
+      await db.query(`insert into public.attendance_department_rules
+        (department_id,effective_from,start_minute,entry_window_start,entry_window_end)
+        values($1,'2026-09-01',960,720,1439)`, [employee.department_id]);
 
       // Disposable legacy fixture only: retain explicit historical timestamps.
       // Re-enable the touch trigger before applying the migration under test.
@@ -40,6 +46,12 @@ for (const scenario of cases) {
       }
       await db.exec("alter table public.attendance_imports enable trigger touch_attendance");
       const legacy = (await db.query("select * from public.attendance_imports order by id")).rows;
+      for (const [index, row] of legacy.entries()) {
+        await db.query(`insert into public.fingerprint_source_rows
+          (import_id,source_sheet,source_row,calendar_date,source_name,raw_values,punch_minutes,employee_id,match_state)
+          values($1,'Legacy',2,'2026-09-06','Legacy evidence','[]',$2,$3,'confirmed')`,
+        [row.id, [1000 + index * 20], employee.id]);
+      }
       assert.ok(new Date(legacy[0].updated_at) < new Date(legacy[1].updated_at));
 
       await db.exec(await readFile(`supabase/migrations/${migration}`, "utf8"));
@@ -56,6 +68,11 @@ for (const scenario of cases) {
         assert.deepEqual(row.reviewed_at, scenario.states[index] === "applied" ? legacy[index].updated_at : null);
       }
       assert.deepEqual((await db.query("select * from public.attendance_imports order by id")).rows, legacy);
+      const daily = (await db.query("select * from hr_private.attendance_session('2026-09-06',null,false) where employee_id=$1", [employee.id])).rows[0];
+      assert.equal(daily.entry_minute, null, "daily attendance must ignore every legacy monthly source, including superseded applied imports");
+      const monthly = (await db.query("select * from hr_private.attendance_session('2026-09-06',null,true) where employee_id=$1", [employee.id])).rows[0];
+      const approvedIndex = scenario.expected.indexOf("approved");
+      assert.equal(monthly.entry_minute, approvedIndex < 0 ? null : 1000 + approvedIndex * 20);
     } finally {
       await db.close();
     }

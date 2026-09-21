@@ -76,7 +76,8 @@ with base as (
  left join public.attendance_import_reviews ar on ar.import_id=i.id
  cross join lateral unnest(s.punch_minutes) p(minute)
  where s.calendar_date between day and day+1 and s.employee_id is not null
-  and (not monthly_only or (i.import_kind='monthly' and ar.lifecycle_state='approved'))
+  and ((not monthly_only and i.import_kind='daily')
+    or (monthly_only and i.import_kind='monthly' and ar.lifecycle_state='approved'))
 ), computed as (
  select b.*,
   (select min(p.minute) from punches p where p.employee_id=b.id and p.calendar_date=day and p.minute between b.entry_window_start and b.entry_window_end) entry,

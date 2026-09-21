@@ -313,6 +313,55 @@ regressionTest("missing exit keeps the entry pending and never invents absence",
   assert.equal(row.status, "present");
   assert.equal((await inspectFixture("select count(*)::int n from public.hr_status_records where employee_id=$1", [person.id]))[0].n, 0);
 });
+regressionTest("daily attendance ignores approved monthly punches and remains entry-driven", async () => {
+  const { person } = await fingerprintFixture();
+  const monthly = fingerprintPayload(person, { import_kind: "monthly", period_start: "2026-09-01", period_end: "2026-09-30" });
+  monthly.rows[0].punch_minutes = [78,960];
+  let batch = await attendanceWriteV3("import.preview", monthly);
+  batch = await attendanceWriteV3("import.review", { id: batch.id, version: batch.lifecycle_version });
+  await attendanceWriteV3("import.approve", { id: batch.id, version: batch.lifecycle_version });
+  const dailyRow = async () => (await attendanceReadV3("daily", { date: "2026-09-06" })).rows.find(row => row.employee_id === person.id);
+  assert.equal((await dailyRow()).entry_minute, null);
+  assert.equal((await dailyRow()).exit_minute, null);
+  const daily = await attendanceWriteV3("import.preview", fingerprintPayload(person, { source_hash: "d".repeat(64) }));
+  await attendanceWriteV3("import.apply", { id: daily.id, version: daily.version });
+  const row = await dailyRow();
+  assert.equal(row.entry_minute, 965);
+  assert.equal(row.exit_minute, null);
+  assert.equal(row.attendance_state, "pending_exit");
+  assert.equal(row.status, "present");
+});
+regressionTest("monthly attendance ignores daily and unapproved monthly punches", async () => {
+  const { person } = await fingerprintFixture();
+  const daily = await attendanceWriteV3("import.preview", fingerprintPayload(person));
+  await attendanceWriteV3("import.apply", { id: daily.id, version: daily.version });
+  const cell = async () => (await attendanceReadV3("monthly_fingerprint", { date: "2026-09-01" })).rows.find(row => row.employee_id === person.id).cells["6"];
+  assert.equal((await cell()).entry, null);
+  const monthly = fingerprintPayload(person, { import_kind: "monthly", period_start: "2026-09-01", period_end: "2026-09-30", source_hash: "d".repeat(64) });
+  monthly.rows[0].punch_minutes = [78,990];
+  let batch = await attendanceWriteV3("import.preview", monthly);
+  assert.equal((await cell()).entry, null);
+  batch = await attendanceWriteV3("import.review", { id: batch.id, version: batch.lifecycle_version });
+  assert.equal((await cell()).entry, null);
+  await attendanceWriteV3("import.approve", { id: batch.id, version: batch.lifecycle_version });
+  assert.equal((await cell()).entry, 990);
+  assert.equal((await cell()).exit, 78);
+  assert.equal((await cell()).duration, 528);
+});
+regressionTest("daily source isolation preserves next-day exit on the original workdate", async () => {
+  const { person } = await fingerprintFixture();
+  const payload = fingerprintPayload(person, { period_end: "2026-09-07" });
+  payload.rows.push({ ...payload.rows[0], source_row: 3, calendar_date: "2026-09-07", raw_values: ["01:18"], punch_minutes: [78] });
+  const batch = await attendanceWriteV3("import.preview", payload);
+  await attendanceWriteV3("import.apply", { id: batch.id, version: batch.version });
+  const original = (await attendanceReadV3("daily", { date: "2026-09-06" })).rows.find(row => row.employee_id === person.id);
+  assert.equal(original.entry_minute, 965);
+  assert.equal(original.exit_minute, 78);
+  assert.equal(original.duration_minutes, 553);
+  assert.equal(original.attendance_state, "complete");
+  const next = (await attendanceReadV3("daily", { date: "2026-09-07" })).rows.find(row => row.employee_id === person.id);
+  assert.equal(next.entry_minute, null);
+});
 regressionTest("unmatched fingerprint preserves evidence without assigning or overwriting HR data", async () => {
   const { person } = await fingerprintFixture();
   await write("status.save", { employee_id: person.id, department_id: person.department_id, record_date: "2026-09-06", status_type: "leave", late_minutes: null });
