@@ -284,9 +284,10 @@ export function AttendanceReport({
     [decision, setDecision] = useState(""),
     [decisionMinutes, setDecisionMinutes] = useState(""),
     [busy, setBusy] = useState(false);
+  const [manager, setManager] = useState("");
   const query = useData<{ rows: (DayRow & MonthRow)[]; approved_import?: { id: string; source_name: string; approved_at: string } | null }>(
     `attendance.${monthly ? "monthly_fingerprint" : "daily"}`,
-    { date, department_id: dep, search: useDebounced(search) },
+    { date, department_id: dep, manager_id: monthly ? manager : "", search: useDebounced(search) },
   );
   const title = monthly ? "الحضور الشهري بالبصمة" : "الموقف اليومي";
   const rawRows = query.data?.rows || [];
@@ -300,7 +301,7 @@ export function AttendanceReport({
   });
   const monthDays = monthly ? daysInMonth(date.slice(0, 7)) : 0;
   const headers = monthly
-    ? ["رقم الموظف", "الموظف", "القسم", ...Array.from({ length: monthDays }, (_, i) => String(i + 1))]
+    ? ["رقم الموظف", "الموظف", "القسم", "المسؤول بنهاية الشهر", ...Array.from({ length: monthDays }, (_, i) => String(i + 1))]
     : [
         "ت",
         "رقم الموظف",
@@ -318,7 +319,7 @@ export function AttendanceReport({
       ];
   const values = rows.map((r) =>
     monthly
-      ? [r.employee_number || "", r.name, r.department, ...Array.from({ length: monthDays }, (_, i) => {
+      ? [r.employee_number || "", r.name, r.department, r.manager || "غير محدد", ...Array.from({ length: monthDays }, (_, i) => {
           const cell = r.cells?.[String(i + 1)];
           if (cell?.entry == null) return "—";
           return `د ${time(cell.entry)}\nخ ${cell.exit == null ? "بانتظار الخروج" : time(cell.exit)}`;
@@ -447,6 +448,14 @@ export function AttendanceReport({
             label: departmentLabel(d),
           }))}
         />
+        {monthly && (
+          <Choice
+            label="المسؤول بنهاية الشهر"
+            value={manager}
+            onChange={setManager}
+            options={reference.managers.map((m) => ({ value: m.id, label: m.name }))}
+          />
+        )}
         <SearchBox value={search} onChange={setSearch} />
         {!monthly && (
           <div className="daily-filter-card">
