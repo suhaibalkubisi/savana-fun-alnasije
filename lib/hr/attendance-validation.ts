@@ -30,12 +30,20 @@ export const attendanceSchemas: Record<string, z.ZodTypeAny> = {
   }),
   "import.apply": z.object(revision),
   "import.cancel": z.object(revision),
+  "import.review": z.object(revision),
+  "import.approve": z.object(revision),
+  "import.supersede": z.object({
+    ...revision,
+    replacement_id: z.string().uuid(),
+    replacement_version: z.number().int().positive(),
+  }),
   "issue.resolve": z.object({
     ...revision,
     state: z.enum(["resolved", "ignored"]),
     employee_id: z.string().uuid().optional(),
     resolution_note: z.string().trim().min(1).max(2000),
   }),
+  "issue.reprocess": z.object(revision),
   "rule.save": z.object({
     id: revision.id.optional(),
     version: revision.version.optional(),
