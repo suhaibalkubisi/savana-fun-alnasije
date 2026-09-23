@@ -33,3 +33,25 @@ approval guard, restore over production, or retry uncertain migrations blindly.
 Local synthetic regressions: `node --test tests/attendance-rollout.test.mjs`.
 They cover V2 previews after backfill, explicit V3 approval, legacy apply refusal,
 duplicate imports, cancellation, daily coexistence, RLS and role permissions.
+
+## Monthly fingerprint row identity and assignment semantics
+
+The additional `monthly_fingerprint_employee_rows` migration replaces only the
+read RPC. Applied migrations and attendance computation remain unchanged.
+The matrix aggregates daily cells by employee UUID only; same-name employees
+remain distinct. Its month-end session supplies display metadata, including the
+direct manager override or the department rule effective at month-end. Manager
+filters use that same manager ID and include the employee's **whole month**,
+not only days under that manager. Daily calculation still uses each day's rule.
+
+The schema stores current employee department/direct-manager assignments, not
+a dated employee-transfer ledger. Department display/filtering therefore use
+the current employee department, including when viewing a past month. No past
+department assignment is invented or business history rewritten. Effective-dated
+department rules remain intact. A changed assignment does not split identity.
+
+UI, Excel, PDF and print share the same filtered rows and formatted values,
+including the month-end manager column. The report contains active employees as
+before. Monthly punches still require explicit approved monthly imports and
+never consume daily imports. Regression tests compare every daily cell and
+summed duration against attendance_session, across manager and department changes.
