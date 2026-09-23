@@ -399,7 +399,7 @@ export function AttendanceReport({
             rows={values}
             columnWeights={
               monthly
-                ? undefined
+                ? [2, 6, 5, 5, ...Array(monthDays).fill(1)]
                 : [4, 8, 8, 15, 16, 13, 9, 9, 8, 9, 24, 11, 18]
             }
             notesArea={!monthly}
