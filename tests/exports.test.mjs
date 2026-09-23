@@ -20,9 +20,45 @@ const {
   pdfBytes,
   tableExcelBytes,
   tablePdfBytes,
+  layoutTablePdf,
   triggerDownload,
 } = await import(compiled.href);
 after(() => rm(compiled, { force: true }));
+
+test("monthly PDF wraps Arabic identity columns and paginates without row overlap or lost day cells", async () => {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a3" });
+  const font = (await readFile("public/fonts/DejaVuSans.ttf")).toString("base64");
+  doc.addFileToVFS("Arabic.ttf", font);
+  doc.addFont("Arabic.ttf", "Arabic", "normal");
+  doc.setFont("Arabic");
+  const headers = ["رقم الموظف", "الموظف", "القسم", "المسؤول بنهاية الشهر", ...Array.from({ length: 30 }, (_, i) => String(i + 1))];
+  const rows = Array.from({ length: 57 }, (_, i) => [String(i), "موظف اختباري ذو اسم عربي طويل متعدد الأجزاء", "قسم اختبار (Test department)", "مسؤول اختبار متعدد الأجزاء", ...Array(30).fill(i % 2 ? "د ٠٤:٠٠ م\nخ بانتظار الخروج" : "—")]);
+  const weights = [2, 6, 5, 5, ...Array(30).fill(1)];
+  const layout = layoutTablePdf(doc, headers, rows, weights);
+  assert.ok(layout.widths[1] >= layout.widths[4] * 6 - 0.001);
+  assert.ok(layout.pages.length > 1);
+  assert.equal(layout.pages.flat().length, rows.length);
+  assert.equal(layout.pages.flat().reduce((n, r) => n + r.lines.length - 4, 0), 57 * 30);
+  assert.ok(layout.pages.flat().some(r => r.height > 30));
+  assert.deepEqual(layout.pages.flat().map(r => r.lines[0].join("")), rows.map(r => r[0]));
+  for (const page of layout.pages) {
+    assert.ok(layout.bodyTop + page.reduce((n, r) => n + r.height, 0) <= layout.bodyBottom);
+    for (const row of page) for (const lines of row.lines)
+      assert.ok(lines.length * 10 + 12 <= row.height);
+  }
+});
+
+test("wrapped daily PDF rows reserve the notes box and footer", async () => {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+  const layout = layoutTablePdf(doc, ["Employee", "Notes"], Array.from({ length: 35 }, (_, i) => [String(i), "Long review note ".repeat(50)]), [1, 2], true);
+  assert.equal(layout.pages.flat().length, 35);
+  for (const page of layout.pages) {
+    const end = layout.bodyTop + page.reduce((n, r) => n + r.height, 0);
+    assert.ok(end + 18 + 12 + 112 < doc.internal.pageSize.getHeight() - 28);
+  }
+});
 test("browser download attaches its link and leaves the prepared URL available for retry", () => {
   const previous = globalThis.document;
   let attached = false;

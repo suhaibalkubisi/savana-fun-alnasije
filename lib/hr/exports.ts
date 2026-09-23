@@ -523,6 +523,45 @@ export function tableExcelBytes({
   return zipSync(files, { level: 6 });
 }
 
+// Wrap once and paginate by measured text height, never by a fixed row count.
+export function layoutTablePdf(
+  doc: jsPDF,
+  headers: string[],
+  rows: (string | number)[][],
+  columnWeights?: number[],
+  notesArea = false,
+) {
+  const tableWidth = doc.internal.pageSize.getWidth() - 56;
+  const weights = columnWeights?.length === headers.length
+    ? columnWeights : Array(headers.length).fill(1);
+  const totalWeight = weights.reduce((sum, value) => sum + value, 0);
+  const widths = weights.map((value) => tableWidth * value / totalWeight);
+  const lineHeight = 10;
+  doc.setFontSize(8.5);
+  doc.setLineHeightFactor(lineHeight / 8.5);
+  const wrap = (row: (string | number)[]) => headers.map((_, i) =>
+    doc.splitTextToSize(String(row[i] ?? "—"), widths[i] - 7) as string[]);
+  const headerLines = wrap(headers);
+  const headerHeight = Math.max(40, ...headerLines.map(lines => lines.length * lineHeight + 16));
+  const bodyTop = 112 + headerHeight;
+  const bodyBottom = doc.internal.pageSize.getHeight() - (notesArea ? 175 : 50);
+  const pages: { lines: string[][]; height: number }[][] = [[]];
+  let y = bodyTop;
+  for (const row of rows) {
+    const lines = wrap(row);
+    const height = Math.max(30, ...lines.map(cell => cell.length * lineHeight + 12));
+    if (height > bodyBottom - bodyTop)
+      throw new Error("نص خلية التقرير أطول من مساحة الصفحة");
+    if (y + height > bodyBottom) {
+      pages.push([]);
+      y = bodyTop;
+    }
+    pages[pages.length - 1].push({ lines, height });
+    y += height;
+  }
+  return { widths, headerLines, headerHeight, bodyTop, bodyBottom, pages };
+}
+
 export async function tablePdfBytes({
   title,
   period,
@@ -565,21 +604,13 @@ export async function tablePdfBytes({
   const height = doc.internal.pageSize.getHeight();
   const margin = 28;
   const tableWidth = width - margin * 2;
-  const weights =
-    columnWeights?.length === headers.length
-      ? columnWeights
-      : Array(headers.length).fill(1);
-  const totalWeight = weights.reduce((sum, value) => sum + value, 0);
-  const widths = weights.map((value) => (tableWidth * value) / totalWeight);
-  const perPage = Math.max(
-    10,
-    Math.floor((height - (notesArea ? 315 : 185)) / 30),
-  );
+  const layout = layoutTablePdf(doc, headers, rows, columnWeights, notesArea);
+  const { widths, headerLines, headerHeight } = layout;
   const [headerAsset, watermarkAsset] = await Promise.all([
     webAsset(brandAssets.header.src),
     webAsset(brandAssets.watermark.src),
   ]);
-  const pages = Math.max(1, Math.ceil(rows.length / perPage));
+  const pages = layout.pages.length;
   for (let page = 0; page < pages; page++) {
     if (page) doc.addPage();
     drawBrand(
@@ -606,41 +637,42 @@ export async function tablePdfBytes({
       headerX -= widths[i];
       const x = headerX;
       doc.setFillColor("#0B2B55");
-      doc.rect(x, 112, widths[i], 40, "F");
+      doc.rect(x, 112, widths[i], headerHeight, "F");
       doc.setDrawColor("#FFFFFF");
-      doc.rect(x, 112, widths[i], 40, "S");
+      doc.rect(x, 112, widths[i], headerHeight, "S");
       doc.setTextColor("#FFFFFF");
       doc.setFontSize(8.5);
       doc.text(
-        doc.splitTextToSize(String(header), widths[i] - 7),
+        headerLines[i],
         x + widths[i] / 2,
         127,
         { align: "center" },
       );
     });
-    const pageRows = rows.slice(page * perPage, (page + 1) * perPage);
+    const pageRows = layout.pages[page];
+    let y = layout.bodyTop;
     pageRows.forEach((row, ri) => {
       let rowX = width - margin;
-      row.forEach((value, ci) => {
+      row.lines.forEach((lines, ci) => {
         rowX -= widths[ci];
         const x = rowX;
-        const y = 152 + ri * 30;
         doc.setFillColor(ri % 2 ? "#F1F5FA" : "#FFFFFF");
-        fillReportCell(doc, x, y, widths[ci], 30);
+        fillReportCell(doc, x, y, widths[ci], row.height);
         doc.setDrawColor("#B8C5D6");
-        doc.rect(x, y, widths[ci], 30, "S");
+        doc.rect(x, y, widths[ci], row.height, "S");
         doc.setTextColor("#10233F");
         doc.setFontSize(8.5);
         doc.text(
-          doc.splitTextToSize(String(value ?? "—"), widths[ci] - 7),
+          lines,
           x + widths[ci] / 2,
           y + 18,
           { align: "center", maxWidth: widths[ci] - 7 },
         );
       });
+      y += row.height;
     });
     if (notesArea && page === pages - 1) {
-      const notesY = 170 + pageRows.length * 30;
+      const notesY = y + 18;
       doc.setTextColor("#0B2B55");
       doc.setFontSize(13);
       doc.text("ملاحظات", width - margin, notesY, { align: "right" });
