@@ -2,6 +2,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
+import { monthlyDeviceRows } from "./fixtures/monthly-device.mjs";
 let db;
 const ids = {
   admin: "11111111-1111-4111-8111-111111111111",
@@ -92,6 +93,32 @@ const attendanceReadV3 = async (kind, filters = {}) =>
 const readV3 = async (kind, filters = {}) =>
   (await db.query("select public.hr_read_v3($1,$2) data", [kind, filters]))
     .rows[0].data;
+
+regressionTest("full monthly device preview uses indexed matching without losing inactive or unmatched identities", async () => {
+  await db.exec("with numbered as (select id,row_number() over(order by id) n from public.employees) update public.employees e set employee_number='SYN-DB-'||n.n from numbered n where n.id=e.id");
+  const employees=(await db.query("select employee_number,name,employment_status from public.employees order by employee_number")).rows;
+  const grid=monthlyDeviceRows();
+  const rows=grid.slice(1).flatMap((r,i)=>r.slice(2).map((cell,d)=>({
+    source_sheet:"Punch Record",source_row:i+2,calendar_date:`2026-09-${String(d+1).padStart(2,'0')}`,
+    person_code:employees[i]?.employee_number || r[0],source_name:employees[i]?.name || r[1],
+    raw_values:[r[0],r[1],grid[0][d+2],cell],
+    punch_minutes:cell?cell.split('\n').map(t=>Number(t.slice(0,2))*60+Number(t.slice(3))).sort((a,b)=>a-b):[],invalid:false,
+  })));
+  await db.exec("analyze public.employees");
+  const plan=await db.query("explain (format json) select array_agg(id) from public.employees where hr_private.fingerprint_name(name)=hr_private.fingerprint_name('synthetic lookup probe')");
+  assert.match(JSON.stringify(plan.rows),/employees_fingerprint_name_idx/);
+  await who('admin');
+  const preview=await attendanceWriteV3('import.preview',{source_name:'synthetic-device.xls',source_hash:'b'.repeat(64),import_kind:'monthly',period_start:'2026-09-01',period_end:'2026-09-30',rows});
+  assert.equal(preview.lifecycle_state,'preview');
+  assert.equal(preview.summary.rows,6450);
+  assert.equal(preview.summary.matched,employees.length*30);
+  assert.equal(preview.summary.unmatched,(215-employees.length)*30);
+  await db.exec('reset role');
+  const counts=(await db.query("select count(*)::int cells,sum(cardinality(punch_minutes))::int tokens,count(*) filter(where calendar_date>='2026-09-24' and cardinality(punch_minutes)>0)::int future_punches from public.fingerprint_source_rows where import_id=$1",[preview.id])).rows[0];
+  assert.deepEqual(counts,{cells:6450,tokens:7416,future_punches:0});
+  assert.equal((await db.query("select count(*)::int n from public.fingerprint_source_rows r join public.employees e on e.id=r.employee_id where r.import_id=$1 and e.employment_status<>'active'",[preview.id])).rows[0].n,14*30);
+  assert.equal((await db.query("select count(*)::int n from public.attendance_import_reviews where import_id=$1 and lifecycle_state='approved'",[preview.id])).rows[0].n,0);
+});
 
 regressionTest("phase 2 daily position exposes schedule, person code and review fields", async () => {
   await who("admin");

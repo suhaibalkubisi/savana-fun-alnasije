@@ -35,10 +35,12 @@ function dateValue(v: string) {
 function punches(values: string[]) {
   const result: number[] = [];
   let invalid = false;
+  let raw_punch_tokens = 0;
   for (const value of values) {
     if (!value || value === "-" || value === "--") continue;
     const normalized = value.replace(/(\d{1,2}:\d{2}(?::\d{2})?)\s+(am|pm)/gi, "$1$2");
     for (const token of normalized.split(/[\s,;،|]+/).filter(Boolean)) {
+      raw_punch_tokens++;
       const m = token.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?$/i);
       if (!m || +m[1] > (m[3] ? 12 : 23) || +m[2] > 59) invalid = true;
       else {
@@ -48,7 +50,7 @@ function punches(values: string[]) {
       }
     }
   }
-  return { punch_minutes: [...new Set(result)].sort((a, b) => a - b), invalid };
+  return { punch_minutes: [...new Set(result)].sort((a, b) => a - b), invalid, raw_punch_tokens };
 }
 // BIFF .xls and OpenXML .xlsx are parsed from bytes, never from file extension.
 // A monthly MM-DD header intentionally requires an explicit selected year.
@@ -67,6 +69,8 @@ export function parseFingerprint(
   });
   const rows: FingerprintRow[] = [];
   const warnings: string[] = [];
+  let rawPunchTokens = 0;
+  let populatedCells = 0;
   const year = Number(period.slice(0, 4));
   if (!Number.isInteger(year) || year < 2000 || year > 2100)
     throw new Error("السنة غير صالحة");
@@ -138,6 +142,9 @@ export function parseFingerprint(
             : cell.day.slice(0, 7) !== period
         )
           throw new Error("فترة الملف لا تطابق الفترة المختارة");
+        const parsed = punches(cell.values);
+        rawPunchTokens += parsed.raw_punch_tokens;
+        if (cell.values.some((value) => value && value !== "-" && value !== "--")) populatedCells++;
         rows.push({
           source_sheet: sheetName,
           source_row: i + 1,
@@ -145,7 +152,8 @@ export function parseFingerprint(
           person_code: raw[code],
           source_name: raw[name],
           raw_values: cell.raw,
-          ...punches(cell.values),
+          punch_minutes: parsed.punch_minutes,
+          invalid: parsed.invalid,
         });
       }
     }
@@ -160,6 +168,14 @@ export function parseFingerprint(
   return {
     rows,
     warnings,
+    source_counts: {
+      source_rows: new Set(rows.map((r) => `${r.source_sheet}\u0000${r.source_row}`)).size,
+      person_codes: new Set(rows.map((r) => r.person_code).filter(Boolean)).size,
+      calendar_cells: rows.length,
+      populated_cells: populatedCells,
+      raw_punch_tokens: rawPunchTokens,
+      unique_punch_minutes: rows.reduce((sum, r) => sum + r.punch_minutes.length, 0),
+    },
     period_start: dates[0],
     period_end: dates[dates.length - 1],
   };

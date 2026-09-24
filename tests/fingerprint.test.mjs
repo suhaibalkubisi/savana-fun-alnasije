@@ -4,6 +4,7 @@ import ts from "typescript";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { utils, write } from "xlsx";
+import { monthlyDeviceRows } from "./fixtures/monthly-device.mjs";
 const output = new URL("./.fingerprint-check.mjs", import.meta.url);
 const source=await readFile(fileURLToPath(new URL("../lib/hr/fingerprint.ts",import.meta.url)),"utf8");
 await writeFile(fileURLToPath(output),ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText);
@@ -58,4 +59,28 @@ test("wrong selected period and unsupported structure cannot import",()=>{
  assert.throws(()=>parseFingerprint(b,"daily","2026-09-07"),/فترة/);
  assert.throws(()=>parseFingerprint(b,"monthly","2026-09"),/الشهرية/);
  assert.throws(()=>parseFingerprint(workbook([["unknown"],["x"]]),"daily","2026-09-06"),/كود الشخص واسم الموظف/);
+});
+test("full device XLS preserves all identities, multiline evidence and blank future dates",()=>{
+ const result=parseFingerprint(workbook(monthlyDeviceRows()),"monthly","2026-09");
+ assert.deepEqual(result.source_counts,{source_rows:215,person_codes:215,calendar_cells:6450,populated_cells:4318,raw_punch_tokens:7416,unique_punch_minutes:7416});
+ assert.equal(result.rows.filter(r=>r.punch_minutes.length>1).length,2946);
+ assert.equal(result.rows.filter(r=>r.invalid).length,0);
+ assert.equal(result.rows.filter(r=>r.calendar_date>="2026-09-24" && r.punch_minutes.length).length,0);
+ assert.equal(result.rows.filter(r=>r.calendar_date>="2026-09-24").length,215*7);
+ assert.deepEqual(result.rows[0].punch_minutes,[78,965,1215]);
+ assert.equal(result.rows[0].raw_values[3],"01:18\n16:05\n20:15");
+ assert.equal(result.rows[0].person_code,"SYN-0001");
+ assert.equal(result.rows[0].source_name,"موظف تجريبي 1");
+});
+test("yearless device headers never infer year from the clock",()=>{
+ const file=workbook(monthlyDeviceRows());
+ assert.throws(()=>parseFingerprint(file,"monthly",""),/السنة/);
+ assert.equal(parseFingerprint(file,"monthly","2030-09").rows[0].calendar_date,"2030-09-01");
+ assert.throws(()=>parseFingerprint(file,"monthly","2026-10"),/فترة/);
+});
+test("same-minute deduplication is disclosed while raw evidence is retained",()=>{
+ const result=parseFingerprint(workbook([["Person Code","Name","09-01"],["001","تجريبي","16:05\n16:05\n01:18"]]),"monthly","2026-09");
+ assert.equal(result.source_counts.raw_punch_tokens,3);
+ assert.equal(result.source_counts.unique_punch_minutes,2);
+ assert.equal(result.rows[0].raw_values[3],"16:05\n16:05\n01:18");
 });

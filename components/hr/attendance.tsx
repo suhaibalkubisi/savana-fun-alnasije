@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import type { parseFingerprint } from "@/lib/hr/fingerprint";
 import { useSearchParams } from "next/navigation";
 import { BrandImage } from "./brand-image";
 import Link from "next/link";
@@ -630,6 +631,7 @@ export function AttendanceReport({
 }
 
 export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
+  const [pending, setPending] = useState<null | { parsed: ReturnType<typeof parseFingerprint>; name: string; hash: string; period: string }>(null);
   const [period, setPeriod] = useState(
       monthly ? baghdadDate().slice(0, 7) : baghdadDate(),
     ),
@@ -650,6 +652,7 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
   }>("attendance.import", { id: batch?.id, page }, !!batch);
   async function upload(file: File) {
     setBusy(true);
+    setPending(null);
     try {
       const bytes = await file.arrayBuffer();
       const { parseFingerprint } = await import("@/lib/hr/fingerprint");
@@ -663,20 +666,34 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
       ]
         .map((v) => v.toString(16).padStart(2, "0"))
         .join("");
-      const next = await mutate<Batch>("attendance.import.preview", {
-        ...parsed,
-        source_name: file.name,
-        source_hash: hash,
-        import_kind: monthly ? "monthly" : "daily",
-      });
-      setBatch(next);
-      setPage(0);
+      if (monthly) setPending({ parsed, name: file.name, hash, period });
+      else {
+        setBatch(await mutate<Batch>("attendance.import.preview", {
+          ...parsed, source_name: file.name, source_hash: hash, import_kind: "daily",
+        }));
+        setPage(0);
+      }
       for (const warning of parsed.warnings) toast.warning(warning);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
     }
+  }
+  async function createPreview() {
+    if (!pending || pending.period !== period) return;
+    setBusy(true);
+    try {
+      const next = await mutate<Batch>("attendance.import.preview", {
+        ...pending.parsed, source_name: pending.name, source_hash: pending.hash,
+        import_kind: monthly ? "monthly" : "daily",
+      });
+      setBatch(next);
+      setPage(0);
+      setPending(null);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally { setBusy(false); }
   }
   async function transition(action: "review" | "approve" | "apply" | "cancel") {
     if (!batch) return;
@@ -713,7 +730,7 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
             type={monthly ? "month" : "date"}
             value={period}
             disabled={busy}
-            onChange={(e) => setPeriod(e.target.value)}
+            onChange={(e) => { setPeriod(e.target.value); setPending(null); }}
           />
         </Field>
         <Field label="ملف البصمة">
@@ -729,6 +746,20 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
         </Field>
         {busy && <span role="status">جاري المعالجة…</span>}
       </section>
+      {pending && (
+        <section className="space-y-4" aria-label="تأكيد فترة الملف">
+          <h2>{pending.name} · الفترة المختارة: {pending.period}</h2>
+          <p>تُفسّر تواريخ الملف حسب السنة المختارة أعلاه، وليس وقت الرفع. إنشاء المعاينة يحفظ أدلة البصمة للمراجعة فقط ولا يعتمد الحضور.</p>
+          <Metrics items={[
+            ["صفوف المصدر", pending.parsed.source_counts.source_rows],
+            ["أكواد الأشخاص", pending.parsed.source_counts.person_codes],
+            ["خلايا بأدلة بصمة", pending.parsed.source_counts.populated_cells],
+            ["البصمات الخام", pending.parsed.source_counts.raw_punch_tokens],
+          ]} />
+          <p>تُحفظ الأيام الفارغة دون تحويلها إلى غياب. تُعرض حالات عدم التطابق للمراجعة، وتُحسب البصمات المكررة في الدقيقة نفسها مرة واحدة فقط مع حفظ الأصل.</p>
+          <Button disabled={busy} onClick={createPreview}>تأكيد الفترة وإنشاء المعاينة</Button>
+        </section>
+      )}
       {current && (
         <section className="space-y-4">
           <PageTitle
@@ -757,7 +788,7 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
           />
           <Metrics
             items={[
-              ["صفوف الملف", current.summary.rows || 0],
+              ["سجلات الشخص / اليوم", current.summary.rows || 0],
               ["مطابق", current.summary.matched || 0],
               ["غير مطابق", current.summary.unmatched || 0],
               ["ملتبس", current.summary.ambiguous || 0],
