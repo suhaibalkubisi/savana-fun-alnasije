@@ -78,7 +78,14 @@ function col(n: number) {
   }
   return s;
 }
+function codedReportTable(report: Report, summary: boolean, from=1, through=daysInMonth(report.month)) {
+  const headers=summary?['الكود الوظيفي',...summaryHeaders]:['الكود الوظيفي','رقم الموظف','اسم الموظف','القسم',...Array.from({length:through-from+1},(_,i)=>String(i+from)),...totalHeaders];
+  const rows=report.rows.map(r=>summary?[r.internal_code||'',...summaryValues(r)]:[r.internal_code||'',r.employee_number||'',r.name,r.department,...Array.from({length:through-from+1},(_,i)=>r.cells[i+from]?statuses[r.cells[i+from]].code:''),...values(r)]);
+  const total:(string|number)[]=Array(headers.length-(summary?summaryKeys.length:keys.length)).fill('');total[2]='الإجمالي';total.push(...(summary?summaryTotals(report.totals):values(report.totals)));rows.push(total);
+  return {headers,rows,columnWeights:summary?[11,8,21,16,8,16,...Array(8).fill(7)]:[11,8,21,16,...Array(through-from+1).fill(5),...Array(7).fill(7)]};
+}
 export function excelBytes(report: Report, title: string, summary = false) {
+  if(report.rows.some(r=>r.internal_code))return tableExcelBytes({title,period:monthLabel(report.month),...codedReportTable(report,summary)});
   const days = daysInMonth(report.month);
   const headers = summary
     ? summaryHeaders
@@ -271,6 +278,7 @@ export async function pdfBytes(
   summary = false,
   fontBase64?: string,
 ) {
+  if(report.rows.some(r=>r.internal_code))return tablePdfBytes({title,period:monthLabel(report.month),fontBase64,...codedReportTable(report,summary),...(!summary?{segments:Array.from({length:Math.ceil(daysInMonth(report.month)/10)},(_,i)=>codedReportTable(report,false,i*10+1,Math.min(daysInMonth(report.month),i*10+10)))}:{})});
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({
     orientation: "landscape",
@@ -530,6 +538,7 @@ export function layoutTablePdf(
   rows: (string | number)[][],
   columnWeights?: number[],
   notesArea = false,
+  headerTop = 112,
 ) {
   const tableWidth = doc.internal.pageSize.getWidth() - 56;
   const weights = columnWeights?.length === headers.length
@@ -543,7 +552,7 @@ export function layoutTablePdf(
     doc.splitTextToSize(String(row[i] ?? "—"), widths[i] - 7) as string[]);
   const headerLines = wrap(headers);
   const headerHeight = Math.max(40, ...headerLines.map(lines => lines.length * lineHeight + 16));
-  const bodyTop = 112 + headerHeight;
+  const bodyTop = headerTop + headerHeight;
   const bodyBottom = doc.internal.pageSize.getHeight() - (notesArea ? 175 : 50);
   const pages: { lines: string[][]; height: number }[][] = [[]];
   let y = bodyTop;
@@ -571,6 +580,7 @@ export async function tablePdfBytes({
   landscape = true,
   columnWeights,
   notesArea = false,
+  segments,
 }: {
   title: string;
   period: string;
@@ -580,6 +590,7 @@ export async function tablePdfBytes({
   landscape?: boolean;
   columnWeights?: number[];
   notesArea?: boolean;
+  segments?: {headers: string[]; rows: (string | number)[][]; columnWeights?: number[]}[];
 }) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({
@@ -604,14 +615,22 @@ export async function tablePdfBytes({
   const height = doc.internal.pageSize.getHeight();
   const margin = 28;
   const tableWidth = width - margin * 2;
-  const layout = layoutTablePdf(doc, headers, rows, columnWeights, notesArea);
-  const { widths, headerLines, headerHeight } = layout;
+  doc.setFontSize(9);
+  const periodLines = doc.splitTextToSize(`قسم الموارد البشرية – مسائي · ${period}`, tableWidth) as string[];
+  const headerTop = 112 + Math.max(0, periodLines.length - 1) * 11;
+  const sections = segments?.length ? segments : [{headers, rows, columnWeights}];
+  const allPages = sections.flatMap(section => {
+    const layout = layoutTablePdf(doc, section.headers, section.rows, section.columnWeights, notesArea, headerTop);
+    return layout.pages.map(pageRows => ({layout, pageRows, headers: section.headers}));
+  });
   const [headerAsset, watermarkAsset] = await Promise.all([
     webAsset(brandAssets.header.src),
     webAsset(brandAssets.watermark.src),
   ]);
-  const pages = layout.pages.length;
+  const pages = allPages.length;
   for (let page = 0; page < pages; page++) {
+    const {layout, pageRows, headers: pageHeaders} = allPages[page];
+    const {widths, headerLines, headerHeight} = layout;
     if (page) doc.addPage();
     drawBrand(
       doc,
@@ -629,27 +648,27 @@ export async function tablePdfBytes({
     doc.text(title, width - margin, 82, { align: "right" });
     doc.setFontSize(9);
     doc.setTextColor("#637188");
-    doc.text(`قسم الموارد البشرية – مسائي · ${period}`, width - margin, 100, {
+    doc.text(periodLines, width - margin, 100, {
       align: "right",
+      lineHeightFactor: 11 / 9,
     });
     let headerX = width - margin;
-    headers.forEach((header, i) => {
+    pageHeaders.forEach((header, i) => {
       headerX -= widths[i];
       const x = headerX;
       doc.setFillColor("#0B2B55");
-      doc.rect(x, 112, widths[i], headerHeight, "F");
+      doc.rect(x, headerTop, widths[i], headerHeight, "F");
       doc.setDrawColor("#FFFFFF");
-      doc.rect(x, 112, widths[i], headerHeight, "S");
+      doc.rect(x, headerTop, widths[i], headerHeight, "S");
       doc.setTextColor("#FFFFFF");
       doc.setFontSize(8.5);
       doc.text(
         headerLines[i],
         x + widths[i] / 2,
-        127,
+        headerTop + 15,
         { align: "center" },
       );
     });
-    const pageRows = layout.pages[page];
     let y = layout.bodyTop;
     pageRows.forEach((row, ri) => {
       let rowX = width - margin;

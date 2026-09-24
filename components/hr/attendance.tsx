@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { parseFingerprint } from "@/lib/hr/fingerprint";
+import type { MonthlyPosition } from "@/lib/hr/monthly-position.mjs";
 import { useSearchParams } from "next/navigation";
 import { BrandImage } from "./brand-image";
 import Link from "next/link";
@@ -44,6 +45,7 @@ import {
 } from "@/lib/hr/types";
 import { download, tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
 import { formatClock12 } from "@/lib/hr/time-format.mjs";
+import { MonthlyPositionPage } from './monthly-position';
 import {
   Choice,
   Field,
@@ -57,6 +59,7 @@ import {
 
 type DayRow = {
   employee_id: string;
+  internal_code?: string | null;
   employee_number: string | null;
   person_code: string | null;
   name: string;
@@ -343,6 +346,7 @@ export function AttendanceReport({
       ]
     : [
         "ت",
+        "الكود الوظيفي",
         "رقم الموظف",
         "كود البصمة",
         "الموظف",
@@ -371,6 +375,7 @@ export function AttendanceReport({
         ]
       : [
           rows.indexOf(r) + 1,
+          r.internal_code || "",
           r.employee_number || "",
           r.person_code || "",
           r.name,
@@ -445,7 +450,7 @@ export function AttendanceReport({
             columnWeights={
               monthly
                 ? [2, 6, 5, 5, ...Array(monthDays).fill(1)]
-                : [4, 8, 8, 15, 16, 13, 9, 9, 8, 9, 24, 11, 18]
+                : [4, 12, 8, 8, 15, 16, 13, 9, 9, 8, 9, 24, 11, 18]
             }
             notesArea={!monthly}
           />
@@ -681,7 +686,7 @@ export function AttendanceReport({
   );
 }
 
-export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
+export function FingerprintImport({ monthly = false,reference }: { monthly?: boolean;reference:Reference }) {
   const selectedImportId = useSearchParams().get("import_id") || undefined;
   const [confirmation, setConfirmation] = useState<
     "review" | "approve" | "apply" | "cancel" | null
@@ -698,6 +703,9 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
     [busy, setBusy] = useState(false),
     [batch, setBatch] = useState<Batch | null>(null),
     [page, setPage] = useState(0);
+  const [coverageFrom,setCoverageFrom]=useState(''),[coverageEnd,setCoverageEnd]=useState('');
+  const [localPosition,setLocalPosition]=useState<MonthlyPosition|null>(null);
+  const [uploadError,setUploadError]=useState('');
   const list = useData<Batch[]>("attendance.imports", {
     import_kind: monthly ? "monthly" : "daily",
   });
@@ -731,7 +739,9 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
   const reviewSummary = preview.data?.review_summary;
   async function upload(file: File) {
     setBusy(true);
+    setUploadError('');
     setPending(null);
+    setLocalPosition(null);
     try {
       const bytes = await file.arrayBuffer();
       const { parseFingerprint } = await import("@/lib/hr/fingerprint");
@@ -745,7 +755,13 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
       ]
         .map((v) => v.toString(16).padStart(2, "0"))
         .join("");
-      if (monthly) setPending({ parsed, name: file.name, hash, period });
+      if (monthly) {
+        setPending({ parsed, name: file.name, hash, period });
+        const observed=parsed.rows.filter(r=>r.punch_minutes.length).map(r=>r.calendar_date).sort();
+        setCoverageFrom(observed[0]||parsed.period_start);
+        setCoverageEnd(observed.at(-1)||parsed.period_start);
+        setLocalPosition(await mutate<MonthlyPosition>('attendance.import.inspect', {...parsed,source_name:file.name,source_hash:hash,import_kind:'monthly',coverage_start:observed[0]||parsed.period_start,coverage_end:observed.at(-1)||parsed.period_start}));
+      }
       else {
         setBatch(
           await mutate<Batch>("attendance.import.preview", {
@@ -759,6 +775,7 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
       }
       for (const warning of parsed.warnings) toast.warning(warning);
     } catch (e) {
+      setUploadError((e as Error).message);
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
@@ -773,6 +790,7 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
         source_name: pending.name,
         source_hash: pending.hash,
         import_kind: monthly ? "monthly" : "daily",
+        ...(monthly?{coverage_start:coverageFrom,coverage_end:coverageEnd}:{}),
       });
       setBatch(next);
       setPage(0);
@@ -855,6 +873,7 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
         </Field>
         {busy && <span role="status">جاري المعالجة…</span>}
       </section>
+      {!!uploadError&&<p role="alert" className="workflow-notice">تعذر إكمال قراءة الملف: {uploadError}</p>}
       {pending && (
         <section className="space-y-4" aria-label="تأكيد فترة الملف">
           <h2>
@@ -880,9 +899,12 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
             للمراجعة، وتُحسب البصمات المكررة في الدقيقة نفسها مرة واحدة فقط مع
             حفظ الأصل.
           </p>
+          <div className="flex flex-wrap gap-3"><Field label="أول تاريخ مغطى"><Input type="date" min={pending.parsed.period_start} max={pending.parsed.period_end} value={coverageFrom} onChange={e=>setCoverageFrom(e.target.value)}/></Field><Field label="آخر تاريخ مغطى"><Input type="date" min={coverageFrom} max={pending.parsed.period_end} value={coverageEnd} onChange={e=>setCoverageEnd(e.target.value)}/></Field></div>
+          <p className="scope-note">القيم المقترحة هي أول وآخر بصمة مرصودة، وليست دليلاً على اكتمال جمع البصمات. تحقق من نطاق تصدير الجهاز قبل التأكيد؛ لا تعني الأيام الفارغة غياباً.</p>
           <Button disabled={busy} onClick={createPreview}>
             تأكيد الفترة وإنشاء المعاينة
           </Button>
+          {localPosition&&<><p className="scope-note">معاينة فورية للقراءة فقط؛ لم يُحفظ استيراد جديد. عند تأكيد الفترة يُعاد الحساب بنطاق التغطية المختار أعلاه وتُحفظ الأدلة للمراجعة.</p><MonthlyPositionPage key={pending.hash} reference={reference} period={pending.period} localPosition={localPosition} embedded/></>}
         </section>
       )}
       {current && (
@@ -959,7 +981,9 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
               </p>
             )}
           </div>
-          {reviewSummary && (
+          {monthly&&<div className="actions"><Button asChild variant="outline"><Link href={`/fingerprint-issues?import_id=${current.id}&import_kind=monthly`}>مراجعة مطابقة هويات هذا الملف</Link></Button><Button asChild variant="outline"><Link href="/monthly-position">عرض الموقف الشهري المعتمد</Link></Button></div>}
+          {monthly&&<MonthlyPositionPage key={current.id} reference={reference} importId={current.id} period={current.period_start.slice(0,7)} embedded/>}
+          {!monthly && reviewSummary && (
             <Metrics
               items={[
                 ["هويات المصدر", reviewSummary.identities],
@@ -972,6 +996,8 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
               ]}
             />
           )}
+          <details className="raw-evidence-panel">
+          <summary>الأدلة الأصلية بالتفصيل · {current.summary.rows || 0} سجل شخص / يوم</summary>
           <Metrics
             items={[
               ["سجلات الشخص / اليوم", current.summary.rows || 0],
@@ -1064,6 +1090,7 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
               التالي
             </Button>
           </div>
+          </details>
         </section>
       )}
       <h2 className="mt-8 mb-4">سجل الاستيراد</h2>
@@ -1188,6 +1215,7 @@ export function FingerprintIssues({
       employee_number: string | null;
       department: string;
       employment_status: string;
+      internal_code?: string;
     }[]
   >("attendance.matching_employees", {}, !!issue && canWrite);
   async function resolve(ignore = false) {
@@ -1347,7 +1375,7 @@ export function FingerprintIssues({
             disabled={busy || employees.loading}
             options={(employees.data || reference.employees).map((e) => ({
               value: e.id,
-              label: `${e.name} — ${e.department} — ${e.employee_number || e.id.slice(0, 8)}${"employment_status" in e && e.employment_status !== "active" ? " — غير نشط" : ""}${issue?.candidates.some((c) => c.id === e.id) ? " — مرشح للمراجعة" : ""}`,
+              label: `${e.name} — ${'internal_code' in e ? e.internal_code : ''} — ${e.department} — رقم ${e.employee_number || 'غير محدد'}${"employment_status" in e && e.employment_status !== "active" ? " — غير نشط" : ""}${issue?.candidates.some((c) => c.id === e.id) ? " — مرشح للمراجعة" : ""}`,
             }))}
           />
           {employees.error && <p role="alert">{employees.error}</p>}

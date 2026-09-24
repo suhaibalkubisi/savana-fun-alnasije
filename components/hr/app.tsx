@@ -108,6 +108,7 @@ const OrganizationPage = lazy(() =>
 const AttendanceReport = lazy(() =>
   import("./attendance").then((m) => ({ default: m.AttendanceReport })),
 );
+const MonthlyPositionPage = lazy(() => import('./monthly-position').then(m=>({default:m.MonthlyPositionPage})));
 const FingerprintImport = lazy(() =>
   import("./attendance").then((m) => ({ default: m.FingerprintImport })),
 );
@@ -174,10 +175,11 @@ const navigation = [
   },
   {
     path: "/monthly-dashboard",
-    label: "الداشبورد الشهري",
+    label: "مؤشرات البصمة الشهرية",
     icon: ChartNoAxesCombined,
     group: "مساحة العمل",
   },
+  {path:'/monthly-position',label:'الموقف الشهري بالبصمة',icon:Table2,group:'التقارير'},
   { path: "/employees", label: "الموظفون", icon: Users, group: "مساحة العمل" },
   {
     path: "/status",
@@ -297,7 +299,7 @@ const navigationSections = [
   { label: "الموظفون", paths: ["/employees", "/organization", "/actions"] },
   {
     label: "التقارير الشهرية",
-    paths: ["/monthly-dashboard", "/monthly", "/departments", "/summary"],
+    paths: ["/monthly-position", "/monthly-dashboard", "/monthly", "/departments", "/summary"],
   },
   {
     label: "التقارير والمتابعة",
@@ -687,18 +689,19 @@ function Workspace({ user }: { user: Profile }) {
     );
   else if (path === "/status") content = <StatusPage reference={ref.data} />;
   else if (
-    ["/daily-position", "/daily-dashboard", "/monthly-dashboard"].includes(path)
+    ["/daily-position", "/daily-dashboard"].includes(path)
   )
     content = (
       <AttendanceReport
         reference={ref.data}
-        monthly={path === "/monthly-dashboard"}
         canWrite={user.role !== "VIEWER"}
       />
     );
+  else if (['/monthly-position','/monthly-dashboard'].includes(path))
+    content=<MonthlyPositionPage key={path} reference={ref.data} initialView={path==='/monthly-dashboard'?'dashboard':'matrix'}/>;
   else if (["/fingerprint-daily", "/fingerprint-monthly"].includes(path))
     content = (
-      <FingerprintImport key={path} monthly={path === "/fingerprint-monthly"} />
+      <FingerprintImport key={path} monthly={path === "/fingerprint-monthly"} reference={ref.data}/>
     );
   else if (path === "/fingerprint-issues")
     content = (
@@ -812,6 +815,7 @@ interface DashboardData {
 }
 function Dashboard({ canWrite }: { canWrite: boolean }) {
   const q = useData<DashboardData>("dashboard");
+  const queue=useData<{monthly_pending:number;ready_for_approval:number;open_identity_groups:number}>('attendance.work_queue');
   const cards = [
     ["الموظفون النشطون", "active", Users, "indigo"],
     ["الغيابات اليوم", "absence", CalendarPlus, "red"],
@@ -888,6 +892,12 @@ function Dashboard({ canWrite }: { canWrite: boolean }) {
             )}
           </div>
         </div>
+        <section className="release-attention" aria-label="تحتاج متابعة">
+          <Link href="/fingerprint-monthly"><strong>{queue.data?.monthly_pending??'غير متاح'} ملفات شهرية قيد المراجعة</strong><small>كل الفترات · {queue.data?.ready_for_approval??'غير متاح'} تمت مراجعتها وتنتظر الاعتماد</small></Link>
+          <Link href="/fingerprint-issues"><strong>{queue.data?.open_identity_groups??'غير متاح'} مجموعات هوية مفتوحة</strong><small>الملفات غير المطبقة · راجع المطابقة قبل الاعتماد</small></Link>
+          <Link href="/monthly-position"><strong>الموقف الشهري بالبصمة</strong><small>الدخول والخروج للملف المعتمد · أو افتح معاينة من ملفات الشهر</small></Link>
+          {!!queue.error&&<p role="alert">تعذر تحميل قائمة المتابعة. <button onClick={queue.refresh}>إعادة المحاولة</button></p>}
+        </section>
         <section className="kpi-grid">
           {cards.map(([label, key, Icon, color]) => (
             <article className={`kpi-card metric-${color}`} key={key}>
@@ -895,7 +905,7 @@ function Dashboard({ canWrite }: { canWrite: boolean }) {
                 <Icon size={20} />
               </div>
               <p>{label}</p>
-              <strong>{q.data?.[key] ?? 0}</strong>
+              <strong>{q.data?.[key] ?? 'غير متاح'}</strong>
               <span className="kpi-caption">
                 {key === "active"
                   ? "موظف"

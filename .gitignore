@@ -46,3 +46,4 @@ next-env.d.ts
 *.tsbuildinfo
 
 /tests/.export-check.mjs
+/supabase/.temp/

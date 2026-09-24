@@ -7,6 +7,7 @@ import {
 } from "@/lib/hr/validation";
 import { z } from "zod";
 import { attendanceSchemas } from "@/lib/hr/attendance-validation";
+import { buildMonthlyPosition } from "@/lib/hr/monthly-position.mjs";
 import {
   AppError,
   body,
@@ -46,9 +47,16 @@ export async function GET(request: Request) {
     const filters = Object.fromEntries(
       [...params].filter(([k]) => k !== "kind"),
     );
+    if (kind === "attendance.monthly_position") {
+      const evidence = await rpc("attendance_monthly_evidence", {p_filters: filters}, s.token);
+      return json(buildMonthlyPosition(evidence, {
+        coverage_start: filters.coverage_start || undefined,
+        coverage_end: filters.coverage_end || undefined,
+      }));
+    }
     return json(
       await rpc(
-        kind.startsWith("attendance.") ? "attendance_read_v3" : "hr_read_v3",
+        kind.startsWith("attendance.") ? "attendance_read_v4" : "hr_read_v4",
         { p_kind: kind.replace(/^attendance\./, ""), p_filters: filters },
         s.token,
       ),
@@ -72,15 +80,16 @@ export async function POST(request: Request) {
         s.profile.role !== "ADMIN"
       )
         throw new AppError("ليست لديك صلاحية لهذه العملية", 403);
-      const validator = attendanceSchemas[operation];
+      const validator = attendanceSchemas[operation === "import.inspect" ? "import.preview" : operation];
       if (!validator) throw new AppError("طلب غير صالح");
       const parsed = validator.safeParse(data);
       if (!parsed.success) throw new AppError("بيانات غير صالحة");
+      if (operation === "import.inspect") return json(buildMonthlyPosition(await rpc("attendance_inspect_monthly", {p_data:parsed.data}, s.token)));
       return json(
         await rpc(
           operation === "identity.resolve"
             ? "attendance_identity_resolve"
-            : "attendance_write_v3",
+            : "attendance_write_v4",
           operation === "identity.resolve"
             ? { p_data: parsed.data }
             : { p_action: operation, p_data: parsed.data },
