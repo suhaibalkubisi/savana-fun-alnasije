@@ -358,7 +358,12 @@ export function HRApp() {
   if (loading)
     return (
       <div className="auth-loading">
-        <BrandImage kind="symbol" alt="فن النسيج" className="auth-brand-art" priority />
+        <BrandImage
+          kind="symbol"
+          alt="فن النسيج"
+          className="auth-brand-art"
+          priority
+        />
         <LoadState loading>{null}</LoadState>
       </div>
     );
@@ -692,7 +697,9 @@ function Workspace({ user }: { user: Profile }) {
       />
     );
   else if (["/fingerprint-daily", "/fingerprint-monthly"].includes(path))
-    content = <FingerprintImport monthly={path === "/fingerprint-monthly"} />;
+    content = (
+      <FingerprintImport key={path} monthly={path === "/fingerprint-monthly"} />
+    );
   else if (path === "/fingerprint-issues")
     content = (
       <FingerprintIssues
