@@ -37,6 +37,7 @@ import { formatClock12 } from "@/lib/hr/time-format.mjs";
 
 type DailyPerson = {
   employee_id: string;
+  internal_code?: string | null;
   name: string;
   employee_number: string | null;
   person_code: string | null;
@@ -86,6 +87,7 @@ export function WorkspaceTools({
       {
         id: e.id,
         name: e.name,
+        internal_code: e.internal_code,
         number: e.employee_number,
         department: e.department,
       },
@@ -96,6 +98,7 @@ export function WorkspaceTools({
       byId.set(e.employee_id, {
         id: e.employee_id,
         name: e.name,
+        internal_code: e.internal_code || undefined,
         number: e.person_code || e.employee_number,
         department: e.department,
       });
@@ -122,7 +125,7 @@ export function WorkspaceTools({
               <ClipboardCheck size={18} />
             </Link>
           </Button>
-          <Button onClick={() => setQuickOpen(true)}>
+          <Button aria-label="إجراء سريع" onClick={() => setQuickOpen(true)}>
             <Plus size={18} />
             <span className="tools-label">إجراء سريع</span>
           </Button>
@@ -164,6 +167,7 @@ export function WorkspaceTools({
                     <Users size={17} />
                     <div>
                       <strong>{e.name}</strong>
+                      {e.internal_code&&<bdi className="internal-code">{e.internal_code}</bdi>}
                       <small>
                         <bdi>{e.department}</bdi> · {e.number || "بلا رقم موظف"}
                       </small>

@@ -12,6 +12,8 @@ export const attendanceSchemas: Record<string, z.ZodTypeAny> = {
     import_kind: z.enum(["daily", "monthly"]),
     period_start: date,
     period_end: date,
+    coverage_start: date.optional(),
+    coverage_end: date.optional(),
     rows: z
       .array(
         z.object({

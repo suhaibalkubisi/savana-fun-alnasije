@@ -203,16 +203,18 @@ export function SearchPicker({
 export function SearchBox({
   value,
   onChange,
+  placeholder = "بحث بالاسم أو الكود الوظيفي أو رقم الموظف",
 }: {
   value: string;
   onChange: (v: string) => void;
+  placeholder?: string;
 }) {
   return (
     <div className="search-box">
       <Search size={17} />
       <Input
-        aria-label="بحث بالاسم أو رقم الموظف"
-        placeholder="بحث بالاسم أو رقم الموظف"
+        aria-label={placeholder}
+        placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

@@ -28,6 +28,7 @@ export interface Lookup {
 }
 export interface Employee {
   id: string;
+  internal_code?: string;
   employee_number: string | null;
   name: string;
   department_id: string;

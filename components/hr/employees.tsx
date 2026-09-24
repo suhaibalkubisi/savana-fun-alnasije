@@ -206,6 +206,7 @@ export function EmployeesPage({
                       </span>
                       {e.name}
                     </Link>
+                    <bdi className="internal-code">{e.internal_code}</bdi>
                   </TableCell>
                   <TableCell dir="ltr">{e.employee_number || "—"}</TableCell>
                   <TableCell>
@@ -620,7 +621,7 @@ export function EmployeeDetail({
     setExporting(true);
     try {
       const title = `تقرير الموظف — ${q.data.name}`;
-      const period = `${monthLabel(month)} · رقم ${q.data.employee_number || "غير محدد"} · ${q.data.department} · ${q.data.shift || "شفت غير محدد"} · ${q.data.manager || "مسؤول غير محدد"}`;
+      const period = `${monthLabel(month)} · الكود الوظيفي ${q.data.internal_code || "غير متاح"} · رقم ${q.data.employee_number || "غير محدد"} · ${q.data.department} · ${q.data.shift || "شفت غير محدد"} · ${q.data.manager || "مسؤول غير محدد"}`;
       const bytes =
         format === "excel"
           ? tableExcelBytes({
@@ -701,6 +702,7 @@ export function EmployeeDetail({
         <div className="profile-strip">
           {q.data && (
             <>
+              <div><small>الكود الوظيفي · دائم</small><strong><bdi>{q.data.internal_code || "غير متاح"}</bdi></strong></div>
               <div>
                 <small>رقم الموظف</small>
                 <strong>{q.data.employee_number || "غير محدد"}</strong>

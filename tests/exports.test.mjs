@@ -25,6 +25,15 @@ const {
 } = await import(compiled.href);
 after(() => rm(compiled, { force: true }));
 
+test('segmented monthly PDF repeats identity and separates all day ranges without losing subrows',async()=>{
+ const fontBase64=(await readFile('public/fonts/DejaVuSans.ttf')).toString('base64');
+ const segments=Array.from({length:3},(_,segment)=>({headers:['الكود الوظيفي','الموظف','الحركة',...Array.from({length:10},(_,d)=>String(segment*10+d+1))],rows:[['FANU-000001','موظف اصطناعي ذو اسم عربي طويل','دخول',...Array(10).fill('16:05')],['FANU-000001','موظف اصطناعي ذو اسم عربي طويل','خروج',...Array(10).fill('01:30 (+1)')]],columnWeights:[12,22,8,...Array(10).fill(7)]}));
+ const bytes=await tablePdfBytes({title:'الموقف الشهري',period:'سبتمبر 2026 · معاينة غير معتمدة · نطاق 10–12 سبتمبر',...segments[0],segments,fontBase64});
+ assert.equal((Buffer.from(bytes).toString('latin1').match(/\/Type \/Page\b/g)||[]).length,3);
+ const sheet=strFromU8(unzipSync(tableExcelBytes({title:'الموقف الشهري',period:'سبتمبر 2026',...segments[0]}))['xl/worksheets/sheet1.xml']);
+ assert.ok(sheet.includes('(+1)'));assert.ok(sheet.includes('دخول'));assert.ok(sheet.includes('خروج'));assert.ok(sheet.includes('FANU-000001'));
+});
+
 test("monthly PDF wraps Arabic identity columns and paginates without row overlap or lost day cells", async () => {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a3" });
@@ -129,11 +138,10 @@ test("Summary and department Excel export use the same filtered report values", 
   assert.ok(
     header.indexOf("إجمالي الغياب المحتسب") < header.indexOf("الإجازات"),
   );
-  assert.ok(
-    sheet.includes('I198" s="3"><v>6</v>') ||
-      /r="I198"[^>]*><v>6<\/v>/.test(sheet),
-  );
-  assert.ok(/r="L198"[^>]*><v>27<\/v>/.test(sheet));
+  const coded=report.rows.some(r=>r.internal_code);
+  assert.match(sheet,new RegExp(`r="${coded?'J':'I'}198"[^>]*><v>6</v>`));
+  assert.match(sheet,new RegExp(`r="${coded?'M':'L'}198"[^>]*><v>27</v>`));
+  if(coded){assert.ok(header.includes('الكود الوظيفي'));for(const r of report.rows)assert.ok(sheet.includes(r.internal_code));}
   const id = report.rows[0].department_id;
   const rows = report.rows.filter((r) => r.department_id === id);
   const totals = Object.fromEntries(

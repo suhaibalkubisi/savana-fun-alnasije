@@ -325,7 +325,7 @@ export function ReportPage({
                         className={i === 1 ? "sticky-name" : ""}
                       >
                         {i === 1 ? (
-                          <Link href={`/employees/${r.id}`}>{v}</Link>
+                          <><Link href={`/employees/${r.id}`}>{v}</Link>{r.internal_code&&<bdi className="internal-code">{r.internal_code}</bdi>}</>
                         ) : (
                           <bdi>{v}</bdi>
                         )}
@@ -385,6 +385,7 @@ export function ReportPage({
                       </TableCell>
                       <TableCell className="sticky-name">
                         <Link href={`/employees/${r.id}`}>{r.name}</Link>
+                        <bdi className="internal-code">{r.internal_code}</bdi>
                       </TableCell>
                       <TableCell>
                         <bdi>{r.department}</bdi>
