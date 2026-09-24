@@ -32,7 +32,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { mutate, useData, useDebounced } from "@/lib/hr/api";
-import { baghdadDate, daysInMonth, departmentLabel, type Reference } from "@/lib/hr/types";
+import {
+  currentImport,
+  importActionVersion,
+} from "@/lib/hr/import-workflow.mjs";
+import {
+  baghdadDate,
+  daysInMonth,
+  departmentLabel,
+  type Reference,
+} from "@/lib/hr/types";
 import { download, tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
 import { formatClock12 } from "@/lib/hr/time-format.mjs";
 import {
@@ -88,7 +97,15 @@ type MonthRow = {
   leave: number;
   no_entry: number;
   missing_schedule: number;
-  cells?: Record<string, { entry: number | null; exit: number | null; duration: number | null; state: string }>;
+  cells?: Record<
+    string,
+    {
+      entry: number | null;
+      exit: number | null;
+      duration: number | null;
+      state: string;
+    }
+  >;
 };
 type Batch = {
   id: string;
@@ -98,6 +115,7 @@ type Batch = {
   period_start: string;
   period_end: string;
   summary: Record<string, number>;
+  import_kind: "daily" | "monthly";
   lifecycle_state?: string;
   lifecycle_version?: number;
 };
@@ -196,7 +214,12 @@ function Grid({
   rows: (string | number | React.ReactNode)[][];
 }) {
   return (
-    <div className="table-card overflow-x-auto">
+    <div
+      className="table-card overflow-x-auto"
+      tabIndex={0}
+      role="region"
+      aria-label="جدول النتائج، قابل للتمرير أفقياً"
+    >
       <Table>
         <TableHeader>
           <TableRow>
@@ -286,10 +309,19 @@ export function AttendanceReport({
     [decisionMinutes, setDecisionMinutes] = useState(""),
     [busy, setBusy] = useState(false);
   const [manager, setManager] = useState("");
-  const query = useData<{ rows: (DayRow & MonthRow)[]; approved_import?: { id: string; source_name: string; approved_at: string } | null }>(
-    `attendance.${monthly ? "monthly_fingerprint" : "daily"}`,
-    { date, department_id: dep, manager_id: monthly ? manager : "", search: useDebounced(search) },
-  );
+  const query = useData<{
+    rows: (DayRow & MonthRow)[];
+    approved_import?: {
+      id: string;
+      source_name: string;
+      approved_at: string;
+    } | null;
+  }>(`attendance.${monthly ? "monthly_fingerprint" : "daily"}`, {
+    date,
+    department_id: dep,
+    manager_id: monthly ? manager : "",
+    search: useDebounced(search),
+  });
   const title = monthly ? "الحضور الشهري بالبصمة" : "الموقف اليومي";
   const rawRows = query.data?.rows || [];
   const group = (value: string) =>
@@ -302,7 +334,13 @@ export function AttendanceReport({
   });
   const monthDays = monthly ? daysInMonth(date.slice(0, 7)) : 0;
   const headers = monthly
-    ? ["رقم الموظف", "الموظف", "القسم", "المسؤول بنهاية الشهر", ...Array.from({ length: monthDays }, (_, i) => String(i + 1))]
+    ? [
+        "رقم الموظف",
+        "الموظف",
+        "القسم",
+        "المسؤول بنهاية الشهر",
+        ...Array.from({ length: monthDays }, (_, i) => String(i + 1)),
+      ]
     : [
         "ت",
         "رقم الموظف",
@@ -320,11 +358,17 @@ export function AttendanceReport({
       ];
   const values = rows.map((r) =>
     monthly
-      ? [r.employee_number || "", r.name, r.department, r.manager || "غير محدد", ...Array.from({ length: monthDays }, (_, i) => {
-          const cell = r.cells?.[String(i + 1)];
-          if (cell?.entry == null) return "—";
-          return `د ${time(cell.entry)}\nخ ${cell.exit == null ? "بانتظار الخروج" : time(cell.exit)}`;
-        })]
+      ? [
+          r.employee_number || "",
+          r.name,
+          r.department,
+          r.manager || "غير محدد",
+          ...Array.from({ length: monthDays }, (_, i) => {
+            const cell = r.cells?.[String(i + 1)];
+            if (cell?.entry == null) return "—";
+            return `د ${time(cell.entry)}\nخ ${cell.exit == null ? "بانتظار الخروج" : time(cell.exit)}`;
+          }),
+        ]
       : [
           rows.indexOf(r) + 1,
           r.employee_number || "",
@@ -454,7 +498,10 @@ export function AttendanceReport({
             label="المسؤول بنهاية الشهر"
             value={manager}
             onChange={setManager}
-            options={reference.managers.map((m) => ({ value: m.id, label: m.name }))}
+            options={reference.managers.map((m) => ({
+              value: m.id,
+              label: m.name,
+            }))}
           />
         )}
         <SearchBox value={search} onChange={setSearch} />
@@ -521,8 +568,12 @@ export function AttendanceReport({
       >
         <Metrics
           items={
-              monthly
-                ? [["الموظفون", rows.length], ["أيام الشهر", monthDays], ["مصدر شهري معتمد", query.data?.approved_import ? 1 : 0]]
+            monthly
+              ? [
+                  ["الموظفون", rows.length],
+                  ["أيام الشهر", monthDays],
+                  ["مصدر شهري معتمد", query.data?.approved_import ? 1 : 0],
+                ]
               : [
                   ["المتوقعون", rows.filter((r) => r.expected).length],
                   ["حاضر", count("present")],
@@ -631,16 +682,34 @@ export function AttendanceReport({
 }
 
 export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
-  const [pending, setPending] = useState<null | { parsed: ReturnType<typeof parseFingerprint>; name: string; hash: string; period: string }>(null);
+  const selectedImportId = useSearchParams().get("import_id") || undefined;
+  const [confirmation, setConfirmation] = useState<
+    "review" | "approve" | "apply" | "cancel" | null
+  >(null);
+  const [pending, setPending] = useState<null | {
+    parsed: ReturnType<typeof parseFingerprint>;
+    name: string;
+    hash: string;
+    period: string;
+  }>(null);
   const [period, setPeriod] = useState(
       monthly ? baghdadDate().slice(0, 7) : baghdadDate(),
     ),
     [busy, setBusy] = useState(false),
     [batch, setBatch] = useState<Batch | null>(null),
     [page, setPage] = useState(0);
-  const list = useData<Batch[]>("attendance.imports");
+  const list = useData<Batch[]>("attendance.imports", {
+    import_kind: monthly ? "monthly" : "daily",
+  });
   const preview = useData<{
     batch: Batch;
+    review_summary: {
+      identities: number;
+      matched_identities: number;
+      populated_cells: number;
+      punch_tokens: number;
+      open_issues: number;
+    };
     rows: {
       source_name: string;
       person_code: string;
@@ -649,7 +718,17 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
       match_state: string;
       punch_minutes: number[];
     }[];
-  }>("attendance.import", { id: batch?.id, page }, !!batch);
+  }>(
+    "attendance.import",
+    { id: batch?.id || selectedImportId, page },
+    !!(batch || selectedImportId),
+  );
+  const candidate = currentImport(batch, preview.data?.batch);
+  const current =
+    candidate?.import_kind === (monthly ? "monthly" : "daily")
+      ? candidate
+      : null;
+  const reviewSummary = preview.data?.review_summary;
   async function upload(file: File) {
     setBusy(true);
     setPending(null);
@@ -668,9 +747,14 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
         .join("");
       if (monthly) setPending({ parsed, name: file.name, hash, period });
       else {
-        setBatch(await mutate<Batch>("attendance.import.preview", {
-          ...parsed, source_name: file.name, source_hash: hash, import_kind: "daily",
-        }));
+        setBatch(
+          await mutate<Batch>("attendance.import.preview", {
+            ...parsed,
+            source_name: file.name,
+            source_hash: hash,
+            import_kind: "daily",
+          }),
+        );
         setPage(0);
       }
       for (const warning of parsed.warnings) toast.warning(warning);
@@ -685,7 +769,9 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
     setBusy(true);
     try {
       const next = await mutate<Batch>("attendance.import.preview", {
-        ...pending.parsed, source_name: pending.name, source_hash: pending.hash,
+        ...pending.parsed,
+        source_name: pending.name,
+        source_hash: pending.hash,
         import_kind: monthly ? "monthly" : "daily",
       });
       setBatch(next);
@@ -693,32 +779,52 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
       setPending(null);
     } catch (e) {
       toast.error((e as Error).message);
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
   async function transition(action: "review" | "approve" | "apply" | "cancel") {
-    if (!batch) return;
+    if (!current) return;
     setBusy(true);
     try {
       setBatch(
-        await mutate<Batch>(
-          `attendance.import.${action}`,
-          {
-            id: batch.id,
-            version: batch.lifecycle_version || preview.data?.batch.lifecycle_version || preview.data?.batch.version || batch.version,
-          },
-        ),
+        await mutate<Batch>(`attendance.import.${action}`, {
+          id: current.id,
+          version: importActionVersion(current, action),
+        }),
       );
-      toast.success(action === "cancel" ? "تم إلغاء الاستيراد" : action === "review" ? "اكتملت مراجعة الملف" : "تم اعتماد البصمة");
+      toast.success(
+        action === "cancel"
+          ? "تم إلغاء الاستيراد"
+          : action === "review"
+            ? "اكتملت مراجعة الملف"
+            : "تم اعتماد البصمة",
+      );
+      setConfirmation(null);
+      preview.refresh();
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
-  const current = preview.data?.batch || batch;
   return (
     <>
       <PageTitle title={monthly ? "البصمة الشهرية" : "البصمة اليومية"} />
+      {candidate && !current && (
+        <p role="alert" className="workflow-notice">
+          هذا الملف يخص{" "}
+          {candidate.import_kind === "daily"
+            ? "البصمة اليومية"
+            : "البصمة الشهرية"}
+          .{" "}
+          <Link
+            href={`/fingerprint-${candidate.import_kind === "daily" ? "daily" : "monthly"}?import_id=${candidate.id}`}
+          >
+            افتحه في شاشة المصدر الصحيح
+          </Link>
+        </p>
+      )}
       <section className="attendance-upload">
         <Upload size={30} />
         <div>
@@ -730,7 +836,10 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
             type={monthly ? "month" : "date"}
             value={period}
             disabled={busy}
-            onChange={(e) => { setPeriod(e.target.value); setPending(null); }}
+            onChange={(e) => {
+              setPeriod(e.target.value);
+              setPending(null);
+            }}
           />
         </Field>
         <Field label="ملف البصمة">
@@ -748,16 +857,32 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
       </section>
       {pending && (
         <section className="space-y-4" aria-label="تأكيد فترة الملف">
-          <h2>{pending.name} · الفترة المختارة: {pending.period}</h2>
-          <p>تُفسّر تواريخ الملف حسب السنة المختارة أعلاه، وليس وقت الرفع. إنشاء المعاينة يحفظ أدلة البصمة للمراجعة فقط ولا يعتمد الحضور.</p>
-          <Metrics items={[
-            ["صفوف المصدر", pending.parsed.source_counts.source_rows],
-            ["أكواد الأشخاص", pending.parsed.source_counts.person_codes],
-            ["خلايا بأدلة بصمة", pending.parsed.source_counts.populated_cells],
-            ["البصمات الخام", pending.parsed.source_counts.raw_punch_tokens],
-          ]} />
-          <p>تُحفظ الأيام الفارغة دون تحويلها إلى غياب. تُعرض حالات عدم التطابق للمراجعة، وتُحسب البصمات المكررة في الدقيقة نفسها مرة واحدة فقط مع حفظ الأصل.</p>
-          <Button disabled={busy} onClick={createPreview}>تأكيد الفترة وإنشاء المعاينة</Button>
+          <h2>
+            {pending.name} · الفترة المختارة: {pending.period}
+          </h2>
+          <p>
+            تُفسّر تواريخ الملف حسب السنة المختارة أعلاه، وليس وقت الرفع. إنشاء
+            المعاينة يحفظ أدلة البصمة للمراجعة فقط ولا يعتمد الحضور.
+          </p>
+          <Metrics
+            items={[
+              ["صفوف المصدر", pending.parsed.source_counts.source_rows],
+              ["أكواد الأشخاص", pending.parsed.source_counts.person_codes],
+              [
+                "خلايا بأدلة بصمة",
+                pending.parsed.source_counts.populated_cells,
+              ],
+              ["البصمات الخام", pending.parsed.source_counts.raw_punch_tokens],
+            ]}
+          />
+          <p>
+            تُحفظ الأيام الفارغة دون تحويلها إلى غياب. تُعرض حالات عدم التطابق
+            للمراجعة، وتُحسب البصمات المكررة في الدقيقة نفسها مرة واحدة فقط مع
+            حفظ الأصل.
+          </p>
+          <Button disabled={busy} onClick={createPreview}>
+            تأكيد الفترة وإنشاء المعاينة
+          </Button>
         </section>
       )}
       {current && (
@@ -766,26 +891,87 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
             title={current.source_name}
             actions={
               (current.lifecycle_state || current.state) === "preview" ? (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
-                    disabled={busy || preview.loading}
-                    onClick={() => transition(monthly ? "review" : "apply")}
+                    disabled={
+                      busy ||
+                      preview.loading ||
+                      !!preview.error ||
+                      (monthly &&
+                        (!reviewSummary || reviewSummary.open_issues > 0))
+                    }
+                    onClick={() =>
+                      setConfirmation(monthly ? "review" : "apply")
+                    }
                   >
                     {monthly ? "إنهاء المراجعة" : "تأكيد واعتماد الاستيراد"}
                   </Button>
                   <Button
                     variant="outline"
                     disabled={busy}
-                    onClick={() => transition("cancel")}
+                    onClick={() => setConfirmation("cancel")}
                   >
                     إلغاء
                   </Button>
                 </div>
               ) : (current.lifecycle_state || current.state) === "reviewed" ? (
-                <Button disabled={busy} onClick={() => transition("approve")}>اعتماد الملف الشهري</Button>
-              ) : <span>{labels[current.lifecycle_state || current.state]}</span>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    disabled={
+                      busy ||
+                      preview.loading ||
+                      !!preview.error ||
+                      !reviewSummary ||
+                      reviewSummary.open_issues > 0
+                    }
+                    onClick={() => setConfirmation("approve")}
+                  >
+                    اعتماد الملف الشهري
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => setConfirmation("cancel")}
+                  >
+                    إلغاء الملف
+                  </Button>
+                </div>
+              ) : (
+                <span>{labels[current.lifecycle_state || current.state]}</span>
+              )
             }
           />
+          <div className="workflow-notice" role="status">
+            <strong>
+              {labels[current.lifecycle_state || current.state]} ·{" "}
+              {current.period_start} — {current.period_end}
+            </strong>
+            <p>
+              {monthly
+                ? "معاينة الأدلة ← معالجة المطابقة ← إنهاء المراجعة ← اعتماد صريح. الموقف الشامل يعرض قرارات HR؛ مصفوفة البصمة تعرض الملف الشهري المعتمد فقط."
+                : "هذه أدلة يومية. لا تدخل الملفات الشهرية في حساب الموقف اليومي، وقرار HR اليدوي له الأولوية."}
+            </p>
+            {reviewSummary && (
+              <p>
+                {reviewSummary.open_issues
+                  ? `متبقٍ ${reviewSummary.open_issues} مشكلة يومية تحتاج معالجة قبل المراجعة والاعتماد.`
+                  : "لا توجد مشاكل مطابقة مفتوحة. راجع الأدلة قبل اتخاذ قرار الاعتماد."}
+              </p>
+            )}
+          </div>
+          {reviewSummary && (
+            <Metrics
+              items={[
+                ["هويات المصدر", reviewSummary.identities],
+                ["هويات مطابقة", reviewSummary.matched_identities],
+                ["خلايا ببصمات", reviewSummary.populated_cells],
+                [
+                  "بصمات محفوظة بعد دمج تكرار الدقيقة",
+                  reviewSummary.punch_tokens,
+                ],
+              ]}
+            />
+          )}
           <Metrics
             items={[
               ["سجلات الشخص / اليوم", current.summary.rows || 0],
@@ -804,19 +990,31 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
                   : "راجع النتائج قبل الاعتماد"}
               </h2>
               <div className="actions">
+                {!monthly && (
+                  <Button asChild variant="outline">
+                    <Link href="/daily-position">افتح الموقف اليومي</Link>
+                  </Button>
+                )}
+                {!monthly && (
+                  <Button asChild variant="outline">
+                    <Link href="/daily-position?status=late">
+                      راجع المتأخرين
+                    </Link>
+                  </Button>
+                )}
+                {!monthly && (
+                  <Button asChild variant="outline">
+                    <Link href="/daily-position?status=no_entry">
+                      راجع بدون بصمة دخول
+                    </Link>
+                  </Button>
+                )}
                 <Button asChild variant="outline">
-                  <Link href="/daily-position">افتح الموقف اليومي</Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href="/daily-position?status=late">راجع المتأخرين</Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href="/daily-position?status=no_entry">
-                    راجع بدون بصمة دخول
+                  <Link
+                    href={`/fingerprint-issues?import_id=${current.id}&import_kind=${current.import_kind}`}
+                  >
+                    معالجة مشاكل هذا الملف
                   </Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link href="/fingerprint-issues">راجع مشاكل المطابقة</Link>
                 </Button>
                 <Button asChild variant="outline">
                   <Link href="/status">عدّل حالات HR</Link>
@@ -829,6 +1027,7 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
             error={preview.error}
             retry={preview.refresh}
           >
+            {preview.refreshing && <p role="status">جار تحديث المعاينة…</p>}
             <Grid
               headers={[
                 "رمز الشخص",
@@ -889,6 +1088,48 @@ export function FingerprintImport({ monthly = false }: { monthly?: boolean }) {
           ])}
         />
       </LoadState>
+      <Dialog
+        open={!!confirmation}
+        onOpenChange={(open) => {
+          if (!open && !busy) setConfirmation(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirmation === "cancel"
+                ? "تأكيد إلغاء الملف"
+                : confirmation === "review"
+                  ? "تأكيد إنهاء المراجعة"
+                  : "تأكيد اعتماد البصمة"}
+            </DialogTitle>
+          </DialogHeader>
+          <p>
+            {current?.source_name} · {current?.period_start} —{" "}
+            {current?.period_end}
+          </p>
+          <p>
+            {confirmation === "review"
+              ? "ستصبح المعاينة جاهزة لقرار الاعتماد؛ لن يُطبّق الحضور بهذه الخطوة."
+              : confirmation === "cancel"
+                ? "سيُستبعد الملف من المعالجة وتُحفظ أدلته وسجل مراجعته. لن تُحذف البيانات."
+                : "سيُستخدم هذا الملف في حساب البصمة. تأكد من الفترة والمطابقة قبل الاعتماد."}
+          </p>
+          <Button
+            disabled={busy}
+            onClick={() => confirmation && transition(confirmation)}
+          >
+            {busy ? "جار الحفظ…" : "تأكيد القرار"}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => setConfirmation(null)}
+          >
+            رجوع للمراجعة
+          </Button>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -903,7 +1144,18 @@ type Issue = {
   state: string;
   punch_minutes: number[];
   raw_values: string[];
-  candidates: { id: string; name: string; employee_number: string | null; department: string }[];
+  import_id: string;
+  import_name: string;
+  group_token?: string;
+  related_open_count?: number;
+  first_date?: string;
+  last_date?: string;
+  candidates: {
+    id: string;
+    name: string;
+    employee_number: string | null;
+    department: string;
+  }[];
 };
 export function FingerprintIssues({
   reference,
@@ -912,29 +1164,55 @@ export function FingerprintIssues({
   reference: Reference;
   canWrite: boolean;
 }) {
+  const params = useSearchParams();
+  const importId = params.get("import_id") || "";
   const [state, setState] = useState("open"),
     [page, setPage] = useState(0),
     [issue, setIssue] = useState<Issue | null>(null),
     [employee, setEmployee] = useState(""),
     [note, setNote] = useState(""),
     [busy, setBusy] = useState(false);
-  const query = useData<{ rows: Issue[]; total: number }>("attendance.issues", {
-    state,
-    page,
-  });
+  const query = useData<{ rows: Issue[]; total: number; issue_count: number }>(
+    "attendance.issues",
+    {
+      state,
+      page,
+      import_id: importId,
+      group_identities: "true",
+    },
+  );
+  const employees = useData<
+    {
+      id: string;
+      name: string;
+      employee_number: string | null;
+      department: string;
+      employment_status: string;
+    }[]
+  >("attendance.matching_employees", {}, !!issue && canWrite);
   async function resolve(ignore = false) {
     if (!issue) return;
     setBusy(true);
     try {
-      await mutate("attendance.issue.resolve", {
-        id: issue.id,
-        version: issue.version,
-        state: ignore ? "ignored" : "resolved",
-        employee_id: employee || undefined,
-        resolution_note: note,
-      });
+      await mutate(
+        !ignore && issue.group_token
+          ? "attendance.identity.resolve"
+          : "attendance.issue.resolve",
+        {
+          id: issue.id,
+          version: issue.version,
+          state: ignore ? "ignored" : "resolved",
+          employee_id: employee || undefined,
+          resolution_note: note,
+          group_token: issue.group_token,
+        },
+      );
       setIssue(null);
-      toast.success("تم حفظ المراجعة");
+      toast.success(
+        !ignore && issue.group_token
+          ? `تم ربط ${issue.related_open_count} سجل يومي. الملف ما زال بانتظار المراجعة والاعتماد.`
+          : "تم حفظ المراجعة",
+      );
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -943,7 +1221,38 @@ export function FingerprintIssues({
   }
   return (
     <>
-      <PageTitle title="مشاكل البصمة" />
+      <PageTitle
+        title="مشاكل البصمة"
+        actions={
+          importId && (
+            <Button asChild variant="outline">
+              <Link
+                href={`/fingerprint-${params.get("import_kind") === "daily" ? "daily" : "monthly"}?import_id=${importId}`}
+              >
+                العودة لمعاينة الملف
+              </Link>
+            </Button>
+          )
+        }
+      />
+      <div className="workflow-notice">
+        <p>
+          {importId
+            ? "المشاكل المعروضة تخص الملف المختار فقط."
+            : "المشاكل المعروضة تخص الملفات غير الملغاة. افتح المشاكل من معاينة الملف لتحديد نطاق العمل."}
+        </p>
+        <p>
+          تُجمع مشاكل المطابقة الشهرية حسب الملف والكود والاسم. لا تختَر موظفاً
+          اعتماداً على الاسم وحده؛ تحقق من الرقم والقسم وحالة الخدمة. الربط لا
+          يعتمد الحضور.
+        </p>
+        {query.data && (
+          <p>
+            {query.data.total} عناصر مراجعة · {query.data.issue_count} مشاكل
+            يومية
+          </p>
+        )}
+      </div>
       <div className="filter-bar">
         <Choice
           label="الحالة"
@@ -965,12 +1274,24 @@ export function FingerprintIssues({
         retry={query.refresh}
       >
         <Grid
-          headers={["التاريخ", "رمز الشخص", "اسم المصدر", "المشكلة", "الإجراء"]}
+          headers={[
+            "الملف",
+            "الفترة",
+            "رمز الشخص",
+            "اسم المصدر",
+            "المشكلة",
+            "سجلات مرتبطة",
+            "الإجراء",
+          ]}
           rows={(query.data?.rows || []).map((r) => [
-            r.calendar_date,
+            r.import_name,
+            r.first_date === r.last_date
+              ? r.calendar_date
+              : `${r.first_date} — ${r.last_date}`,
             r.person_code,
             r.source_name,
             r.details,
+            r.related_open_count || 1,
             canWrite && state === "open" ? (
               <Button
                 key={r.id}
@@ -995,7 +1316,10 @@ export function FingerprintIssues({
           onChange={(v) => setPage(v - 1)}
         />
       </LoadState>
-      <Dialog open={!!issue} onOpenChange={(o) => !o && setIssue(null)}>
+      <Dialog
+        open={!!issue}
+        onOpenChange={(o) => !o && !busy && setIssue(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{issue?.source_name}</DialogTitle>
@@ -1003,18 +1327,30 @@ export function FingerprintIssues({
           <div className="text-sm space-y-1">
             <p>كود الشخص: {issue?.person_code || "غير موجود"}</p>
             <p>التاريخ: {issue?.calendar_date}</p>
-            <p>البصمات: {issue?.punch_minutes?.map(time).join(" / ") || "لا توجد"}</p>
+            <p>
+              البصمات:{" "}
+              {issue?.punch_minutes?.map(time).join(" / ") || "لا توجد"}
+            </p>
             <p>{issue?.details}</p>
+            {issue?.group_token && (
+              <p className="workflow-notice">
+                تأكيد الربط سيعالج {issue.related_open_count} مشاكل يومية لنفس
+                الكود والاسم في هذا الملف فقط ({issue.first_date} —{" "}
+                {issue.last_date}). الاستبعاد أدناه يخص اليوم المعروض فقط.
+              </p>
+            )}
           </div>
           <SearchPicker
             label="الموظف الصحيح"
             value={employee}
             onChange={setEmployee}
-            options={(issue?.candidates?.length ? issue.candidates : reference.employees).map((e) => ({
+            disabled={busy || employees.loading}
+            options={(employees.data || reference.employees).map((e) => ({
               value: e.id,
-              label: `${e.name} — ${e.department} — ${e.employee_number || e.id.slice(0, 8)}`,
+              label: `${e.name} — ${e.department} — ${e.employee_number || e.id.slice(0, 8)}${"employment_status" in e && e.employment_status !== "active" ? " — غير نشط" : ""}${issue?.candidates.some((c) => c.id === e.id) ? " — مرشح للمراجعة" : ""}`,
             }))}
           />
+          {employees.error && <p role="alert">{employees.error}</p>}
           <Field label="سبب المعالجة">
             <Input
               value={note}
@@ -1023,10 +1359,20 @@ export function FingerprintIssues({
             />
           </Field>
           <Button
-            disabled={busy || !employee || !note.trim()}
+            disabled={
+              busy ||
+              employees.loading ||
+              !!employees.error ||
+              !employee ||
+              !note.trim()
+            }
             onClick={() => resolve()}
           >
-            تأكيد الربط
+            {busy
+              ? "جار الحفظ…"
+              : issue?.group_token
+                ? `تأكيد ربط ${issue.related_open_count} سجلات يومية`
+                : "تأكيد ربط هذا اليوم"}
           </Button>
           <Button
             variant="outline"

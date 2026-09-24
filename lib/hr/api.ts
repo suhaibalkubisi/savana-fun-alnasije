@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { scopedResult, singleFlight } from "./request-state.mjs";
 export async function api<T>(path: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
@@ -46,6 +47,7 @@ export function useData<T>(
     data?: T;
     error: string;
     key: string;
+    query?: string;
   }>({ error: "", key: "" });
   const [revision, bump] = useState(0);
   const sequence = useRef(0);
@@ -58,11 +60,11 @@ export function useData<T>(
     api<T>(`/api/data?${query}`)
       .then((data) => {
         if (active && seq === sequence.current)
-          setResult({ data, error: "", key });
+          setResult({ data, error: "", key, query });
       })
       .catch((error) => {
         if (active && seq === sequence.current)
-          setResult({ error: error.message, key });
+          setResult({ error: error.message, key, query });
       });
     return () => {
       active = false;
@@ -82,17 +84,18 @@ export function useData<T>(
     };
   }, [refresh, enabled]);
   return {
-    data: result.data,
-    loading: enabled && result.key !== key,
-    error: result.key === key ? result.error : "",
+    ...scopedResult(result, query, key, enabled),
     refresh,
   };
 }
 export const changed = () => window.dispatchEvent(new Event("hr-data-changed"));
+const pendingMutation = singleFlight();
 export async function mutate<T = unknown>(action: string, data: unknown) {
-  const result = await api<T>("/api/data", { action, data });
-  changed();
-  return result;
+  return pendingMutation(JSON.stringify({ action, data }), async () => {
+    const result = await api<T>("/api/data", { action, data });
+    changed();
+    return result;
+  });
 }
 export function useDebounced(value: string) {
   const [delayed, set] = useState(value);

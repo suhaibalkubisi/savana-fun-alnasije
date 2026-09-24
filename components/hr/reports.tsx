@@ -84,6 +84,7 @@ export function ReportPage({
     url: string;
     name: string;
     label: string;
+    scope: string;
   } | null>(null);
   useEffect(() => {
     return () => {
@@ -107,6 +108,7 @@ export function ReportPage({
     include_inactive: inactive ? "true" : undefined,
   };
   const q = useData<Report>("report", filters, !!month);
+  const exportScope = JSON.stringify({ ...filters, search });
   useEffect(() => {
     const qp = new URLSearchParams(
       Object.fromEntries(
@@ -125,7 +127,7 @@ export function ReportPage({
       router.replace(target, { scroll: false });
   }, [month, dep, delayed, shift, manager, inactive, path, router]);
   async function exportFile(format: "excel" | "pdf") {
-    if (!q.data || exporting) return;
+    if (!q.data || exporting || search !== delayed) return;
     setExporting(format);
     try {
       const reportTitle = dep
@@ -145,6 +147,7 @@ export function ReportPage({
         url,
         name,
         label: `${reportTitle} · ${monthLabel(month)}`,
+        scope: exportScope,
       });
       // Keep a real user-clickable link when automatic downloads are blocked.
       try {
@@ -172,7 +175,9 @@ export function ReportPage({
           <>
             <Button
               variant="outline"
-              disabled={!q.data || !!exporting || q.loading}
+              disabled={
+                !q.data || !!exporting || q.loading || search !== delayed
+              }
               onClick={() => void exportFile("excel")}
             >
               <FileSpreadsheet size={17} />
@@ -180,7 +185,9 @@ export function ReportPage({
             </Button>
             <Button
               variant="outline"
-              disabled={!q.data || !!exporting || q.loading}
+              disabled={
+                !q.data || !!exporting || q.loading || search !== delayed
+              }
               onClick={() => void exportFile("pdf")}
             >
               <FileDown size={17} />
@@ -188,7 +195,7 @@ export function ReportPage({
             </Button>
             <Button
               variant="outline"
-              disabled={!q.data || q.loading}
+              disabled={!q.data || q.loading || search !== delayed}
               onClick={() => window.print()}
             >
               <Printer size={17} />
@@ -197,7 +204,12 @@ export function ReportPage({
           </>
         }
       />
-      {readyFile && (
+      {q.refreshing && (
+        <p className="text-sm no-print" role="status">
+          جار تحديث نفس نطاق التقرير…
+        </p>
+      )}
+      {readyFile && readyFile.scope === exportScope && (
         <div
           className="panel no-print flex flex-wrap items-center justify-between gap-3 p-4"
           role="status"

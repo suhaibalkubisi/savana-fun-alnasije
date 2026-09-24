@@ -171,7 +171,7 @@ export function SearchPicker({
   const selected = options.find((o) => o.value === value) || null;
   return (
     <div className="field">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={inputId || id}>{label}</label>
       <Combobox
         items={options}
         value={selected}

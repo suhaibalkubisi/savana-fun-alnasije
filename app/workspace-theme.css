@@ -1279,3 +1279,35 @@
     transition: none !important;
   }
 }
+
+/* Operational guidance is secondary to the table, with a consistent RTL edge. */
+.hr-product .workflow-notice {
+  margin-block: 14px;
+  padding: 16px 18px;
+  border: 1px solid #c5d7ed;
+  border-inline-start: 4px solid #1763b0;
+  border-radius: 10px;
+  background: #f4f8fd;
+  color: #23405f;
+  font-size: 14px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.hr-product .workflow-notice p + p { margin-top: 6px; }
+.hr-product .attendance-upload > div,
+.hr-product .attendance-upload .field { min-width: 0; }
+.hr-product .attendance-upload input[type="file"] { max-width: 100%; }
+.hr-product .page-title h1 { overflow-wrap: anywhere; }
+.hr-product .filter-bar { display: flex; flex-wrap: wrap; gap: 16px; }
+.hr-product .filter-bar > .field { min-width: 0; flex: 1 1 180px; }
+.hr-product [data-slot="table-container"]:focus-visible { outline: 3px solid #1763b0; outline-offset: 2px; }
+@media screen and (max-width: 767px) {
+  .hr-product .topbar-title { flex: 1 1 0; min-width: 0; }
+  .hr-product .topbar-context { min-width: 0; }
+  .hr-product .topbar-context > strong,
+  .hr-product .topbar-context > span { overflow-wrap: anywhere; white-space: normal; }
+  .hr-product .workspace-tools { flex: 0 0 auto; gap: 5px; }
+  .hr-product .attendance-upload { flex-direction: column; gap: 16px; }
+  .hr-product .page-title .actions { flex-wrap: wrap; }
+  .hr-product .workflow-notice { padding: 14px; }
+}

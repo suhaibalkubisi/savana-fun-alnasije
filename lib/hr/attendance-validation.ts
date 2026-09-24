@@ -43,6 +43,12 @@ export const attendanceSchemas: Record<string, z.ZodTypeAny> = {
     employee_id: z.string().uuid().optional(),
     resolution_note: z.string().trim().min(1).max(2000),
   }),
+  "identity.resolve": z.object({
+    ...revision,
+    employee_id: z.string().uuid(),
+    group_token: z.string().regex(/^[a-f0-9]{32}$/),
+    resolution_note: z.string().trim().min(1).max(2000),
+  }),
   "issue.reprocess": z.object(revision),
   "rule.save": z.object({
     id: revision.id.optional(),

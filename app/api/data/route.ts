@@ -78,8 +78,12 @@ export async function POST(request: Request) {
       if (!parsed.success) throw new AppError("بيانات غير صالحة");
       return json(
         await rpc(
-          "attendance_write_v3",
-          { p_action: operation, p_data: parsed.data },
+          operation === "identity.resolve"
+            ? "attendance_identity_resolve"
+            : "attendance_write_v3",
+          operation === "identity.resolve"
+            ? { p_data: parsed.data }
+            : { p_action: operation, p_data: parsed.data },
           s.token,
         ),
       );
