@@ -1,3 +1,5 @@
+> Historical release evidence. For the September 30 rebuild see rebuild-specification.md and system-map.md.
+
 # Employee codes and monthly evidence release
 
 ## Scope and architecture

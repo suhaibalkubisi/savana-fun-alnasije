@@ -43,16 +43,16 @@ async function fixture(run) {
     };
     const read = async (kind, filters = {}) =>
       (
-        await db.query("select public.attendance_read_v3($1,$2) data", [
+        await db.query("select public.attendance_read_v5($1,$2) data", [
           kind,
           filters,
         ])
       ).rows[0].data;
     const write = async (action, data) =>
       (
-        await db.query("select public.attendance_write_v3($1,$2) data", [
+        await db.query("select public.attendance_write_v5($1,$2) data", [
           action,
-          data,
+          action==='import.preview'&&data.import_kind==='monthly'?{coverage_start:data.period_start,coverage_end:data.period_end,...data}:data,
         ])
       ).rows[0].data;
     const hr = async (action, data) =>
@@ -73,6 +73,9 @@ async function fixture(run) {
     const people = (
       await db.query("select * from public.employees order by id")
     ).rows;
+    for(const [i,e] of people.entries()) {
+      if(!e.employee_number){e.employee_number='WORKFLOW-VERIFIED-'+i;await db.query('update public.employees set employee_number=$1 where id=$2',[e.employee_number,e.id]);}
+    }
     const payload = {
       source_name: "synthetic-review.xls",
       source_hash: "a".repeat(64),
@@ -315,7 +318,7 @@ test("preview audit volume is batch-level while later identity decisions remain 
     const after = (
       await db.query("select count(*)::int n from public.audit_logs")
     ).rows[0].n;
-    assert.equal(after - before, 3);
+    assert.equal(after - before, 4); // Import, batch summary, review, and explicit coverage; never one audit per raw row.
     assert.equal(
       (
         await db.query(

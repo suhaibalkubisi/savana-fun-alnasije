@@ -1,0 +1,156 @@
+@font-face {
+  font-family: Cairo;
+  src: url('/fonts/Cairo.ttf') format('truetype');
+  font-weight: 200 1000;
+  font-display: swap;
+}
+/* The application shell has one responsive definition. Report print styles are separate. */
+.hr-product { font-family:Cairo,Arial,sans-serif; --primary:#0765f5; --background:#f4f7fb; --foreground:#10213d; --sidebar:#071e40; --sidebar-accent:#133662; --sidebar-border:#254467; --sidebar-foreground:#eef4ff; }
+.hr-product :is(button,input,select,textarea) { font-family:inherit; }
+.hr-product [data-slot="button"] { min-height:42px; font-size:14px; font-weight:650; border-radius:7px; }
+.hr-product [data-slot="button"].bg-primary { background:var(--primary); }
+.hr-product .app-main { min-width:0; display:flex; flex-direction:column; min-height:100dvh; }
+.hr-product .workspace { width:100%; max-width:1800px; padding:28px 28px 36px; flex:1; }
+.hr-product .page-title { margin:0 0 24px; gap:16px; }
+.hr-product .page-title h1 { color:#0c2245; font-size:26px; font-weight:800; line-height:1.5; }
+.hr-product .page-title p { color:#65758e; font-size:14px; margin-top:4px; }
+.hr-product :is(.panel,.table-card) { border:1px solid #e0e7f1; border-radius:10px; box-shadow:0 2px 5px #10233e04; }
+.hr-product .panel-header { padding:18px 20px; border-bottom:1px solid #e6ecf3; }
+.hr-product .filterbar,.hr-product .filter-bar { padding:18px 20px; gap:14px; }
+.hr-product [data-slot="table-head"] { color:#455976; background:#f2f5fa; font-weight:700; font-size:13px; height:48px; }
+.hr-product [data-slot="table-cell"] { padding:12px 14px; color:#203451; font-size:14px; line-height:1.6; }
+.hr-product [data-slot="table-row"] { border-color:#e7edf5; }
+.hr-product [data-slot="table-row"]:hover { background:#f7faff; }
+.hr-product .topbar { position:sticky; top:0; z-index:25; background:#fff; display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:80px; padding:12px 28px; border-bottom:1px solid #e2e9f3; box-shadow:none; }
+.hr-product .topbar-title { display:flex; align-items:center; gap:12px; flex:1; min-width:0; }
+.hr-product .topbar-context { display:grid; gap:2px; min-width:0; }
+.hr-product .topbar-context>span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hr-product .topbar-context>span { color:#182f52; font-size:15px; font-weight:750; }
+.hr-product .topbar-context>strong { font-size:11px; color:#7a88a0; font-weight:500; }
+.hr-product .header-date { display:none; }
+.hr-product .topbar-account { display:flex; align-items:center; gap:9px; border-inline-start:1px solid #e5eaf2; padding-inline-start:16px; }
+.hr-product .topbar-account strong { font-size:12px; color:#1a304c; }
+.hr-product .topbar-account small { display:block; font-size:10px; color:#7a88a0; }
+.hr-product .topbar-account .avatar { width:34px; height:34px; background:#eff4fb; color:#235ca7; font-size:13px; }
+.hr-product .topbar-savana { width:124px; flex-shrink:0; }
+.hr-product .workspace-footer { display:flex; justify-content:space-between; gap:12px; padding:14px 28px; color:#7c899e; border-top:1px solid #e2e9f2; font-size:10px; }
+.hr-product .hr-sidebar [data-slot="sidebar-inner"] { background:#071e40; }
+.hr-product .hr-sidebar [data-slot="sidebar-header"] { padding:25px 22px 14px; background:white; border-bottom:1px solid #e1e7f0; gap:14px; }
+.hr-product .sidebar-company-art { width:100%; border:0; border-radius:0; background:transparent; }
+.hr-product .sidebar-symbol-art { display:none; }
+.hr-product .sidebar-shift { display:flex; align-items:center; justify-content:center; gap:8px; color:#6a7d97; font-size:11px; padding:0; border:0; }
+.hr-product .hr-sidebar [data-slot="sidebar-content"] { padding:18px 12px; gap:4px; scrollbar-width:thin; }
+.hr-product .hr-sidebar [data-slot="sidebar-menu"] { gap:5px; }
+.hr-product .nav-item { min-height:45px; height:auto; padding:11px 14px; border-radius:7px; color:#dce7f7; font-size:14px; font-weight:600; gap:12px; }
+.hr-product .nav-item svg { flex-shrink:0; color:#aac3e9; }
+.hr-product .nav-item:hover { background:#123460; color:white; }
+.hr-product .nav-item[data-active="true"] { background:#0765f5; color:#fff; box-shadow:none; border:0; }
+.hr-product .nav-item[data-active="true"] svg { color:white; }
+.hr-product .nav-disclosure summary { display:flex; align-items:center; gap:12px; color:#dce7f7; min-height:45px; font-size:14px; font-weight:600; padding:11px 14px; border-radius:7px; cursor:pointer; list-style:none; }
+.hr-product .nav-disclosure summary::-webkit-details-marker { display:none; }
+.hr-product .nav-disclosure summary>svg:last-child { margin-inline-start:auto; transition:transform .15s; }
+.hr-product .nav-disclosure[open] summary>svg:last-child { transform:rotate(180deg); }
+.hr-product .nav-disclosure>ul { margin:5px 17px 12px 0; padding-inline-start:13px; border-inline-start:1px solid #2f4a70; }
+.hr-product .nav-disclosure .nav-item { font-size:12px; min-height:39px; padding:8px; }
+.hr-product .nav-disclosure summary:hover { background:#123460; }
+.hr-product .hr-sidebar [data-slot="sidebar-footer"] { border-top:1px solid #27415f; padding:14px; gap:6px; }
+.hr-product .sidebar-user { display:flex; align-items:center; gap:10px; color:white; }
+.hr-product .sidebar-user strong { color:#fff; font-size:12px; font-weight:700; }
+.hr-product .sidebar-user small { display:block; font-size:10px; color:#91aacd; }
+.hr-product .sidebar-user .avatar { width:34px; height:34px; background:#183b67; color:#bed5f8; }
+.hr-product .sidebar-user>button { margin-inline-start:auto; color:#9ab6dc; }
+.hr-product .logout { justify-content:flex-start; color:#adc0d9; font-size:11px; min-height:32px; padding:4px; }
+.hr-product [data-collapsible="icon"] .sidebar-company-art,.hr-product [data-collapsible="icon"] .sidebar-shift,.hr-product [data-collapsible="icon"] .sidebar-user>div,.hr-product [data-collapsible="icon"] .nav-disclosure summary>span,.hr-product [data-collapsible="icon"] .nav-disclosure summary>svg:last-child { display:none; }
+.hr-product [data-collapsible="icon"] .sidebar-symbol-art { display:block; width:34px; }
+.hr-product [data-collapsible="icon"] [data-slot="sidebar-header"] { padding:20px; }
+.hr-product [data-collapsible="icon"] .nav-disclosure>ul { margin:0; padding:0; border:0; }
+.hr-product [data-collapsible="icon"] .nav-disclosure summary { justify-content:center; padding:10px; }
+.hr-product .metric-strip article { background:#fff; min-height:105px; padding:18px; border:1px solid #e0e7f1; border-radius:9px; }
+.hr-product .metric-strip article strong { font-size:30px; font-weight:750; font-variant-numeric:tabular-nums; }
+.hr-product .metric-strip article span { font-size:13px; }
+.hr-product .operation-launcher { background:#fff; border:1px solid #e0e7f1; border-radius:10px; }
+.hr-product .form-grid { gap:20px; }
+.hr-product .field { gap:7px; }
+.hr-product .field-label,.hr-product .field>label { color:#283e5d; font-weight:650; font-size:13px; }
+.hr-product .field-hint { color:#76869b; font-size:11px; font-weight:400; }
+.hr-product .field-error { color:#b92340; font-size:12px; }
+.hr-product .required-mark { color:#c82a47; margin-inline-start:4px; }
+.hr-product [aria-invalid="true"] { border-color:#c82a47; }
+.hr-product .form-actions { padding-top:20px; margin-top:4px; border-top:1px solid #e7edf5; }
+.hr-product .assignment-layout { padding:20px; display:grid; gap:24px; }
+.hr-product .assignment-layout .form-stack { padding:20px; background:#f8faff; border:1px solid #dde8f8; border-radius:8px; }
+.hr-product .assignment-layout h3 { font-size:16px; font-weight:750; }
+.hr-product .history-toolbar { overflow-x:auto; }
+.hr-product .monthly-matrix td[data-state="missing_assignment"] { background:#fff4e1; color:#856012; }
+.hr-product .monthly-matrix td button bdi { display:block; white-space:normal; min-width:104px; max-width:140px; line-height:1.65; }
+.hr-product .login-page { display:grid; grid-template-columns:44% 56%; min-height:100dvh; padding:0; background:white; overflow:visible; }
+.hr-product .login-page::after { display:none; }
+.hr-product .login-company { display:flex; flex-direction:column; justify-content:space-between; background:#071e40; padding:32px 40px; color:white; min-height:100dvh; }
+.hr-product .login-company-top,.hr-product .login-company-footer { display:flex; justify-content:space-between; align-items:center; gap:16px; font-size:12px; color:#abc2e4; }
+.hr-product .login-company-top { background:white; padding:32px 60px; margin:-32px -40px 0; justify-content:center; }
+.hr-product .login-company-top .brand-artwork { width:280px; max-width:100%; }
+.hr-product .login-company-identity { text-align:center; padding:40px 0; }
+.hr-product .login-company .login-brand { position:static; width:100%; max-width:360px; height:auto; margin:0 auto 40px; padding:28px; border-radius:0; background:white; }
+.hr-product .login-brand .brand-artwork { width:100%; }
+.hr-product .login-company h2 { font-size:28px; color:white; font-weight:750; }
+.hr-product .login-company-identity>p { color:#a9c3e9; margin:14px auto 30px; max-width:270px; font-size:14px; line-height:2; }
+.hr-product .login-savana { width:170px; margin:0 auto 48px; }
+.hr-product .login-company-footer { border-top:1px solid #2d466b; padding-top:20px; }
+.hr-product .login-workspace { display:flex; flex-direction:column; justify-content:center; align-items:center; min-width:0; padding:60px; }
+.hr-product .login-card { max-width:430px; width:100%; margin:0; padding:0; border:0; background:transparent; box-shadow:none; }
+.hr-product .login-heading { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.hr-product .login-heading h1 { font-size:36px; line-height:1.6; font-weight:800; color:#0b2146; }
+.hr-product .login-lock { width:40px; height:40px; display:grid; place-items:center; color:#1763d4; background:#edf4ff; border-radius:12px; }
+.hr-product .login-description { font-size:15px; line-height:1.9; color:#71809a; margin-bottom:36px; }
+.hr-product .login-card form { display:grid; gap:22px; }
+.hr-product .login-card input { min-height:50px; background:white; }
+.hr-product .login-card form>button { min-height:52px; margin-top:10px; font-size:16px; }
+.hr-product .login-credit { width:100%; max-width:430px; margin-top:64px; padding-top:18px; border-top:1px solid #e7ecf5; text-align:center; font-size:11px; color:#8a96ab; }
+.hr-product .login-credit span { display:block; font-size:10px; margin-top:3px; }
+.hr-product .password-field { position:relative; }
+.hr-product .password-toggle { position:absolute; bottom:4px; inset-inline-start:4px; }
+@media(max-width:1280px) {
+ .hr-product .topbar-account { display:none; }
+ .hr-product .topbar-context>span { font-size:13px; }
+ .hr-product .topbar-savana { width:106px; }
+ .hr-product .workspace { padding:24px; }
+}
+@media(max-width:900px) {
+ .hr-product .login-page { grid-template-columns:37% 63%; }
+ .hr-product .login-company { padding:22px; }
+ .hr-product .login-company-top { margin:-22px -22px 0; padding:24px; }
+ .hr-product .login-workspace { padding:32px; }
+ .hr-product .login-company h2 { font-size:22px; }
+ .hr-product .login-company .login-brand { padding:12px; }
+}
+@media(max-width:767px) {
+ .hr-product .topbar { min-height:66px; padding:10px 14px; gap:8px; }
+ .hr-product .topbar-title { flex:1; min-width:0; gap:6px; }
+ .hr-product .topbar-context { min-width:0; }
+ .hr-product .topbar-context>span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+ .hr-product .topbar-context>strong { display:none; }
+ .hr-product .topbar-context>span { font-size:11px; max-width:150px; display:block; }
+ .hr-product .topbar-savana { width:64px; }
+ .hr-product .workspace { padding:20px 14px; }
+ .hr-product .page-title { align-items:flex-start; flex-direction:column; gap:12px; }
+ .hr-product .page-title h1 { font-size:23px; }
+ .hr-product .page-title-actions { width:100%; flex-wrap:wrap; }
+ .hr-product .workspace-footer { padding:14px; font-size:9px; }
+ .hr-product .filterbar,.hr-product .filter-bar { padding:14px; }
+ .hr-product .metric-strip article { min-height:90px; padding:14px; }
+ .hr-product .metric-strip article strong { font-size:26px; }
+ .hr-product .assignment-layout { padding:14px; }
+ .hr-product .login-page { display:flex; flex-direction:column; }
+ .hr-product .login-company { min-height:0; padding:22px; background:#f6f9fe; color:#10213d; border-bottom:1px solid #e1e9f3; }
+ .hr-product .login-company-identity { padding:0; display:flex; align-items:center; justify-content:space-between; gap:22px; }
+ .hr-product .login-company .login-brand { width:190px; padding:0; margin:0; background:transparent; }
+ .hr-product .login-company h2,.hr-product .login-company-identity,.hr-product .login-company-footer { display:none; }
+ .hr-product .login-company-top { display:flex; margin:-22px; padding:20px; }
+ .hr-product .login-company-top .brand-artwork { width:190px; }
+ .hr-product .login-savana { width:130px; margin:0 auto 28px; }
+ .hr-product .login-workspace { flex:1; padding:38px 24px; }
+ .hr-product .login-heading h1 { font-size:29px; }
+ .hr-product .login-description { font-size:13px; margin-bottom:28px; }
+ .hr-product .login-credit { margin-top:44px; }
+}
+@media print { .workspace-footer,.topbar { display:none!important; } }

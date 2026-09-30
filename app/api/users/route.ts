@@ -11,6 +11,7 @@ import {
   upstream,
 } from "@/lib/server/supabase";
 export async function POST(request: Request) {
+  let accountCreated = false;
   try {
     protectMutation(request);
     const s = await session();
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
     if (!result.response.ok || !result.data?.id)
       throw new AppError("تعذر إنشاء المستخدم. تحقق من البريد الإلكتروني");
     const createdId = result.data.id;
+    accountCreated = true;
     const users = await rpc<Profile[]>(
       "hr_read",
       { p_kind: "users", p_filters: {} },
@@ -58,6 +60,7 @@ export async function POST(request: Request) {
     );
     return json({ ok: true });
   } catch (e) {
+    if (accountCreated) return errorResponse(new AppError("تم إنشاء الحساب لكن لم يكتمل تفعيله. حدّث قائمة المستخدمين وعدّل الحساب الموجود؛ لا تنشئه مرة ثانية", 409));
     return errorResponse(e);
   }
 }

@@ -113,9 +113,10 @@ test("daily Excel keeps twelve-hour punch labels and numeric lateness editable",
       }),
     )["xl/worksheets/sheet1.xml"],
   );
-  assert.ok(sheet.includes("٠٤:٠٠ م"));
-  assert.ok(sheet.includes("٠٤:٢٧ م"));
-  assert.ok(sheet.includes("٠١:١٨ ص (+١ يوم)"));
+  const numberAt=cell=>Number(sheet.match(new RegExp(`<c r="${cell}"[^>]*><v>([^<]+)</v>`))[1]);
+  assert.equal(numberAt("A6"),960/1440);
+  assert.equal(numberAt("B6"),987/1440);
+  assert.equal(numberAt("C6"),1+78/1440);
   assert.match(sheet, /<v>27<\/v>/);
 });
 test("Excel matrix exports real active database employees, valid days and weighted totals", () => {
@@ -169,7 +170,8 @@ test("Operational exports are genuine branded XLSX and Arabic PDF", async () => 
   const sheet = strFromU8(zip["xl/worksheets/sheet1.xml"]);
   assert.ok(sheet.includes('rightToLeft="1"'));
   assert.ok(sheet.includes("قسم الموارد البشرية – مسائي"));
-  assert.ok(sheet.includes("Designed by Suhaib Al-Kubaisi"));
+  assert.ok(sheet.includes("صنع من قبل صهيب الكبيسي"));
+  assert.ok(sheet.includes("تاريخ الإصدار:"));
   const font = (await readFile("public/fonts/DejaVuSans.ttf")).toString(
     "base64",
   );

@@ -30,7 +30,7 @@ import {
 } from "@/lib/hr/types";
 import {
   triggerDownload,
-  excelBytes,
+  brandedReportExcelBytes as excelBytes,
   pdfBytes,
   summaryHeaders,
   summaryKeys,
@@ -130,13 +130,14 @@ export function ReportPage({
     if (!q.data || exporting || search !== delayed) return;
     setExporting(format);
     try {
+      const scope = [monthLabel(month),dep?departmentLabel(reference.departments.find(d=>d.id===dep)!):'جميع الأقسام',shift?'الشفت: '+(reference.shifts.find(s=>s.id===shift)?.name || shift):'جميع الشفتات',manager?'المسؤول: '+(reference.managers.find(m=>m.id===manager)?.name || manager):'جميع المسؤولين',inactive?'جميع حالات التوظيف':'النشطون والسجلات التاريخية',search?'البحث: '+search:'', 'المصدر: قرارات الموارد البشرية المسجلة؛ فلاتر الشفت والمسؤول وفق الانتماء الحالي'].filter(Boolean).join(' · ');
       const reportTitle = dep
         ? `${title} · ${reference.departments.find((d) => d.id === dep) ? departmentLabel(reference.departments.find((d) => d.id === dep)!) : ""}`
         : title;
       const bytes =
         format === "excel"
-          ? excelBytes(q.data, reportTitle, summary)
-          : await pdfBytes(q.data, reportTitle, summary);
+          ? await excelBytes(q.data, reportTitle, summary, scope)
+          : await pdfBytes(q.data, reportTitle, summary, undefined, scope);
       const name = `HR_${mode}_${month}.${format === "excel" ? "xlsx" : "pdf"}`;
       const type =
         format === "excel"

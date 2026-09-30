@@ -10,7 +10,7 @@ import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@
 import {useData} from '@/lib/hr/api';
 import {baghdadDate,departmentLabel,employmentLabels,statuses,type Reference} from '@/lib/hr/types';
 import {scopeMonthlyPosition,monthlyCellText,monthlyMatrixRows,monthlyStateLabels,minuteText,type MonthlyPosition,type MonthlyPerson,type MonthlyCell} from '@/lib/hr/monthly-position.mjs';
-import {download,tableExcelBytes,tablePdfBytes} from '@/lib/hr/exports';
+import {download,brandedExcelBytes as tableExcelBytes,tablePdfBytes} from '@/lib/hr/exports';
 import {Choice,Field,LoadState,PageTitle,SearchBox} from './shared';
 import {BrandImage} from './brand-image';
 
@@ -48,9 +48,9 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
     headers:detail?['تاريخ الوردية','دخول','خروج','الحالة','دقائق العمل','دقائق التأخير','الأدلة التقويمية','قرار HR']:view==='summary'?summaryHeaders:matrixHeaders(1,position.days),
     rows:detailRows|| (view==='summary'?position.rows.map(summaryValues):monthlyMatrixRows(position)),
     columnWeights:detail?[8,7,7,15,7,7,25,10]:undefined,
-    ...(pdf&&!detail&&view!=='summary'?{segments:Array.from({length:Math.ceil(position.days/10)},(_,i)=>({headers:matrixHeaders(i*10+1,Math.min(position.days,i*10+10)),rows:monthlyMatrixRows(position,i*10+1,Math.min(position.days,i*10+10)),columnWeights:[10,18,13,5,...Array(Math.min(10,position.days-i*10)).fill(6),5,5,5,5,7]}))}:{}),
+    ...(pdf&&!detail&&view!=='summary'?{segments:Array.from({length:Math.ceil(position.days/7)},(_,i)=>({headers:matrixHeaders(i*7+1,Math.min(position.days,i*7+7)),rows:monthlyMatrixRows(position,i*7+1,Math.min(position.days,i*7+7)).map(row=>row.map(value=>typeof value==='string'?value.replace(/ · (\d{4}-\d{2}-\d{2})$/, '\n$1'):value)),columnWeights:[14,18,13,7,...Array(Math.min(7,position.days-i*7)).fill(10),7,7,10,7,9]}))}:{}),
    };
-   const bytes=pdf?await tablePdfBytes(report):tableExcelBytes(report);
+   const bytes=pdf?await tablePdfBytes(report):await tableExcelBytes(report);
    const name=`FANU-fingerprint-${position.month}${detail?'-employee':''}.${pdf?'pdf':'xlsx'}`;
    const mime=pdf?'application/pdf':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
    setExportFileLink({url:URL.createObjectURL(new Blob([bytes as BlobPart],{type:mime})),name,bytes:bytes.length});
@@ -63,8 +63,8 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
    <div className="filterbar">
     {!embedded&&<Field label="الشهر والسنة"><Input type="month" value={month} onChange={e=>{setMonth(e.target.value);setFrom('');setThrough('');setSelected(null);}}/></Field>}
     <SearchBox value={search} onChange={setSearch} placeholder="الاسم، الكود الوظيفي أو رقم البصمة"/>
-    <Choice label="القسم الحالي" value={dep} onChange={setDep} options={reference.departments.map(d=>({value:d.id,label:departmentLabel(d)}))}/>
-    <Choice label="المسؤول بنهاية الشهر" value={manager} onChange={setManager} options={reference.managers.map(m=>({value:m.id,label:m.name}))}/>
+    <Choice label="القسم بتاريخ العرض" value={dep} onChange={setDep} options={reference.departments.map(d=>({value:d.id,label:departmentLabel(d)}))}/>
+    <Choice label="المسؤول بتاريخ العرض" value={manager} onChange={setManager} options={reference.managers.map(m=>({value:m.id,label:m.name}))}/>
     <Choice label="حالة البصمة" value={condition} onChange={setCondition} options={conditions}/>
    </div>
    <div className="scope-toolbar">
@@ -86,7 +86,7 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
     <div className="monthly-source-strip">
      <span><b>{position.source_counts?.identities}</b> هوية مصدر</span><span><b>{position.source_counts?.matched_identities}</b> مطابقة</span><span><b>{position.source_counts?.populated_cells}</b> خلية ممتلئة</span><span><b>{position.source_counts?.raw_punches}</b> بصمة خام</span><span><b>{position.source_counts?.effective_punches}</b> بصمة بعد دمج التكرار</span>
     </div>
-    <p className="scope-note">النطاق: هويات الملف، بما فيها غير النشطين وغير المطابقين. «بلا بصمات» ليس غياباً؛ تواريخ الخدمة وسجل نقل الأقسام المؤرخ غير متاحين. القسم المعروض حالي. لا تخلط هذه الأعداد مع عدد الموظفين النشطين أو الموقف الشامل اليدوي.</p>
+    <p className="scope-note">النطاق: هويات الملف، بما فيها غير النشطين وغير المطابقين. «بلا بصمات» ليس غياباً. حساب كل يوم يتبع انتماءه ودوامه الموثقين؛ الفترات المجهولة تبقى للمراجعة. يُجمع الموظف في صف واحد حسب انتمائه بنهاية الشهر، أو تاريخ اليوم للشهر الجاري. لا تخلط أعداد البصمات مع عدد الموظفين النشطين أو قرارات HR اليدوية.</p>
     {!!position.daily_overlap_rows&&<p className="workflow-notice">توجد {position.daily_overlap_rows} سجلات يومية تتقاطع مع فترة وأشخاص الملف. لا تدخل في الحساب الشهري ولا تضاعف الحضور.</p>}
     {position.other_approved&&<p className="workflow-notice">يوجد ملف معتمد آخر: {position.other_approved.source_name}. هذه معاينة فقط؛ تغييره يتطلب الاستبدال الصريح بصلاحية الإدارة.</p>}
     <div className="monthly-view-toolbar no-print">

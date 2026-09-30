@@ -47,3 +47,5 @@ next-env.d.ts
 
 /tests/.export-check.mjs
 /supabase/.temp/
+
+/tests/.transport-check.mjs

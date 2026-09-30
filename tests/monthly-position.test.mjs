@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildMonthlyPosition,scopeMonthlyPosition,monthlyMatrixRows} from '../lib/hr/monthly-position.mjs';
+import {buildMonthlyPosition,scopeMonthlyPosition,monthlyMatrixRows,monthlyCellText} from '../lib/hr/monthly-position.mjs';
 const person={id:'employee-1',name:'موظف تجريبي',internal_code:'FANU-000001',department_id:'dep',department:'قسم تجريبي',employment_status:'active'};
 const rule={department_id:'dep',effective_from:'2020-01-01',start_minute:960,grace_minutes:15,entry_window_start:720,entry_window_end:1439,working_weekdays:[0,1,2,3,4,5,6]};
 function fixture(cells,extra={}) {
  return {month:'2026-09',as_of:'2026-09-24',available:true,batch:{id:'batch',lifecycle_state:'preview',coverage_start:'2026-09-01',coverage_end:'2026-09-23'},employees:[person],rules:[rule],
+ assignments:[{employee_id:person.id,department_id:'dep',department:'قسم تجريبي',employment_status:'active',valid_from:'2020-01-01',valid_to:null}],
  sources:Object.entries(cells).map(([day,minutes],n)=>({id:`source-${n}`,source_sheet:'Punch Record',source_row:2,calendar_date:`2026-09-${day.padStart(2,'0')}`,person_code:'DVC-1',source_name:'موظف تجريبي',employee_id:person.id,punch_minutes:minutes,raw_values:['DVC-1','موظف تجريبي',`09-${day}`,minutes.map(m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`).join('\n')]})),...extra};
 }
 test('monthly same-day pair uses first and last shift punches, retaining intermediate evidence',()=>{
@@ -17,6 +18,8 @@ test('overnight exit keeps original calendar date and cannot consume the next af
  assert.equal(r.cells[10].exit,90);assert.equal(r.cells[10].next_day,true);assert.equal(r.cells[10].duration,565);
  assert.equal(r.cells[11].entry,970);assert.equal(r.cells[11].exit,100);
  assert.equal(r.cells[10].timeline.at(-1).calendar_date,'2026-09-11');
+ assert.equal(monthlyCellText(r.cells[10],'entry'),'٠٤:٠٥ م');
+ assert.equal(monthlyCellText(r.cells[10],'exit'),'٠١:٣٠ ص (+1) · 2026-09-11');
  const used=Object.values(r.cells).flatMap(c=>c.timeline.map(p=>p.timestamp));assert.equal(new Set(used).size,used.length);
 });
 test('same-calendar morning is never fabricated as the evening shift next-day exit',()=>{
@@ -50,6 +53,7 @@ test('duplicate source timestamps keep raw count but cannot create duplicate wor
 });
 test('inactive employees and unmatched source identities remain visible independently',()=>{
  const f=fixture({10:[960,1100]},{employees:[{...person,employment_status:'resigned'}]});
+ f.assignments[0].employment_status='resigned';
  f.sources.push({...f.sources[0],id:'unmatched',employee_id:null,person_code:'DVC-OTHER',source_row:3});
  const p=buildMonthlyPosition(f);assert.equal(p.rows.length,2);assert.equal(p.source_counts.identities,2);assert.equal(p.source_counts.matched_identities,1);
  assert.ok(p.rows.some(r=>r.employment_status==='resigned'));assert.ok(p.rows.some(r=>!r.employee_id));
@@ -72,7 +76,7 @@ test('blocking evidence issues keep duration unavailable and pending filters rec
 });
 test('matrix exports use explicit entry/exit labels and +1 without conflating punch and day counts',()=>{
  const p=buildMonthlyPosition(fixture({10:[960],11:[90]}));const rows=monthlyMatrixRows(p);
- assert.equal(rows[0][3],'دخول');assert.equal(rows[1][3],'خروج');assert.equal(rows[1][13],'01:30 (+1)');assert.equal(p.rows[0].raw_punch_count,2);assert.equal(p.metrics.complete,1);
+ assert.equal(rows[0][3],'دخول');assert.equal(rows[1][3],'خروج');assert.equal(rows[1][13],'٠١:٣٠ ص (+1) · 2026-09-11');assert.equal(p.rows[0].raw_punch_count,2);assert.equal(p.metrics.complete,1);
 });
 test('unapproved month availability is unknown, never a fabricated zero attendance result',()=>{
  const p=buildMonthlyPosition({month:'2026-09',available:false});assert.equal(p.metrics,null);assert.deepEqual(p.rows,[]);

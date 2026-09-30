@@ -15,6 +15,10 @@ function workbook(rows,bookType="biff8"){
  const b=write(wb,{bookType,type:"buffer"});return b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);
 }
 const header=["Person Code","Name","Department","Punch Date","Week","First Time Punch","Last Time Punch","Total(Hours)"];
+test('partial monthly headers preserve the selected accounting month without manufacturing blank evidence',()=>{
+ const r=parseFingerprint(workbook([['Person Code','Name','09-10','09-11'],['QA-1','Synthetic','16:05','01:30']]),'monthly','2026-09');
+ assert.equal(r.period_start,'2026-09-01');assert.equal(r.period_end,'2026-09-30');assert.equal(r.rows.length,2);assert.equal(r.source_counts.raw_punch_tokens,2);
+});
 test("real binary XLS daily parser preserves both calendar punches, ignores misleading duration",()=>{
  const result=parseFingerprint(workbook([header,["001","احمد علي","Packing","2026-09-06","Sun","01:31","16:27","14:56"]]),"daily","2026-09-06");
  assert.deepEqual(result.rows[0].punch_minutes,[91,987]);assert.equal(result.rows[0].person_code,"001");assert.equal(result.rows[0].source_row,2);

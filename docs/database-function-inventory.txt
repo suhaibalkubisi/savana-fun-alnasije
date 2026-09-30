@@ -1,0 +1,58 @@
+hr_private.attendance_day(day date, dep uuid) — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.attendance_day_v2(day date, dep uuid) — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.attendance_session(day date, dep uuid, monthly_only boolean) — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.audit() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.audit_administrative_action() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.fingerprint_name(v text) — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.identity_issues(source_id uuid) — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.immutable_audit() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.new_auth_user() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.next_employee_internal_code() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.preview_import(import_id uuid) — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.preview_source(source_id uuid) — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.protect_employee_internal_code() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.require_clear_import_review() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.require_monthly_import_approval() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.require_role(roles text[]) — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.sync_monthly_import_review() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.touch() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.touch_action_type() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.touch_administrative_action() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.touch_attendance() — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_identity_resolve(p_data jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_inspect_monthly(p_data jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_monthly_evidence(p_filters jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_read(p_kind text, p_filters jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_read_v2(p_kind text, p_filters jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_read_v3(p_kind text, p_filters jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_read_v4(p_kind text, p_filters jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_write(p_action text, p_data jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_write_v2(p_action text, p_data jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_write_v3(p_action text, p_data jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.attendance_write_v4(p_action text, p_data jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.hr_bootstrap(p_user_id uuid) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.hr_import(p_batch uuid, p_hash text, p_rows jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.hr_read(p_kind text, p_filters jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.hr_read_v2(p_kind text, p_filters jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.hr_read_v3(p_kind text, p_filters jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.hr_read_v4(p_kind text, p_filters jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.hr_write(p_action text, p_data jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.hr_write_v2(p_action text, p_data jsonb) — existing; retained unless explicitly wrapped/restricted by release migrations
+public.rls_auto_enable() — existing; retained unless explicitly wrapped/restricted by release migrations
+hr_private.capture_employee_assignment — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+hr_private.assignment_evidence — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+hr_private.with_assignment_evidence — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.attendance_daily_evidence — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.employee_assignments — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.employee_assignment_record — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.attendance_day_save — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.attendance_monthly_evidence_v2 — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.attendance_inspect_monthly_v2 — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.attendance_write_v5 — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+hr_private.freeze_attendance_context — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.attendance_write_v4 — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.attendance_write — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.attendance_write_v3 — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.attendance_inspect_monthly — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+hr_private.preserve_employee_identity — added/replaced by 20260924220002_rebuild_calculation_integrity.sql
+public.attendance_read_v5 — added/replaced by 20260930153912_attendance_read_gateway.sql

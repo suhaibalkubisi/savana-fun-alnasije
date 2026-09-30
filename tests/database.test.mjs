@@ -1,3 +1,5 @@
+// Historical compatibility suite, before the final read-permissions cutover.
+// Latest-schema denial and canonical evidence behavior live in read-cutover/rebuild-integrity tests.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
@@ -14,7 +16,7 @@ async function initializeDatabase(db) {
     `create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`,
   );
   for (const file of (await readdir("supabase/migrations"))
-    .filter((name) => name.endsWith(".sql"))
+    .filter((name) => name.endsWith(".sql") && !name.endsWith("_restrict_legacy_attendance_reads.sql"))
     .sort())
     await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
   await db.exec("set hr.test_fixture = 'on'");
@@ -85,7 +87,7 @@ const attendanceReadV2 = async (kind, filters = {}) =>
   (await db.query("select public.attendance_read_v2($1,$2) data", [kind, filters]))
     .rows[0].data;
 const attendanceWriteV3 = async (action, data) =>
-  (await db.query("select public.attendance_write_v3($1,$2) data", [action, data]))
+  (await db.query("select public.attendance_write_v5($1,$2) data", [action, action==='import.preview'&&data.import_kind==='monthly'?{coverage_start:data.period_start,coverage_end:data.period_end,...data}:data]))
     .rows[0].data;
 const attendanceReadV3 = async (kind, filters = {}) =>
   (await db.query("select public.attendance_read_v3($1,$2) data", [kind, filters]))
@@ -137,7 +139,7 @@ regressionTest("phase 2 daily position exposes schedule, person code and review 
   await write("employee.save", { ...person, employment_status: "inactive" });
 });
 
-regressionTest("duplicate cleanup is ADMIN-only and hard delete refuses linked history", async () => {
+regressionTest("duplicate inspection is ADMIN-only and permanent identities cannot be deleted", async () => {
   await who("admin");
   const ref = await read("reference");
   const first = await write("employee.save", { name: "اسم تنظيف مكرر", employee_number: "PH2-DUP-A", department_id: ref.departments[0].id, employment_status: "active" });
@@ -147,7 +149,7 @@ regressionTest("duplicate cleanup is ADMIN-only and hard delete refuses linked h
   await who("viewer");
   await assert.rejects(attendanceWriteV2("employee.delete_permanent", { source_employee_id: second.id, confirmed: true }), /صلاحية/);
   await who("admin");
-  await attendanceWriteV2("employee.delete_permanent", { source_employee_id: second.id, confirmed: true });
+  await assert.rejects(attendanceWriteV2("employee.delete_permanent", { source_employee_id: second.id, confirmed: true }), /هوية الموظف دائمة/);
   await write("status.save", { employee_id: first.id, department_id: first.department_id, record_date: "2099-02-01", status_type: "absence", late_minutes: null, notes: null });
   await assert.rejects(attendanceWriteV2("employee.delete_permanent", { source_employee_id: first.id, confirmed: true }), /سجلات مرتبطة/);
   await write("employee.save", { ...first, employment_status: "inactive" });
@@ -317,6 +319,7 @@ async function fingerprintFixture() {
   const department = (await read("reference")).departments[0];
   const person = await write("employee.save", { name: "اختبار تغطية البصمة", employee_number: "COVERAGE", department_id: department.id, employment_status: "active" });
   await attendanceWrite("rule.save", { department_id: department.id, effective_from: "2026-09-01", start_minute: 960, grace_minutes: 5, entry_window_start: 720, entry_window_end: 1439, working_weekdays: [0,1,2,3,4,5,6], default_manager_id: null });
+  await db.query('select public.employee_assignment_record($1)',[{employee_id:person.id,employee_version:person.version,department_id:department.id,employment_status:'active',valid_from:'2026-09-01',valid_to:'2026-09-30',reason:'Explicit synthetic historical organization evidence'}]);
   return { person, department };
 }
 function fingerprintPayload(person, overrides = {}) {

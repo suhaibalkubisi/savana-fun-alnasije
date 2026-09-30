@@ -1,7 +1,11 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { scopedResult, singleFlight } from "./request-state.mjs";
-export async function api<T>(path: string, body?: unknown): Promise<T> {
+const pendingRead = singleFlight();
+export function api<T>(path: string, body?: unknown): Promise<T> {
+  return body === undefined ? pendingRead(path, () => request<T>(path)) : request<T>(path, body);
+}
+async function request<T>(path: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
     response = await fetch(path, {
@@ -11,7 +15,7 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
         : undefined,
       body: body ? JSON.stringify(body) : undefined,
       cache: "no-store",
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(body && typeof body==='object' && 'action' in body && String(body.action).startsWith('attendance.import.') ? 135000 : 45000),
     });
   } catch {
     throw new Error(
