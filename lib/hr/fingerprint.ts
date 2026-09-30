@@ -176,7 +176,9 @@ export function parseFingerprint(
       raw_punch_tokens: rawPunchTokens,
       unique_punch_minutes: rows.reduce((sum, r) => sum + r.punch_minutes.length, 0),
     },
-    period_start: dates[0],
-    period_end: dates[dates.length - 1],
+    // The accounting month and the source's observed coverage are different.
+    // A partial device export still belongs to the selected whole month.
+    period_start: kind === 'monthly' ? `${period}-01` : dates[0],
+    period_end: kind === 'monthly' ? new Date(Date.UTC(Number(period.slice(0,4)),Number(period.slice(5,7)),0)).toISOString().slice(0,10) : dates[dates.length - 1],
   };
 }

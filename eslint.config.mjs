@@ -11,6 +11,11 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "dist/**",
+    "outputs/**",
+    ".sites-runtime/**",
+    "tests/.export-check.mjs",
+    "tests/.transport-check.mjs",
     "next-env.d.ts",
   ]),
   {

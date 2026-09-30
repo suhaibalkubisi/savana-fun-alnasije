@@ -7,15 +7,27 @@ async function fixture(ctx){
  const {db,who,hr,write}=ctx;const dep=(await db.query('select id from public.departments limit 1')).rows[0].id;
  await who();const e=await hr('employee.save',{name:'Synthetic monthly employee',employee_number:'TEST-DEVICE',department_id:dep,shift_id:null,direct_manager_id:null,employment_status:'active'});
  await write('rule.save',{department_id:dep,effective_from:'2026-09-01',start_minute:960,grace_minutes:15,entry_window_start:720,entry_window_end:1439,working_weekdays:[0,1,2,3,4,5,6],default_manager_id:null});
+ await db.query('select public.employee_assignment_record($1)',[{employee_id:e.id,employee_version:e.version,department_id:dep,shift_id:null,direct_manager_id:null,employment_status:'active',valid_from:'2026-09-01',valid_to:'2026-09-24',reason:'Explicit synthetic schedule evidence'}]);
  const row=(date,minutes,name=e.name,code=e.employee_number)=>({source_sheet:'Punch Record',source_row:2,calendar_date:date,person_code:code,source_name:name,raw_values:[code,name,date,minutes.map(m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`).join('\n')],punch_minutes:minutes,invalid:false});
  const data={source_name:'Synthetic monthly.xlsx',source_hash:'a'.repeat(64),import_kind:'monthly',period_start:'2026-09-01',period_end:'2026-09-30',coverage_start:'2026-09-10',coverage_end:'2026-09-11',rows:[row('2026-09-10',[965,1000]),row('2026-09-11',[90,970]),row('2026-09-12',[100])]};
  return {e,data,row};
 }
 const scalar=async(db,sql)=>{await db.exec('reset role');try{return (await db.query(sql)).rows[0].n;}finally{await db.exec('set role authenticated');}};
+
+test('approval rejects missing dated assignment and rolls back import state',()=>isolatedDatabase(async ctx=>{
+ const {db,write,evidence}=ctx;const {e,data}=await fixture(ctx);
+ const batch=await write('import.preview',data);
+ const reviewed=await write('import.review',{id:batch.id,version:batch.lifecycle_version});
+ await db.exec('reset role');await db.query('update public.employee_assignment_history set voided_at=now() where employee_id=$1',[e.id]);await db.exec('set role authenticated');
+ await assert.rejects(write('import.approve',{id:batch.id,version:reviewed.lifecycle_version}),/انتماء وظيفي/);
+ assert.equal((await evidence({month})).available,false);
+ assert.equal((await evidence({month,import_id:batch.id})).batch.lifecycle_state,'reviewed');
+ assert.equal(await scalar(db,"select count(*) n from public.attendance_imports where state='applied'"),0);
+}));
 test('immediate inspection is read-only and matches saved preview calculations, raw evidence and stable codes',()=>isolatedDatabase(async ctx=>{
  const {db,write,evidence}=ctx;const {e,data}=await fixture(ctx);
  const before=await scalar(db,'select count(*) n from public.audit_logs');
- const inspect=(await db.query('select public.attendance_inspect_monthly($1) value',[data])).rows[0].value;
+ const inspect=(await db.query('select public.attendance_inspect_monthly_v2($1) value',[data])).rows[0].value;
  assert.equal(await scalar(db,'select count(*) n from public.attendance_imports'),0);
  assert.equal(await scalar(db,'select count(*) n from public.audit_logs'),before);
  const local=buildMonthlyPosition(inspect);assert.equal(local.rows[0].internal_code,e.internal_code);
@@ -34,6 +46,10 @@ test('review, approval, replacement and cancellation preserve raw sources and ma
  const reviewed=await write('import.review',{id:batch.id,version:batch.lifecycle_version});
  await write('import.approve',{id:batch.id,version:reviewed.lifecycle_version});
  const approved=buildMonthlyPosition(await evidence({month}));assert.equal(approved.batch.lifecycle_state,'approved');assert.equal(approved.rows[0].cells['10'].manual.status_type,'leave');
+ const snapshot=await evidence({month});assert.equal(snapshot.calculation_basis,'approval_snapshot');
+ const savedRule=snapshot.rules.find(r=>r.department_id===e.department_id);
+ await write('rule.save',{...savedRule,start_minute:1020,grace_minutes:0});
+ assert.deepEqual((await evidence({month})).rules,snapshot.rules,'approved schedule is independent from later edits');
  const daily=await write('import.preview',{...data,source_hash:'b'.repeat(64),import_kind:'daily',period_start:'2026-09-10',period_end:'2026-09-10',rows:[row('2026-09-10',[800,1100])]});
  await write('import.apply',{id:daily.id,version:daily.version});
  assert.deepEqual(buildMonthlyPosition(await evidence({month})).metrics,approved.metrics);

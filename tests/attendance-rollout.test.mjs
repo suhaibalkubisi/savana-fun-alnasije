@@ -1,3 +1,5 @@
+// Historical pre-cutover compatibility contract. Current-schema denial and canonical
+// evidence calculations are verified in read-cutover and monthly-workflow tests.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
@@ -11,13 +13,15 @@ async function fixture(run) {
       create schema auth; create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);
       create function auth.uid() returns uuid language sql stable as
       $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`);
-    for (const name of (await readdir("supabase/migrations")).filter(n => n.endsWith(".sql")).sort())
+    for (const name of (await readdir("supabase/migrations")).filter(n => n.endsWith(".sql") && !n.endsWith("_restrict_legacy_attendance_reads.sql")).sort())
       await db.exec(await readFile(`supabase/migrations/${name}`, "utf8"));
     await db.exec("set hr.test_fixture='on'");
     await db.exec(await readFile("supabase/seed.sql", "utf8"));
     await db.query("insert into auth.users values($1,'rollout@example.invalid','{}')", [admin]);
     await db.query("update public.profiles set role='ADMIN',is_active=true where id=$1", [admin]);
     const person = (await db.query("select * from public.employees where employment_status='active' order by id limit 1")).rows[0];
+    person.employee_number='ROLLOUT-VERIFIED';
+    await db.query('update public.employees set employee_number=$1 where id=$2',[person.employee_number,person.id]);
     await db.query(`insert into public.attendance_department_rules(department_id,effective_from,start_minute,entry_window_start,entry_window_end)
       values($1,'2099-01-01',960,720,1439)`, [person.department_id]);
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [admin]);
@@ -31,7 +35,7 @@ async function fixture(run) {
   } finally { await db.close(); }
 }
 
-test("rollout: V2 preview after backfill awaits explicit V3 review and approval", () => fixture(async ({rpc,payload,reviews,monthly,person}) => {
+test("rollout: legacy preview cannot be approved without confirmed coverage", () => fixture(async ({rpc,payload,reviews,monthly}) => {
   const legacy = await rpc("_v2","import.preview",payload);
   let review = (await reviews()).find(r => r.id === legacy.id);
   assert.equal(review.lifecycle_state,"preview");
@@ -43,10 +47,9 @@ test("rollout: V2 preview after backfill awaits explicit V3 review and approval"
   assert.equal(review.state,"preview");
   assert.equal(review.lifecycle_state,"preview");
   const reviewed = await rpc("_v3","import.review",{id:legacy.id,version:review.lifecycle_version});
-  await rpc("_v3","import.approve",{id:legacy.id,version:reviewed.lifecycle_version});
+  await assert.rejects(rpc("_v3","import.approve",{id:legacy.id,version:reviewed.lifecycle_version}),/نطاق تغطية/);
   const result = await monthly();
-  assert.equal(result.approved_import.id,legacy.id);
-  assert.equal(result.rows.find(r => r.employee_id === person.id).cells["5"].entry,965);
+  assert.equal(result.approved_import,null);
 }));
 
 test("rollout: V1 and V2 cannot bypass approval and V3 duplicates preserve one review", () => fixture(async ({rpc,payload,reviews}) => {

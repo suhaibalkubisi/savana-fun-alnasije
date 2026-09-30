@@ -1,4 +1,5 @@
 import { zipSync, strToU8 } from "fflate";
+import {loadExcelBrands, addExcelBrands, type ExcelBrands} from "./excel-brand";
 import type { jsPDF } from "jspdf";
 import { brandAssets, type BrandKind } from "./brand";
 import {
@@ -18,6 +19,8 @@ const keys: (keyof Totals)[] = [
   "late_minutes",
   "weighted",
 ];
+export const dailyColumnWeights = [3, 12, 7, 7, 16, 14, 10, 7, 7, 7, 8, 7, 16, 10, 10, 12];
+
 export const totalHeaders = [
   "غياب",
   "غياب ×2",
@@ -52,6 +55,7 @@ export const summaryHeaders = [
   "مجموع دقائق التأخير",
   "عدد الإجراءات الإدارية",
 ];
+const generatedAt = () => new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Baghdad',dateStyle:'medium',timeStyle:'short'}).format(new Date());
 const values = (r: Totals) => keys.map((k) => Number(r[k]));
 const summaryTotals = (r: Totals) => summaryKeys.map((k) => Number(r[k]));
 export const summaryValues = (r: ReportRow) => [
@@ -78,120 +82,36 @@ function col(n: number) {
   }
   return s;
 }
+// Preserve spreadsheet arithmetic while displaying the same 12-hour evidence.
+// Only a complete clock label is converted; employee codes and arbitrary text
+// remain inline strings, including text beginning with spreadsheet operators.
+function excelClock(value: unknown) {
+  if(typeof value !== 'string')return null;
+  const label=value.replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)));
+  const m=label.match(/^(\d{1,2}):(\d{2})\s*([صم])(?:\s*\(\+(1)(?: يوم)?\))?(?:\s*·\s*(\d{4}-\d{2}-\d{2}))?$/);
+  if(!m||+m[1]<1||+m[1]>12||+m[2]>59)return null;
+  const fraction=((+m[1]%12+(m[3]==='م'?12:0))*60+(+m[2]))/1440;
+  if(m[5]){
+    const timestamp=Date.parse(m[5]);
+    if(!Number.isFinite(timestamp)||new Date(timestamp).toISOString().slice(0,10)!==m[5])return null;
+    return {value:timestamp/86400000+25569+fraction,style:5};
+  }
+  return {value:fraction+(m[4]?1:0),style:m[4]?6:4};
+}
 function codedReportTable(report: Report, summary: boolean, from=1, through=daysInMonth(report.month)) {
   const headers=summary?['الكود الوظيفي',...summaryHeaders]:['الكود الوظيفي','رقم الموظف','اسم الموظف','القسم',...Array.from({length:through-from+1},(_,i)=>String(i+from)),...totalHeaders];
   const rows=report.rows.map(r=>summary?[r.internal_code||'',...summaryValues(r)]:[r.internal_code||'',r.employee_number||'',r.name,r.department,...Array.from({length:through-from+1},(_,i)=>r.cells[i+from]?statuses[r.cells[i+from]].code:''),...values(r)]);
   const total:(string|number)[]=Array(headers.length-(summary?summaryKeys.length:keys.length)).fill('');total[2]='الإجمالي';total.push(...(summary?summaryTotals(report.totals):values(report.totals)));rows.push(total);
   return {headers,rows,columnWeights:summary?[11,8,21,16,8,16,...Array(8).fill(7)]:[11,8,21,16,...Array(through-from+1).fill(5),...Array(7).fill(7)]};
 }
-export function excelBytes(report: Report, title: string, summary = false) {
-  if(report.rows.some(r=>r.internal_code))return tableExcelBytes({title,period:monthLabel(report.month),...codedReportTable(report,summary)});
-  const days = daysInMonth(report.month);
-  const headers = summary
-    ? summaryHeaders
-    : [
-        "رقم الموظف",
-        "اسم الموظف",
-        "القسم",
-        ...Array.from({ length: days }, (_, i) => i + 1),
-        ...totalHeaders,
-      ];
-  const data: (string | number)[][] = report.rows.map((r) =>
-    summary
-      ? summaryValues(r)
-      : [
-          r.employee_number || "",
-          r.name,
-          r.department,
-          ...Array.from({ length: days }, (_, i) =>
-            r.cells[i + 1] ? statuses[r.cells[i + 1]].code : "",
-          ),
-          ...values(r),
-        ],
-  );
-  const metricCount = summary ? summaryKeys.length : keys.length;
-  const total: (string | number)[] = Array(headers.length - metricCount).fill(
-    "",
-  );
-  total[1] = "الإجمالي";
-  total.push(
-    ...(summary ? summaryTotals(report.totals) : values(report.totals)),
-  );
-  data.push(total);
-  const grid: (string | number)[][] = [
-    ["قسم الموارد البشرية – مسائي"],
-    [title],
-    [monthLabel(report.month)],
-    [],
-    headers,
-    ...data,
-  ];
-  const cells = grid
-    .map(
-      (r, ri) =>
-        `<row r="${ri + 1}" ht="${ri < 3 ? 28 : ri === 4 ? 42 : 24}" customHeight="1">${r
-          .map((v, ci) => {
-            const style =
-              ri < 3
-                ? 1
-                : ri === 4
-                  ? 2
-                  : ri === grid.length - 1
-                    ? 3
-                    : typeof v === "string" &&
-                        ["غ", "غ×2", "غ×3", "إ", "ت"].includes(v)
-                      ? 4 + ["غ", "غ×2", "غ×3", "إ", "ت"].indexOf(v)
-                      : 0;
-            return typeof v === "number"
-              ? `<c r="${col(ci)}${ri + 1}" s="${style}"><v>${v}</v></c>`
-              : `<c r="${col(ci)}${ri + 1}" t="inlineStr" s="${style}"><is><t xml:space="preserve">${escape(v)}</t></is></c>`;
-          })
-          .join("")}</row>`,
-    )
-    .join("");
-  const last = col(headers.length - 1);
-  const lastRow = grid.length;
-  const files: Record<string, Uint8Array> = {};
-  const add = (name: string, xml: string) =>
-    (files[name] = strToU8(
-      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${xml}`,
-    ));
-  add(
-    "[Content_Types].xml",
-    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
-  );
-  add(
-    "_rels/.rels",
-    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
-  );
-  add(
-    "xl/workbook.xml",
-    `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="التقرير الشهري" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'التقرير الشهري'!$1:$5</definedName><definedName name="_xlnm.Print_Area" localSheetId="0">'التقرير الشهري'!$A$1:$${last}$${lastRow}</definedName></definedNames></workbook>`,
-  );
-  add(
-    "xl/_rels/workbook.xml.rels",
-    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
-  );
-  const fills = [
-    "FFFFFF",
-    "0B2B55",
-    "EAF2FF",
-    "F6F7FB",
-    "FDECEC",
-    "F9D5D9",
-    "ECC0C9",
-    "E5EFFD",
-    "FFF2D5",
-  ];
-  add(
-    "xl/styles.xml",
-    `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Arial"/><color rgb="FF25324A"/></font><font><b/><sz val="15"/><name val="Arial"/><color rgb="FFFFFFFF"/></font><font><b/><sz val="11"/><name val="Arial"/></font></fonts><fills count="${fills.length + 2}"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>${fills.map((c) => `<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`).join("")}</fills><borders count="1"><border><left/><right/><top/><bottom style="hair"><color rgb="FFE2E8F0"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="9">${fills.map((_, i) => `<xf numFmtId="0" fontId="${i === 1 ? 1 : i === 2 || i === 3 ? 2 : 0}" fillId="${i + 2}" borderId="0" xfId="0" applyAlignment="1" applyFill="1"><alignment horizontal="center" vertical="center" wrapText="1" readingOrder="2"/></xf>`).join("")}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`,
-  );
-  add(
-    "xl/worksheets/sheet1.xml",
-    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${last}${lastRow}"/><sheetViews><sheetView workbookViewId="0" rightToLeft="1" showGridLines="0"><pane xSplit="3" ySplit="5" topLeftCell="D6" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/><cols>${headers.map((_, i) => `<col min="${i + 1}" max="${i + 1}" width="${i === 1 ? 28 : i === 2 ? 26 : i === 0 ? 14 : summary ? 20 : i < days + 3 ? 5 : 13}" customWidth="1"/>`).join("")}</cols><sheetData>${cells}</sheetData><autoFilter ref="A5:${last}${lastRow - 1}"/><mergeCells count="3"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/><mergeCell ref="A3:${last}3"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.25" right="0.25" top="0.35" bottom="0.45" header="0.15" footer="0.15"/><pageSetup paperSize="8" orientation="landscape" fitToWidth="1" fitToHeight="0"/><headerFooter><oddFooter>&amp;LDesigned by Suhaib Al-Kubaisi&amp;C&amp;P / &amp;N&amp;Rقسم الموارد البشرية – مسائي</oddFooter></headerFooter></worksheet>`,
-  );
-  return zipSync(files, { level: 6 });
+export function excelBytes(report: Report, title: string, summary = false, scope = '', brands?: ExcelBrands) {
+  return tableExcelBytes({title,period:scope || monthLabel(report.month),brands,...codedReportTable(report,summary)});
+}
+export async function brandedReportExcelBytes(report: Report, title: string, summary = false, scope = '') {
+  return excelBytes(report,title,summary,scope,await loadExcelBrands());
+}
+export async function brandedExcelBytes(report: Parameters<typeof tableExcelBytes>[0]) {
+  return tableExcelBytes({...report,brands:await loadExcelBrands()});
 }
 export function triggerDownload(url: string, name: string) {
   const a = document.createElement("a");
@@ -217,7 +137,7 @@ export function download(bytes: Uint8Array, name: string, type: string) {
 async function webAsset(path: string) {
   try {
     const response = await fetch(path, { signal: AbortSignal.timeout(15000) });
-    if (!response.ok) return null;
+    if (!response.ok) throw new Error('تعذر تحميل شعار التقرير؛ أعد المحاولة');
     const bytes = new Uint8Array(await response.arrayBuffer());
     let binary = "";
     for (let i = 0; i < bytes.length; i += 8192)
@@ -229,6 +149,7 @@ async function webAsset(path: string) {
         : "webp";
     return `data:image/${mime};base64,${btoa(binary)}`;
   } catch {
+    if(typeof window !== 'undefined') throw new Error('تعذر تحميل شعار التقرير؛ أعد المحاولة');
     return null;
   }
 }
@@ -272,189 +193,8 @@ function fillReportCell(
   doc.rect(x, y, width, height, "F");
   doc.restoreGraphicsState();
 }
-export async function pdfBytes(
-  report: Report,
-  title: string,
-  summary = false,
-  fontBase64?: string,
-) {
-  if(report.rows.some(r=>r.internal_code))return tablePdfBytes({title,period:monthLabel(report.month),fontBase64,...codedReportTable(report,summary),...(!summary?{segments:Array.from({length:Math.ceil(daysInMonth(report.month)/10)},(_,i)=>codedReportTable(report,false,i*10+1,Math.min(daysInMonth(report.month),i*10+10)))}:{})});
-  const { jsPDF } = await import("jspdf");
-  const doc = new jsPDF({
-    orientation: "landscape",
-    unit: "pt",
-    format: "a3",
-    compress: true,
-  });
-  if (!fontBase64) {
-    const r = await fetch("/fonts/DejaVuSans.ttf", {
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!r.ok) throw new Error("تعذر تحميل خط التقرير");
-    const bytes = new Uint8Array(await r.arrayBuffer());
-    let binary = "";
-    for (let i = 0; i < bytes.length; i += 8192)
-      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-    fontBase64 = btoa(binary);
-  }
-  doc.addFileToVFS("Arabic.ttf", fontBase64);
-  doc.addFont("Arabic.ttf", "Arabic", "normal");
-  doc.setFont("Arabic");
-  doc.setProperties({
-    title: `${title} ${report.month}`,
-    author: "قسم الموارد البشرية",
-    subject: "تقرير شهري",
-  });
-  const width = doc.internal.pageSize.getWidth();
-  const height = doc.internal.pageSize.getHeight();
-  const margin = 34;
-  const usable = width - 2 * margin;
-  const [headerAsset, watermarkAsset, savanaAsset] = await Promise.all([
-    webAsset(brandAssets.header.src),
-    webAsset(brandAssets.watermark.src),
-    webAsset(brandAssets.savana.src),
-  ]);
-  const dayCount = daysInMonth(report.month);
-  const segments = summary
-    ? [[0, 0]]
-    : [
-        [1, 15],
-        [16, dayCount],
-      ];
-  let page = 0;
-  const text = (
-    s: unknown,
-    x: number,
-    y: number,
-    size = 10,
-    align: "left" | "right" | "center" = "center",
-  ) => {
-    doc.setFontSize(size);
-    doc.text(Array.isArray(s) ? s.map(String) : String(s ?? ""), x, y, {
-      align,
-    });
-  };
-  for (const [start, end] of segments) {
-    const headers = summary
-      ? summaryHeaders
-      : [
-          "رقم الموظف",
-          "اسم الموظف",
-          "القسم",
-          ...Array.from({ length: end - start + 1 }, (_, i) =>
-            String(start + i),
-          ),
-          ...totalHeaders.map((h) =>
-            h
-              .replace("إجمالي الغياب المحتسب", "المحتسب")
-              .replace("دقائق التأخير", "الدقائق"),
-          ),
-        ];
-    const base = summary
-      ? [65, 170, 155, 70, 145, ...Array(8).fill((usable - 605) / 8)]
-      : [
-          55,
-          155,
-          160,
-          ...Array(end - start + 1).fill(25),
-          ...Array(7).fill((usable - 370 - (end - start + 1) * 25) / 7),
-        ];
-    const perPage = 20;
-    const allRows = report.rows.map((r) =>
-      summary
-        ? summaryValues(r)
-        : [
-            r.employee_number || "—",
-            r.name,
-            r.department,
-            ...Array.from({ length: end - start + 1 }, (_, i) =>
-              r.cells[start + i] ? statuses[r.cells[start + i]].code : "",
-            ),
-            ...values(r),
-          ],
-    );
-    const total: (string | number)[] = Array(
-      headers.length - (summary ? summaryKeys.length : keys.length),
-    ).fill("");
-    total[1] = "الإجمالي";
-    total.push(
-      ...(summary ? summaryTotals(report.totals) : values(report.totals)),
-    );
-    allRows.push(total);
-    for (let offset = 0; offset < allRows.length; offset += perPage) {
-      if (page++) doc.addPage();
-      drawBrand(doc, "watermark", watermarkAsset, width / 2 - 90, 270, 180);
-      drawBrand(doc, "header", headerAsset, width - 320, 16, 286);
-      // SAVANA is the supplied original wordmark, never substitute typed text.
-      drawBrand(doc, "savana", savanaAsset, margin, 28, 110);
-      doc.setDrawColor("#F2AD21");
-      doc.setLineWidth(1.2);
-      doc.line(margin, 74, width - margin, 74);
-      doc.setTextColor("#26324A");
-      text(title, width - margin, 96, 17, "right");
-      text(
-        `قسم الموارد البشرية – مسائي · ${monthLabel(report.month)}`,
-        width - margin,
-        118,
-        12,
-        "right",
-      );
-      if (!summary) text(`الأيام ${start} – ${end}`, margin, 118, 11, "left");
-      let x = width - margin;
-      headers.forEach((h, i) => {
-        x -= base[i];
-        doc.setFillColor("#0B2B55");
-        doc.rect(x, 132, base[i], 43, "F");
-        doc.setTextColor("#FFFFFF");
-        doc.setFontSize(9);
-        const lines =
-          base[i] < 90
-            ? String(h)
-                .replace("إجمالي الغياب المحتسب", "الغياب المحتسب")
-                .split(" ")
-            : [String(h)];
-        text(lines as unknown as string, x + base[i] / 2, 150, 9);
-      });
-      allRows.slice(offset, offset + perPage).forEach((r, ri) => {
-        let x = width - margin;
-        const y = 175 + ri * 30;
-        const last = offset + ri === allRows.length - 1;
-        r.forEach((v, ci) => {
-          x -= base[ci];
-          doc.setFillColor(last ? "#D9E5F3" : ri % 2 ? "#F1F5FA" : "#FFFFFF");
-          fillReportCell(doc, x, y, base[ci], 30);
-          doc.setDrawColor("#B8C5D6");
-          doc.rect(x, y, base[ci], 30, "S");
-          doc.setTextColor("#10233F");
-          doc.setFontSize(10);
-          const lines =
-            !summary && ci >= 3 && ci < 3 + end - start + 1
-              ? [String(v)]
-              : doc.splitTextToSize(String(v), base[ci] - 7);
-          doc.text(lines, x + base[ci] / 2, y + (lines.length > 1 ? 12 : 19), {
-            align: "center",
-          });
-        });
-      });
-    }
-  }
-  const pages = doc.getNumberOfPages();
-  for (let index = 1; index <= pages; index++) {
-    doc.setPage(index);
-    doc.setDrawColor("#DCE5F0");
-    doc.line(margin, height - 31, width - margin, height - 31);
-    doc.setTextColor("#6E7D92");
-    text("Designed by Suhaib Al-Kubaisi", margin, height - 16, 8, "left");
-    text(`${index} / ${pages}`, width / 2, height - 16, 9);
-    text(
-      "قسم الموارد البشرية – مسائي",
-      width - margin,
-      height - 16,
-      8,
-      "right",
-    );
-  }
-  return new Uint8Array(doc.output("arraybuffer"));
+export async function pdfBytes(report: Report,title: string,summary = false,fontBase64?: string,scope = '') {
+  return tablePdfBytes({title,period:scope || monthLabel(report.month),fontBase64,...codedReportTable(report,summary),...(!summary?{segments:Array.from({length:Math.ceil(daysInMonth(report.month)/10)},(_,i)=>codedReportTable(report,false,i*10+1,Math.min(daysInMonth(report.month),i*10+10)))}:{})});
 }
 
 export function tableExcelBytes({
@@ -463,6 +203,7 @@ export function tableExcelBytes({
   headers,
   rows,
   sheetName = "التقرير",
+  brands,
   columnWeights,
   notesArea = false,
 }: {
@@ -471,6 +212,7 @@ export function tableExcelBytes({
   headers: string[];
   rows: (string | number)[][];
   sheetName?: string;
+  brands?: ExcelBrands;
   columnWeights?: number[];
   notesArea?: boolean;
 }) {
@@ -480,7 +222,7 @@ export function tableExcelBytes({
     ["قسم الموارد البشرية – مسائي"],
     [title],
     [period],
-    [],
+    [`تاريخ الإصدار: ${generatedAt()} · بغداد`],
     headers,
     ...rows,
     ...(notesArea ? [[], ["ملاحظات"], [], [], []] : []),
@@ -491,12 +233,18 @@ export function tableExcelBytes({
     (files[name] = strToU8(
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>${xml}`,
     ));
+  const widths=headers.map((h,i)=>columnWeights?.[i]?Math.min(48,Math.max(9,columnWeights[i]*1.6)):Math.min(42,Math.max(14,String(h).length+8)));
+  if(brands)addExcelBrands(files,brands,widths.reduce((n,w)=>n+w*7+5,0));
   const sheetRows = grid
     .map(
       (row, ri) =>
-        `<row r="${ri + 1}" ht="${ri < 3 ? 28 : ri === 4 ? 42 : 24}" customHeight="1">${row
+        `<row r="${ri + 1}" ht="${ri === 0 && brands ? 66 : ri === 2 ? 46 : ri < 3 ? 30 : ri === 4 ? 46 : Math.min(120,Math.max(30,...row.map((v,i)=>Math.ceil(String(v).length / Math.max(6,widths[i]-3))*16+10)))}" customHeight="1">${row
           .map((value, ci) => {
             const style = ri < 3 ? 1 : ri === 4 ? 2 : 0;
+            const clock=ri>4?excelClock(value):null;
+            if(clock)return `<c r="${col(ci)}${ri+1}" s="${clock.style}"><v>${clock.value}</v></c>`;
+            const isDate=ri>4 && typeof value==='string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0,10)===value;
+            if(isDate)return `<c r="${col(ci)}${ri+1}" s="3"><v>${Date.parse(String(value))/86400000+25569}</v></c>`;
             return typeof value === "number"
               ? `<c r="${col(ci)}${ri + 1}" s="${style}"><v>${value}</v></c>`
               : `<c r="${col(ci)}${ri + 1}" t="inlineStr" s="${style}"><is><t xml:space="preserve">${escape(value)}</t></is></c>`;
@@ -506,7 +254,7 @@ export function tableExcelBytes({
     .join("");
   add(
     "[Content_Types].xml",
-    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'.replace('</Types>',brands?'<Default Extension="jpeg" ContentType="image/jpeg"/><Default Extension="png" ContentType="image/png"/><Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>':'</Types>'),
   );
   add(
     "_rels/.rels",
@@ -514,7 +262,7 @@ export function tableExcelBytes({
   );
   add(
     "xl/workbook.xml",
-    `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="${escape(safeSheet)}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'${escape(safeSheet)}'!$1:$5</definedName></definedNames></workbook>`,
+    `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="${escape(safeSheet)}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'${escape(safeSheet.replaceAll("'","''"))}'!$1:$5,'${escape(safeSheet.replaceAll("'","''"))}'!$A:$C</definedName></definedNames></workbook>`,
   );
   add(
     "xl/_rels/workbook.xml.rels",
@@ -522,11 +270,11 @@ export function tableExcelBytes({
   );
   add(
     "xl/styles.xml",
-    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Arial"/><color rgb="FF14213D"/></font><font><b/><sz val="15"/><name val="Arial"/><color rgb="FFFFFFFF"/></font><font><b/><sz val="11"/><name val="Arial"/><color rgb="FF0B2B55"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0B2B55"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEAF2FF"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom style="hair"><color rgb="FFDCE5F0"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1" readingOrder="2"/></xf><xf numFmtId="0" fontId="1" fillId="3" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" readingOrder="2"/></xf><xf numFmtId="0" fontId="2" fillId="4" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1" readingOrder="2"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>',
+    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="4"><numFmt numFmtId="164" formatCode="yyyy-mm-dd"/><numFmt numFmtId="165" formatCode="[$-ar-IQ]hh:mm AM/PM"/><numFmt numFmtId="166" formatCode="[$-ar-IQ]hh:mm AM/PM &quot;(+1)&quot; yyyy-mm-dd"/><numFmt numFmtId="167" formatCode="[$-ar-IQ]hh:mm AM/PM &quot;(+1)&quot;"/></numFmts><fonts count="3"><font><sz val="11"/><name val="Cairo"/><color rgb="FF14213D"/></font><font><b/><sz val="15"/><name val="Cairo"/><color rgb="FF0B2B55"/></font><font><b/><sz val="11"/><name val="Cairo"/><color rgb="FF0B2B55"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0B2B55"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEAF2FF"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom style="hair"><color rgb="FFDCE5F0"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1" readingOrder="2"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1" readingOrder="2"/></xf><xf numFmtId="0" fontId="2" fillId="4" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1" readingOrder="2"/></xf><xf numFmtId="164" fontId="0" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="165" fontId="0" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="166" fontId="0" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="167" fontId="0" fillId="2" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>',
   );
   add(
     "xl/worksheets/sheet1.xml",
-    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${last}${grid.length}"/><sheetViews><sheetView workbookViewId="0" rightToLeft="1" showGridLines="0"><pane xSplit="3" ySplit="5" topLeftCell="D6" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/><cols>${headers.map((h, i) => `<col min="${i + 1}" max="${i + 1}" width="${columnWeights?.[i] ? Math.min(48, Math.max(7, columnWeights[i] * 1.6)) : Math.min(42, Math.max(14, String(h).length + 8))}" customWidth="1"/>`).join("")}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="A5:${last}${5 + rows.length}"/><mergeCells count="3"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/><mergeCell ref="A3:${last}3"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.45" header="0.15" footer="0.15"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/><headerFooter><oddFooter>&amp;LDesigned by Suhaib Al-Kubaisi&amp;C&amp;P / &amp;N&amp;Rقسم الموارد البشرية – مسائي</oddFooter></headerFooter></worksheet>`,
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="${headers.length>16?0:1}"/></sheetPr><dimension ref="A1:${last}${grid.length}"/><sheetViews><sheetView workbookViewId="0" rightToLeft="1" showGridLines="0"><pane xSplit="3" ySplit="5" topLeftCell="D6" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/><cols>${headers.map((h, i) => `<col min="${i + 1}" max="${i + 1}" width="${widths[i]}" customWidth="1"/>`).join("")}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="A5:${last}${5 + rows.length}"/><mergeCells count="3"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/><mergeCell ref="A3:${last}3"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.45" header="0.15" footer="0.15"/><pageSetup paperSize="${headers.length>12?8:9}" orientation="landscape" scale="100" fitToWidth="${headers.length>16?0:1}" fitToHeight="0"/><headerFooter><oddFooter>&amp;Lصنع من قبل صهيب الكبيسي&amp;C&amp;P / &amp;N&amp;Rقسم الموارد البشرية – مسائي</oddFooter></headerFooter>${brands?'<drawing r:id="rIdBrand"/>':''}</worksheet>`,
   );
   return zipSync(files, { level: 6 });
 }
@@ -545,9 +293,9 @@ export function layoutTablePdf(
     ? columnWeights : Array(headers.length).fill(1);
   const totalWeight = weights.reduce((sum, value) => sum + value, 0);
   const widths = weights.map((value) => tableWidth * value / totalWeight);
-  const lineHeight = 10;
-  doc.setFontSize(8.5);
-  doc.setLineHeightFactor(lineHeight / 8.5);
+  const lineHeight = 12;
+  doc.setFontSize(10);
+  doc.setLineHeightFactor(lineHeight / 10);
   const wrap = (row: (string | number)[]) => headers.map((_, i) =>
     doc.splitTextToSize(String(row[i] ?? "—"), widths[i] - 7) as string[]);
   const headerLines = wrap(headers);
@@ -615,40 +363,34 @@ export async function tablePdfBytes({
   const height = doc.internal.pageSize.getHeight();
   const margin = 28;
   const tableWidth = width - margin * 2;
+  doc.setFontSize(15);
+  const titleLines=doc.splitTextToSize(title,tableWidth) as string[];
+  const titleExtra=Math.max(0,titleLines.length-1)*18;
   doc.setFontSize(9);
   const periodLines = doc.splitTextToSize(`قسم الموارد البشرية – مسائي · ${period}`, tableWidth) as string[];
-  const headerTop = 112 + Math.max(0, periodLines.length - 1) * 11;
+  const headerTop = 112 + titleExtra + Math.max(0, periodLines.length - 1) * 11;
+  const generationLabel = `تاريخ الإصدار: ${generatedAt()} · بغداد`;
   const sections = segments?.length ? segments : [{headers, rows, columnWeights}];
   const allPages = sections.flatMap(section => {
     const layout = layoutTablePdf(doc, section.headers, section.rows, section.columnWeights, notesArea, headerTop);
     return layout.pages.map(pageRows => ({layout, pageRows, headers: section.headers}));
   });
-  const [headerAsset, watermarkAsset] = await Promise.all([
-    webAsset(brandAssets.header.src),
-    webAsset(brandAssets.watermark.src),
-  ]);
+  const [companyAsset,savanaAsset] = await Promise.all([webAsset(brandAssets.company.src),webAsset(brandAssets.savana.src)]);
   const pages = allPages.length;
   for (let page = 0; page < pages; page++) {
     const {layout, pageRows, headers: pageHeaders} = allPages[page];
     const {widths, headerLines, headerHeight} = layout;
     if (page) doc.addPage();
-    drawBrand(
-      doc,
-      "watermark",
-      watermarkAsset,
-      width / 2 - 70,
-      height / 2 - 80,
-      140,
-    );
-    drawBrand(doc, "header", headerAsset, width - 270, 12, 240);
+    drawBrand(doc,"company",companyAsset,width-154,5,126);
+    drawBrand(doc,"savana",savanaAsset,margin,25,130);
     doc.setDrawColor("#F2AD21");
     doc.line(margin, 60, width - margin, 60);
     doc.setTextColor("#14213D");
     doc.setFontSize(15);
-    doc.text(title, width - margin, 82, { align: "right" });
+    doc.text(titleLines, width - margin, 82, { align: "right",lineHeightFactor:1.2 });
     doc.setFontSize(9);
     doc.setTextColor("#637188");
-    doc.text(periodLines, width - margin, 100, {
+    doc.text(periodLines, width - margin, 100 + titleExtra, {
       align: "right",
       lineHeightFactor: 11 / 9,
     });
@@ -661,7 +403,7 @@ export async function tablePdfBytes({
       doc.setDrawColor("#FFFFFF");
       doc.rect(x, headerTop, widths[i], headerHeight, "S");
       doc.setTextColor("#FFFFFF");
-      doc.setFontSize(8.5);
+      doc.setFontSize(10);
       doc.text(
         headerLines[i],
         x + widths[i] / 2,
@@ -680,7 +422,7 @@ export async function tablePdfBytes({
         doc.setDrawColor("#B8C5D6");
         doc.rect(x, y, widths[ci], row.height, "S");
         doc.setTextColor("#10233F");
-        doc.setFontSize(8.5);
+        doc.setFontSize(10);
         doc.text(
           lines,
           x + widths[ci] / 2,
@@ -710,7 +452,8 @@ export async function tablePdfBytes({
     doc.line(margin, height - 28, width - margin, height - 28);
     doc.setTextColor("#6E7D92");
     doc.setFontSize(7.5);
-    doc.text("Designed by Suhaib Al-Kubaisi", margin, height - 14, {
+    doc.text(generationLabel, margin, height - 34, {align: "left"});
+    doc.text("صنع من قبل صهيب الكبيسي", margin, height - 14, {
       align: "left",
     });
     doc.text(`${page + 1} / ${pages}`, width / 2, height - 14, {

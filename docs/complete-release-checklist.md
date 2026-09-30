@@ -1,3 +1,5 @@
+> Historical release evidence. For the September 30 rebuild see rebuild-specification.md and system-map.md.
+
 # Complete HR release checklist
 
 Baseline: version 18, GitHub ff4005e7, Sites d9d965a. Preserve subsequent writes and the original XLS preview; no real attendance decisions for QA.

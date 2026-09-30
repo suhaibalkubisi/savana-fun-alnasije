@@ -83,16 +83,13 @@
  .hr-product .filterbar { gap:.7rem; }
  .hr-product .metric-strip article { min-height:100px; padding:1rem; }
  .hr-product .metric-strip strong { font-size:1.8rem; }
- .hr-product .topbar { min-height:72px; padding-inline:1.5rem; }
  .hr-product .profile-strip { gap:.7rem 1.4rem; }
- .hr-product .sidebar-company-art { width:180px; }
  .hr-product .operation-launcher { background:#16344f; border-radius:10px; }
  .hr-product .report-table { font-size:.875rem; }
 }
 @media (max-width:1024px) { .monthly-dashboard-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:640px) {
  .hr-product .workspace { padding:1rem .8rem 1.5rem; }
- .hr-product .topbar { padding-inline:.8rem; }
  .monthly-filter-panel { padding:.8rem; }
  .monthly-filter-panel .field { min-width:0; }
  .monthly-dashboard-grid { grid-template-columns:1fr 1fr; gap:.5rem; }
@@ -122,44 +119,6 @@
 
 @media screen {
   .hr-product .auth-brand-art { width: 62px; margin: 0 auto 20px; }
-  .hr-product .login-company .login-brand {
-    width: 280px;
-    height: auto;
-    padding: 20px;
-  }
-  .hr-product .login-brand .brand-artwork {
-    width: 100%;
-  }
-  .hr-product .login-identity .brand-artwork {
-    width: 100%;
-  }
-  .hr-product .login-identity .savana-wordmark {
-    width: 132px;
-    margin: 18px auto 0;
-  }
-  .hr-product .sidebar-company-art {
-    width: 220px;
-    flex-shrink: 0;
-    border-radius: 6px;
-    background: #fff;
-  }
-  .hr-product .sidebar-symbol-art {
-    display: none !important;
-  }
-  .hr-product .sidebar-savana-art {
-    width: 100px;
-    margin: 0 auto 14px;
-    border-radius: 4px;
-  }
-  .hr-product [data-collapsible="icon"] .sidebar-company-art,
-  .hr-product [data-collapsible="icon"] .sidebar-savana-art {
-    display: none !important;
-  }
-  .hr-product [data-collapsible="icon"] .sidebar-symbol-art {
-    display: block !important;
-    width: 42px;
-    border-radius: 6px;
-  }
   .hr-product {
     --background: #f1f4f9;
     --foreground: #16243b;
@@ -262,15 +221,6 @@
   }
 
   /* Compact navy navigation, with a real icon rail when collapsed. */
-  .hr-product .hr-sidebar [data-slot="sidebar-inner"],
-  .hr-product [data-slot="sidebar"][data-mobile="true"] {
-    background: #101f36;
-    color: #e3edfc;
-  }
-  .hr-product .hr-sidebar [data-slot="sidebar-inner"] {
-    box-shadow: none;
-    border-inline-start: 1px solid #24354e;
-  }
   .hr-product [data-slot="sidebar-header"] {
     padding: 22px 18px 14px;
     border-bottom: 1px solid #ffffff16;
@@ -278,15 +228,6 @@
   .hr-product .brand {
     gap: 12px;
     align-items: center;
-  }
-  .hr-product .sidebar-logo {
-    width: 56px;
-    height: 64px;
-    border-radius: 8px;
-    padding: 4px;
-    background: #fff;
-    object-fit: contain;
-    flex-shrink: 0;
   }
   .hr-product .brand strong {
     display: block;
@@ -302,79 +243,15 @@
     color: #bdcce0;
     margin-top: 6px;
   }
-  .hr-product .sidebar-shift {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #e4c77b;
-    margin-top: 16px;
-    padding-top: 12px;
-    border-top: 1px solid #ffffff14;
-    font-size: 13px;
-  }
   .hr-product [data-slot="sidebar-content"] {
     padding: 8px 12px 16px;
     scrollbar-width: thin;
     scrollbar-color: #415570 transparent;
   }
-  .hr-product .nav-heading {
-    font-size: 12px;
-    font-weight: 700;
-    color: #93a9c6;
-    padding: 19px 12px 8px;
-    margin: 0;
-    letter-spacing: 0;
-  }
-  .hr-product .nav-item {
-    min-height: 43px;
-    height: auto;
-    border-radius: 8px;
-    padding: 11px 12px;
-    color: #d3e0f0;
-    font-size: 14px;
-    font-weight: 400;
-    gap: 12px;
-    border: 0;
-    margin-bottom: 2px;
-  }
-  .hr-product .nav-item svg {
-    width: 19px;
-    height: 19px;
-    color: #8faacb;
-  }
-  .hr-product .nav-item:hover {
-    background: #1b304e;
-    color: #fff;
-  }
-  .hr-product .nav-item[data-active="true"] {
-    background: #175cd3 !important;
-    color: #fff !important;
-    border: 0;
-    box-shadow: none;
-    font-weight: 700;
-  }
-  .hr-product .nav-item[data-active="true"] svg {
-    color: #fff;
-  }
   .hr-product [data-slot="sidebar-footer"] {
     border-top: 1px solid #ffffff18;
     padding: 14px 16px;
     background: #0c1a2e;
-  }
-  .hr-product .sidebar-user {
-    gap: 10px;
-  }
-  .hr-product .sidebar-user strong {
-    color: #fff;
-    font-size: 13px;
-  }
-  .hr-product .sidebar-user small {
-    color: #a7bcd7;
-    font-size: 12px;
-  }
-  .hr-product .sidebar-user button,
-  .hr-product .logout {
-    color: #c5d5eb;
   }
   .hr-product .avatar {
     background: #e8f0fd;
@@ -386,30 +263,8 @@
     font-weight: 700;
     flex-shrink: 0;
   }
-  .hr-product .logout {
-    justify-content: flex-start;
-    font-size: 13px;
-    min-height: 36px;
-  }
   .hr-product [data-collapsible="icon"] .brand {
     justify-content: center;
-  }
-  .hr-product [data-collapsible="icon"] .sidebar-logo {
-    width: 40px;
-    height: 46px;
-    padding: 3px;
-  }
-  .hr-product
-    [data-collapsible="icon"]
-    :is(
-      .brand > div,
-      .sidebar-shift,
-      .nav-heading,
-      .sidebar-user > div:nth-child(2),
-      .sidebar-user > button,
-      .logout
-    ) {
-    display: none;
   }
   .hr-product [data-collapsible="icon"] [data-slot="sidebar-header"] {
     padding: 17px 10px;
@@ -417,51 +272,8 @@
   .hr-product [data-collapsible="icon"] [data-slot="sidebar-content"] {
     padding-inline: 10px;
   }
-  .hr-product [data-collapsible="icon"] .nav-item {
-    width: 46px !important;
-    height: 44px !important;
-    justify-content: center;
-    padding: 12px !important;
-  }
-  .hr-product [data-collapsible="icon"] .nav-item span {
-    display: none;
-  }
   .hr-product [data-collapsible="icon"] [data-slot="sidebar-footer"] {
     padding: 12px;
-  }
-
-  .hr-product .topbar {
-    height: auto;
-    min-height: 82px;
-    padding: 15px 28px;
-    gap: 20px;
-    background: #fff;
-    border-bottom: 1px solid #dce4ef;
-    box-shadow: none;
-    flex-wrap: nowrap;
-  }
-  .hr-product .topbar-title {
-    gap: 12px;
-    flex-shrink: 0;
-  }
-  .hr-product .topbar-context {
-    display: grid;
-    gap: 2px;
-  }
-  .hr-product .topbar-context > span {
-    color: #64748b;
-    font-size: 12px;
-  }
-  .hr-product .topbar-context > strong {
-    font-size: 14px;
-    color: #14263f;
-    font-weight: 700;
-  }
-  .hr-product .header-date {
-    color: #53657e;
-    font-size: 12px;
-    white-space: nowrap;
-    margin-inline-start: auto;
   }
   .hr-product .workspace-tools {
     display: flex;
@@ -476,28 +288,6 @@
     justify-content: flex-start;
     font-weight: 400;
     font-size: 12px;
-  }
-  .hr-product .topbar-account {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    border-inline-start: 1px solid #dfe5ee;
-    padding-inline-start: 18px;
-  }
-  .hr-product .topbar-account > div {
-    display: grid;
-    gap: 2px;
-    max-width: 130px;
-  }
-  .hr-product .topbar-account strong {
-    font-size: 13px;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-  }
-  .hr-product .topbar-account small {
-    font-size: 12px;
-    color: #5e718d;
   }
   .hr-product .workspace {
     max-width: 1800px;
@@ -991,135 +781,10 @@
   }
 
   /* The sign-in is a distinct two-column corporate workspace. */
-  .hr-product .login-page {
-    display: grid;
-    align-items: stretch;
-    grid-template-columns: minmax(360px, 0.9fr) minmax(440px, 1.1fr);
-    min-height: 100dvh;
-    padding: 0;
-    background: #fff;
-    overflow: visible;
-    isolation: auto;
-  }
-  .hr-product .login-page::after {
-    display: none;
-  }
-  .hr-product .login-company {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    background: #10294b;
-    padding: 36px 42px;
-    color: #fff;
-    min-height: 100dvh;
-  }
-  .hr-product .login-company-top,
-  .hr-product .login-company-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-  }
-  .hr-product .login-company-top > span:first-child {
-    font-size: 14px;
-    letter-spacing: 2px;
-    font-family: Arial, sans-serif;
-    font-weight: 700;
-  }
-  .hr-product .login-company-identity {
-    padding-block: 45px;
-    text-align: center;
-  }
-  .hr-product .login-brand {
-    position: static;
-    width: 154px;
-    height: 176px;
-    padding: 15px;
-    background: #fff;
-    border-radius: 14px;
-    margin: 0 auto 32px;
-  }
-  .hr-product .login-company h2 {
-    color: #fff;
-    font-size: 30px;
-    font-weight: 700;
-    margin-bottom: 12px;
-  }
-  .hr-product .login-company-identity > p {
-    color: #bad0ed;
-    font-size: 20px;
-  }
-  .hr-product .login-company-footer {
-    color: #a8c0df;
-    font-size: 13px;
-    border-top: 1px solid #ffffff26;
-    padding-top: 22px;
-  }
-  .hr-product .login-workspace {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 48px;
-    min-width: 0;
-  }
-  .hr-product .login-card {
-    margin: 0;
-    width: 100%;
-    max-width: 430px;
-    padding: 0;
-    border: 0;
-    box-shadow: none;
-    border-radius: 0;
-    background: transparent;
-  }
-  .hr-product .login-identity {
-    padding-bottom: 24px;
-    margin-bottom: 30px;
-    border-bottom: 1px solid #dce4ef;
-  }
-  .hr-product .login-identity > img:first-child {
-    height: 60px;
-    object-fit: contain;
-  }
   .hr-product .associated-brand {
     margin-top: 8px;
     font-size: 17px;
     color: #8b641c;
-  }
-  .hr-product .login-heading {
-    gap: 12px;
-    margin-bottom: 26px;
-  }
-  .hr-product .login-heading h1 {
-    font-size: 25px;
-    font-weight: 700;
-    color: #132d4d;
-  }
-  .hr-product .login-lock {
-    background: #eaf2ff;
-    border-radius: 10px;
-    color: #175cd3;
-  }
-  .hr-product .login-card form {
-    gap: 22px;
-  }
-  .hr-product .login-card input {
-    min-height: 50px;
-    background: #f9fbfe;
-    border-color: #bdcce0;
-  }
-  .hr-product .login-card form > button {
-    min-height: 52px;
-    margin-top: 6px;
-    font-size: 16px;
-  }
-  .hr-product .login-credit {
-    position: static;
-    margin-top: 42px;
-    width: 245px;
-    height: auto;
-    opacity: 1;
   }
   .hr-product .password-toggle {
     inset-block-end: 4px;
@@ -1127,9 +792,6 @@
 }
 
 @media screen and (max-width: 1400px) {
-  .hr-product .header-date {
-    display: none;
-  }
   .hr-product .workspace-tools {
     margin-inline-start: auto;
   }
@@ -1149,9 +811,6 @@
   }
 }
 @media screen and (max-width: 1150px) {
-  .hr-product .topbar-account {
-    display: none;
-  }
   .hr-product .workspace-tools .tools-label {
     display: none;
   }
@@ -1203,33 +862,8 @@
   .hr-product .dashboard-grid {
     grid-template-columns: 1fr;
   }
-  .hr-product .login-workspace {
-    padding: 36px;
-  }
-  .hr-product .login-company {
-    padding: 30px;
-  }
-  .hr-product .login-company h2 {
-    font-size: 25px;
-  }
 }
 @media screen and (max-width: 767px) {
-  .hr-product .login-company .login-brand {
-    width: 110px;
-    height: auto;
-    padding: 6px;
-  }
-  .hr-product .login-company .login-company-identity {
-    grid-template-columns: 110px 1fr;
-  }
-  .hr-product .topbar {
-    min-height: 72px;
-    padding: 12px 16px;
-    gap: 10px;
-  }
-  .hr-product .topbar-account {
-    display: none;
-  }
   .hr-product .workspace {
     padding: 22px 16px 36px;
   }
@@ -1301,65 +935,6 @@
     align-items: stretch;
     padding: 20px;
   }
-  .hr-product .login-page {
-    display: flex;
-    flex-direction: column;
-    min-height: 100dvh;
-  }
-  .hr-product .login-company {
-    min-height: 0;
-    padding: 22px 24px 26px;
-  }
-  .hr-product .login-company-identity {
-    display: grid;
-    grid-template-columns: 68px 1fr;
-    column-gap: 18px;
-    text-align: right;
-    padding: 24px 0 0;
-    align-items: center;
-  }
-  .hr-product .login-brand {
-    grid-row: span 2;
-    width: 68px;
-    height: 78px;
-    padding: 6px;
-    border-radius: 8px;
-    margin: 0;
-  }
-  .hr-product .login-company h2 {
-    font-size: 20px;
-    margin: 0;
-  }
-  .hr-product .login-company-identity > p {
-    font-size: 15px;
-  }
-  .hr-product .login-company-footer {
-    display: none;
-  }
-  .hr-product .login-workspace {
-    padding: 32px 26px;
-    flex: 1;
-  }
-  .hr-product .login-identity {
-    display: block;
-    padding: 0;
-    margin: 0 0 22px;
-    border: 0;
-  }
-  .hr-product .login-identity > .brand-artwork:first-child {
-    display: none !important;
-  }
-  .hr-product .login-identity .savana-wordmark {
-    width: 115px;
-    margin: 0;
-  }
-  .hr-product .login-card {
-    max-width: 430px;
-  }
-  .hr-product .login-credit {
-    margin-top: 32px;
-    width: 215px;
-  }
 }
 @media print {
   .print-brand > .brand-artwork {
@@ -1416,10 +991,6 @@
 .hr-product .filter-bar > .field { min-width: 0; flex: 1 1 180px; }
 .hr-product [data-slot="table-container"]:focus-visible { outline: 3px solid #1763b0; outline-offset: 2px; }
 @media screen and (max-width: 767px) {
-  .hr-product .topbar-title { flex: 1 1 0; min-width: 0; }
-  .hr-product .topbar-context { min-width: 0; }
-  .hr-product .topbar-context > strong,
-  .hr-product .topbar-context > span { overflow-wrap: anywhere; white-space: normal; }
   .hr-product .workspace-tools { flex: 0 0 auto; gap: 5px; }
   .hr-product .attendance-upload { flex-direction: column; gap: 16px; }
   .hr-product .page-title .actions { flex-wrap: wrap; }
@@ -1428,7 +999,6 @@
 
 /* Shared compact Arabic workspace: operational density across every route. */
 .hr-product .workspace { padding: 22px 24px 40px; }
-.hr-product .topbar { min-height: 66px; padding: 10px 24px; gap: 14px; }
 .hr-product .page-title { margin-bottom: 18px; align-items: flex-start; gap: 14px; }
 .hr-product .page-title h1 { font-size: 24px; line-height: 1.5; }
 .hr-product .subtitle { font-size: 14px; }
@@ -1460,7 +1030,6 @@
 @media screen and (max-width: 1100px) { .hr-product .kpi-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 @media screen and (max-width: 767px) {
  .hr-product .workspace { padding: 16px 12px 32px; }
- .hr-product .topbar { min-height: 62px; padding: 10px 12px; }
  .hr-product .page-title h1 { font-size: 21px; }
  .hr-product .kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
  .hr-product .kpi-card, .hr-product .kpi-card:first-child { min-height: 108px; padding: 13px; }

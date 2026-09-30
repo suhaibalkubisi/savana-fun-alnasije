@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {useDirtyForm} from "@/lib/hr/use-dirty-form";
 import Link from "next/link";
 import { BrandImage } from "./brand-image";
 import { useSearchParams } from "next/navigation";
@@ -53,7 +54,7 @@ import {
   type StatusRecord,
   type StatusType,
 } from "@/lib/hr/types";
-import { download, tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
+import { download, brandedExcelBytes as tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
 import {
   Choice,
   Field,
@@ -105,7 +106,7 @@ async function exportTable(
 ) {
   const bytes =
     format === "excel"
-      ? tableExcelBytes({ title, period, headers, rows, sheetName: title })
+      ? await tableExcelBytes({ title, period, headers, rows, sheetName: title })
       : await tablePdfBytes({ title, period, headers, rows });
   download(
     bytes,
@@ -834,6 +835,8 @@ export function ActionEditor({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const guard=useDirtyForm(data,busy);
+  const close=()=>{if(guard.canClose())onClose();};
   const set = (key: string, value: string | null) =>
     setData((v) => ({ ...v, [key]: value }));
   const employeeOptions = reference.employees.map((e) => ({
@@ -841,7 +844,7 @@ export function ActionEditor({
     label: `${e.name} — ${e.department} — ${e.employee_number || e.id.slice(0, 6)}`,
   }));
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && close()}>
       <DialogContent dir="rtl" className="action-dialog">
         <DialogHeader>
           <DialogTitle>
@@ -948,7 +951,7 @@ export function ActionEditor({
               <Check size={17} />
               {busy ? "جار الحفظ…" : "حفظ الإجراء"}
             </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={close}>
               إلغاء
             </Button>
           </div>

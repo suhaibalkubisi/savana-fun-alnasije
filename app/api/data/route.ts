@@ -8,6 +8,7 @@ import {
 import { z } from "zod";
 import { attendanceSchemas } from "@/lib/hr/attendance-validation";
 import { buildMonthlyPosition } from "@/lib/hr/monthly-position.mjs";
+import { buildDailyPosition } from "@/lib/hr/attendance-engine.mjs";
 import {
   AppError,
   body,
@@ -48,15 +49,17 @@ export async function GET(request: Request) {
       [...params].filter(([k]) => k !== "kind"),
     );
     if (kind === "attendance.monthly_position") {
-      const evidence = await rpc("attendance_monthly_evidence", {p_filters: filters}, s.token);
+      const evidence = await rpc("attendance_monthly_evidence_v2", {p_filters: filters}, s.token);
       return json(buildMonthlyPosition(evidence, {
         coverage_start: filters.coverage_start || undefined,
         coverage_end: filters.coverage_end || undefined,
       }));
     }
+    if (kind === 'attendance.daily') return json(buildDailyPosition(await rpc('attendance_daily_evidence',{p_filters:filters},s.token),filters));
+    if (kind === 'employee.assignments') return json(await rpc('employee_assignments',{p_employee_id:z.string().uuid().parse(filters.employee_id)},s.token));
     return json(
       await rpc(
-        kind.startsWith("attendance.") ? "attendance_read_v4" : "hr_read_v4",
+        kind.startsWith("attendance.") ? "attendance_read_v5" : "hr_read_v4",
         { p_kind: kind.replace(/^attendance\./, ""), p_filters: filters },
         s.token,
       ),
@@ -73,6 +76,17 @@ export async function POST(request: Request) {
     if (s.profile.role === "VIEWER")
       throw new AppError("ليست لديك صلاحية لهذه العملية", 403);
     let schema: z.ZodTypeAny;
+    if (action === 'employee.assignment.record') {
+      const parsed=z.object({id:z.string().uuid().optional(),version:z.number().int().positive().optional(),employee_id:z.string().uuid(),employee_version:z.number().int().positive(),department_id:z.string().uuid(),shift_id:z.string().uuid().nullable(),direct_manager_id:z.string().uuid().nullable(),employment_status:z.enum(['active','inactive','resigned','long_leave']),valid_from:z.string().date(),valid_to:z.string().date(),reason:z.string().trim().min(3).max(2000)}).parse(data);
+      return json(await rpc('employee_assignment_record',{p_data:parsed},s.token));
+    }
+    if (action === 'attendance.day.save') {
+      const parsed=z.object({note:attendanceSchemas['note.save'],decision:z.discriminatedUnion('operation',[
+        z.object({operation:z.literal('save'),data:statusSchema}),
+        z.object({operation:z.literal('delete'),data:z.object({id:z.string().uuid(),version:z.number().int().positive(),confirmed:z.literal(true)})}),
+      ]).nullable()}).parse(data);
+      return json(await rpc('attendance_day_save',{p_data:parsed},s.token));
+    }
     if (typeof action === "string" && action.startsWith("attendance.")) {
       const operation = action.slice(11);
       if (
@@ -84,12 +98,12 @@ export async function POST(request: Request) {
       if (!validator) throw new AppError("طلب غير صالح");
       const parsed = validator.safeParse(data);
       if (!parsed.success) throw new AppError("بيانات غير صالحة");
-      if (operation === "import.inspect") return json(buildMonthlyPosition(await rpc("attendance_inspect_monthly", {p_data:parsed.data}, s.token)));
+      if (operation === "import.inspect") return json(buildMonthlyPosition(await rpc("attendance_inspect_monthly_v2", {p_data:parsed.data}, s.token)));
       return json(
         await rpc(
           operation === "identity.resolve"
             ? "attendance_identity_resolve"
-            : "attendance_write_v4",
+            : "attendance_write_v5",
           operation === "identity.resolve"
             ? { p_data: parsed.data }
             : { p_action: operation, p_data: parsed.data },

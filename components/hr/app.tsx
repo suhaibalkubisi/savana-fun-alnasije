@@ -10,7 +10,6 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import {
   LayoutDashboard,
   Users,
@@ -37,6 +36,7 @@ import {
   Fingerprint,
   ClipboardCheck,
   Moon,
+  ChevronDown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -105,8 +105,8 @@ const OperationsCenter = lazy(() =>
 const OrganizationPage = lazy(() =>
   import("./workspace-tools").then((m) => ({ default: m.OrganizationPage })),
 );
-const AttendanceReport = lazy(() =>
-  import("./attendance").then((m) => ({ default: m.AttendanceReport })),
+const DailyAttendanceReport = lazy(() =>
+  import("./attendance").then((m) => ({ default: m.DailyAttendanceReport })),
 );
 const MonthlyPositionPage = lazy(() => import('./monthly-position').then(m=>({default:m.MonthlyPositionPage})));
 const FingerprintImport = lazy(() =>
@@ -282,40 +282,11 @@ const navigation = [
     group: "الإدارة",
   },
 ];
-const navigationSections = [
-  { label: "مساحة العمل", paths: ["/", "/tasks"] },
-  {
-    label: "التشغيل اليومي",
-    paths: ["/daily-dashboard", "/daily-position", "/status"],
-  },
-  {
-    label: "البصمة والحضور",
-    paths: [
-      "/fingerprint-daily",
-      "/fingerprint-monthly",
-      "/fingerprint-issues",
-    ],
-  },
-  { label: "الموظفون", paths: ["/employees", "/organization", "/actions"] },
-  {
-    label: "التقارير الشهرية",
-    paths: ["/monthly-position", "/monthly-dashboard", "/monthly", "/departments", "/summary"],
-  },
-  {
-    label: "التقارير والمتابعة",
-    paths: ["/lateness", "/absence-leave", "/reports", "/review"],
-  },
-  {
-    label: "الإدارة",
-    paths: ["/attendance-settings", "/audit", "/users", "/settings"],
-  },
+const primaryPaths=['/','/employees','/status','/fingerprint-daily','/fingerprint-monthly','/monthly-position','/actions','/review'];
+const secondaryGroups=[
+  {label:'التقارير',icon:FileBarChart,paths:['/reports','/daily-position','/monthly-dashboard','/monthly','/departments','/summary','/lateness','/absence-leave']},
+  {label:'الإدارة والإعدادات',icon:Settings,paths:['/organization','/attendance-settings','/fingerprint-issues','/audit','/users','/settings']},
 ];
-const organizedNavigation = navigationSections.flatMap((section) =>
-  section.paths.flatMap((path) => {
-    const item = navigation.find((n) => n.path === path);
-    return item ? [{ ...item, group: section.label }] : [];
-  }),
-);
 export function HRApp() {
   const [user, setUser] = useState<Profile | null>(null);
   const [configured, setConfigured] = useState(true);
@@ -386,7 +357,7 @@ export function HRApp() {
       <SidebarProvider
         style={
           {
-            "--sidebar-width": "17rem",
+            "--sidebar-width": "16rem",
             "--sidebar-width-icon": "4.75rem",
           } as React.CSSProperties
         }
@@ -443,48 +414,28 @@ function Login({
     <main className="login-page">
       <aside className="login-company" aria-label="فن النسيج">
         <div className="login-company-top">
-          <span dir="ltr">FANU ALNASIJ</span>
-          <span className="evening-tag">
-            <Moon size={15} /> مسائي
-          </span>
+          <BrandImage kind="company" alt="فن النسيج — FANU ALNASIJ BY ZMC" priority />
         </div>
         <div className="login-company-identity">
-          <div className="login-brand">
-            <BrandImage
-              kind="company"
-              alt="فن النسيج — FANU ALNASIJ BY ZMC"
-              priority
-            />
-          </div>
           <h2>قسم الموارد البشرية</h2>
-          <p>الشفت المسائي</p>
+          <span className="evening-tag"><Moon size={18} /> مسائي</span>
+          <p>مساحة واحدة لموظفيك وحضورهم ومتابعتهم اليومية.</p>
         </div>
         <div className="login-company-footer">
-          <span>فن النسيج</span>
-          <span dir="ltr">BY ZMC</span>
+          <span>بيانات موثقة. قرارات واضحة.</span>
+          <span>بغداد</span>
         </div>
       </aside>
       <div className="login-workspace">
+        <BrandImage kind="savana" alt="savana" className="login-savana" />
         <section className="login-card">
-          <div className="login-identity">
-            <BrandImage
-              kind="title"
-              alt="قسم الموارد البشرية — مسائي"
-              priority
-            />
-            <BrandImage
-              kind="savana"
-              alt="SAVANA"
-              className="savana-wordmark"
-              priority
-            />
-          </div>
           <div className="login-heading">
             <div className="login-lock">
               <LockKeyhole size={21} />
             </div>
-            <h1>تسجيل الدخول</h1>
+            <h1>مرحباً بعودتك</h1>
           </div>
+          <p className="login-description">سجّل الدخول إلى قسم الموارد البشرية — مسائي</p>
           <form onSubmit={submit}>
             <Field label="البريد الإلكتروني">
               <Input
@@ -540,14 +491,7 @@ function Login({
             </Button>
           )}
         </section>
-        <Image
-          className="login-credit"
-          src="/brand/designed-by.webp"
-          alt="Designed by Suhaib Al-Kubaisi"
-          width={640}
-          height={23}
-          unoptimized
-        />
+        <p className="login-credit">صنع من قبل صهيب الكبيسي <span lang="en" dir="ltr">Made by Suhaib Alkubisi</span></p>
       </div>
     </main>
   );
@@ -563,6 +507,12 @@ function Navigation({
 }) {
   const path = usePathname();
   const { setOpenMobile } = useSidebar();
+  const allowed=(n:typeof navigation[number])=>(!n.admin||user.role==='ADMIN')&&(!n.write||user.role!=='VIEWER');
+  const navLink=(n:typeof navigation[number])=><SidebarMenuItem key={n.path}>
+    <SidebarMenuButton asChild isActive={path===n.path||(n.path==='/employees'&&path.startsWith('/employees/'))} className="nav-item" tooltip={n.label}>
+      <Link href={n.path} aria-current={path===n.path?'page':undefined} onClick={()=>setOpenMobile(false)}><n.icon size={20}/><span>{n.label}</span></Link>
+    </SidebarMenuButton>
+  </SidebarMenuItem>;
   return (
     <Sidebar side="right" collapsible="icon" className="hr-sidebar">
       <SidebarHeader>
@@ -585,44 +535,24 @@ function Navigation({
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {organizedNavigation
-            .filter(
-              (n) =>
-                (!n.admin || user.role === "ADMIN") &&
-                (!n.write || user.role !== "VIEWER"),
-            )
-            .map((n, index, visible) => (
-              <SidebarMenuItem key={n.path}>
-                {(index === 0 || visible[index - 1].group !== n.group) && (
-                  <p className="nav-heading">{n.group}</p>
-                )}
-                <SidebarMenuButton
-                  asChild
-                  isActive={
-                    path === n.path ||
-                    (n.path === "/employees" && path.startsWith("/employees/"))
-                  }
-                  className="nav-item"
-                  tooltip={n.label}
-                >
-                  <Link href={n.path} onClick={() => setOpenMobile(false)}>
-                    <n.icon size={19} />
-                    <span>{n.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+          {primaryPaths.flatMap(p=>navigation.filter(n=>n.path===p&&allowed(n))).map(navLink)}
+          {secondaryGroups.map(group=>{
+            const items=group.paths.flatMap(p=>navigation.filter(n=>n.path===p&&allowed(n)));
+            return items.length>0&&<SidebarMenuItem key={group.label}><details className="nav-disclosure" open={group.paths.includes(path)}>
+              <summary><group.icon size={20}/><span>{group.label}</span><ChevronDown size={15}/></summary>
+              <SidebarMenu>{items.map(navLink)}</SidebarMenu>
+            </details></SidebarMenuItem>;
+          })}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-        <BrandImage kind="savana" alt="SAVANA" className="sidebar-savana-art" />
         <div className="sidebar-user">
           <div className="avatar">{user.name.slice(0, 1)}</div>
           <div>
             <strong>{user.name}</strong>
             <small>
               {user.role === "ADMIN"
-                ? "الموارد البشرية · صلاحية كاملة"
+                ? "مدير النظام"
                 : user.role === "HR"
                   ? "الموارد البشرية"
                   : "عرض فقط"}
@@ -692,7 +622,7 @@ function Workspace({ user }: { user: Profile }) {
     ["/daily-position", "/daily-dashboard"].includes(path)
   )
     content = (
-      <AttendanceReport
+      <DailyAttendanceReport
         reference={ref.data}
         canWrite={user.role !== "VIEWER"}
       />
@@ -782,6 +712,7 @@ function Workspace({ user }: { user: Profile }) {
             </small>
           </div>
         </div>
+        <BrandImage kind="savana" alt="savana" className="topbar-savana" />
       </header>
       <div className="workspace" key={path}>
         <PageBoundary>
@@ -790,6 +721,7 @@ function Workspace({ user }: { user: Profile }) {
           </Suspense>
         </PageBoundary>
       </div>
+      <footer className="workspace-footer no-print"><span>صنع من قبل صهيب الكبيسي</span><span dir="ltr" lang="en">Made by Suhaib Alkubisi</span></footer>
     </>
   );
 }

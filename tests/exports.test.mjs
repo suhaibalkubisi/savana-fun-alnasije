@@ -21,9 +21,23 @@ const {
   tableExcelBytes,
   tablePdfBytes,
   layoutTablePdf,
+  dailyColumnWeights,
   triggerDownload,
 } = await import(compiled.href);
 after(() => rm(compiled, { force: true }));
+
+test('daily PDF keeps permanent codes intact across all sixteen columns',async()=>{
+ const {jsPDF}=await import('jspdf');
+ const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a3'});
+ const font=(await readFile('public/fonts/DejaVuSans.ttf')).toString('base64');
+ doc.addFileToVFS('Arabic.ttf',font);doc.addFont('Arabic.ttf','Arabic','normal');doc.setFont('Arabic');
+ const headers=['ت','الكود الوظيفي','رقم الموظف','كود البصمة','الموظف','القسم','المسؤول','وقت الدوام','الدخول','الخروج','دقائق العمل الموثقة','دقائق التأخير','الحالة','الإجراء','قرار HR','الملاحظات'];
+ const row=[1,'FANU-000200','','5176','موظف اختبار عربي','انتماء الفترة غير موثق','غير محدد','—','—','—','—','—','الانتماء التاريخي غير موثق','','',''];
+ const layout=layoutTablePdf(doc,headers,[row],dailyColumnWeights,true);
+ assert.equal(dailyColumnWeights.length,headers.length);
+ assert.deepEqual(layout.pages[0][0].lines[1],['FANU-000200']);
+ assert.ok(layout.widths[4]>layout.widths[0]*4);
+});
 
 test('segmented monthly PDF repeats identity and separates all day ranges without losing subrows',async()=>{
  const fontBase64=(await readFile('public/fonts/DejaVuSans.ttf')).toString('base64');
@@ -113,9 +127,10 @@ test("daily Excel keeps twelve-hour punch labels and numeric lateness editable",
       }),
     )["xl/worksheets/sheet1.xml"],
   );
-  assert.ok(sheet.includes("٠٤:٠٠ م"));
-  assert.ok(sheet.includes("٠٤:٢٧ م"));
-  assert.ok(sheet.includes("٠١:١٨ ص (+١ يوم)"));
+  const numberAt=cell=>Number(sheet.match(new RegExp(`<c r="${cell}"[^>]*><v>([^<]+)</v>`))[1]);
+  assert.equal(numberAt("A6"),960/1440);
+  assert.equal(numberAt("B6"),987/1440);
+  assert.equal(numberAt("C6"),1+78/1440);
   assert.match(sheet, /<v>27<\/v>/);
 });
 test("Excel matrix exports real active database employees, valid days and weighted totals", () => {
@@ -169,7 +184,8 @@ test("Operational exports are genuine branded XLSX and Arabic PDF", async () => 
   const sheet = strFromU8(zip["xl/worksheets/sheet1.xml"]);
   assert.ok(sheet.includes('rightToLeft="1"'));
   assert.ok(sheet.includes("قسم الموارد البشرية – مسائي"));
-  assert.ok(sheet.includes("Designed by Suhaib Al-Kubaisi"));
+  assert.ok(sheet.includes("صنع من قبل صهيب الكبيسي"));
+  assert.ok(sheet.includes("تاريخ الإصدار:"));
   const font = (await readFile("public/fonts/DejaVuSans.ttf")).toString(
     "base64",
   );

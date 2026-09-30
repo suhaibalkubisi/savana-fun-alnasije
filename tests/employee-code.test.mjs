@@ -22,13 +22,13 @@ test('concurrent employee creations receive independent codes; edits and inactiv
  assert.equal(changed.internal_code,a.internal_code);assert.equal(changed.id,a.id);
 }));
 
-test('codes cannot be edited or manually supplied, and issued codes are not reused after an unused employee is deleted',()=>isolatedDatabase(async({db,who,hr})=>{
+test('codes cannot be edited or manually supplied, and even unused employee identities are preserved',()=>isolatedDatabase(async({db,who,hr})=>{
  const dep=(await db.query('select id from public.departments limit 1')).rows[0].id;await who();
  const a=await hr('employee.save',{name:'Synthetic unused',employee_number:null,department_id:dep,shift_id:null,direct_manager_id:null,employment_status:'active'});
  await assert.rejects(db.query("update public.employees set internal_code='FANU-999999' where id=$1",[a.id]),/permission denied/);
  await db.exec('reset role');await assert.rejects(db.query("update public.employees set internal_code='FANU-999999' where id=$1",[a.id]),/دائم/);
  await assert.rejects(db.query("insert into public.employees(name,department_id,employment_status,internal_code) values('Synthetic manual',$1,'active','FANU-999999')",[dep]),/آلياً/);
- await db.query('delete from public.employees where id=$1',[a.id]);
+ await assert.rejects(db.query('delete from public.employees where id=$1',[a.id]),/هوية الموظف دائمة/);
  await who();const b=await hr('employee.save',{name:'Synthetic next',employee_number:null,department_id:dep,shift_id:null,direct_manager_id:null,employment_status:'active'});
  assert.notEqual(b.internal_code,a.internal_code);assert.ok(Number(b.internal_code.slice(5))>Number(a.internal_code.slice(5)));
 }));

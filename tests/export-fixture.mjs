@@ -23,7 +23,7 @@ await db.query("update profiles set role='ADMIN',is_active=true where id=$1", [
 await db.query("select set_config('request.jwt.claim.sub',$1,false)", [admin]);
 await db.exec("set role authenticated");
 const read = async (kind, filters = {}) =>
-  (await db.query("select hr_read_v2($1,$2) data", [kind, filters])).rows[0]
+  (await db.query("select hr_read_v4($1,$2) data", [kind, filters])).rows[0]
     .data;
 const write = async (action, data) =>
   (await db.query("select hr_write_v2($1,$2) data", [action, data])).rows[0]

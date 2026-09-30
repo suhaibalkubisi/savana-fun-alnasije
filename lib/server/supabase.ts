@@ -42,11 +42,12 @@ export async function upstream(
   try {
     response = await fetch(`${c.url}${path}`, {
       ...options,
+      signal:options.signal ?? AbortSignal.timeout(30000),
       headers: supabaseHeaders(c, { token, admin, headers: options.headers }),
     });
   } catch {
     throw new AppError(
-      "تعذر الاتصال بالخدمة. تحقق من الاتصال ثم حاول مجدداً",
+      options.method==='POST' ? "لم تصل نتيجة العملية. تحقق من السجل قبل إعادة المحاولة" : "تعذر الاتصال بالخدمة. أعد تحميل البيانات",
       503,
     );
   }
@@ -84,6 +85,15 @@ export async function clearSession() {
   jar.delete("hr-access");
   jar.delete("hr-refresh");
 }
+const refreshing=new Map<string,ReturnType<typeof upstream>>();
+function refreshSession(refresh:string) {
+  const active=refreshing.get(refresh);
+  if(active)return active;
+  const pending=upstream('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:refresh})});
+  refreshing.set(refresh,pending);
+  void pending.finally(()=>refreshing.delete(refresh)).catch(()=>{});
+  return pending;
+}
 export async function session() {
   const jar = await cookies();
   let token = jar.get("hr-access")?.value;
@@ -91,10 +101,7 @@ export async function session() {
   if (!token && !refresh) throw new AppError("يرجى تسجيل الدخول", 401);
   let valid = token ? await upstream("/auth/v1/user", {}, token) : null;
   if ((!valid || valid.response.status === 401) && refresh) {
-    const r = await upstream("/auth/v1/token?grant_type=refresh_token", {
-      method: "POST",
-      body: JSON.stringify({ refresh_token: refresh }),
-    });
+    const r = await refreshSession(refresh);
     if (r.response.ok && r.data?.access_token) {
       token = r.data.access_token;
       if (!r.data.refresh_token || typeof r.data.expires_in !== "number")
@@ -120,7 +127,7 @@ export async function session() {
 export async function rpc<T>(fn: string, body: unknown, token: string) {
   const { response, data } = await upstream(
     `/rest/v1/rpc/${fn}`,
-    { method: "POST", body: JSON.stringify(body) },
+    { method: "POST", body: JSON.stringify(body), signal: AbortSignal.timeout(fn.startsWith('attendance_write') || fn.startsWith('attendance_inspect') ? 120000 : 30000) },
     token,
   );
   if (!response.ok) {
@@ -148,9 +155,14 @@ export function protectMutation(request: Request) {
     throw new AppError("صيغة طلب غير صالحة", 415);
 }
 export async function body(request: Request, max = 2000000) {
-  const text = await request.text();
-  if (text.length > max)
-    throw new AppError("حجم البيانات أكبر من المسموح", 413);
+  if(Number(request.headers.get('content-length'))>max)throw new AppError('حجم البيانات أكبر من المسموح',413);
+  const reader=request.body?.getReader();
+  if(!reader)throw new AppError('طلب فارغ');
+  const decoder=new TextDecoder();let text='';let length=0;
+  try {
+    for(;;){const {value,done}=await reader.read();if(done)break;length+=value.byteLength;if(length>max){await reader.cancel();throw new AppError('حجم البيانات أكبر من المسموح',413);}text+=decoder.decode(value,{stream:true});}
+    text+=decoder.decode();
+  } finally {reader.releaseLock();}
   try {
     return JSON.parse(text);
   } catch {
@@ -158,6 +170,7 @@ export async function body(request: Request, max = 2000000) {
   }
 }
 export function errorResponse(error: unknown) {
+  if(error instanceof Error && error.name==='ZodError')error=new AppError('بيانات غير صالحة. راجع الحقول المطلوبة',400);
   if (error instanceof AppError)
     return Response.json(
       { error: error.message },
@@ -165,7 +178,7 @@ export function errorResponse(error: unknown) {
     );
   console.error(
     "HR request failed",
-    error instanceof Error ? `${error.name}: ${error.message}` : "unknown",
+    error instanceof Error ? error.name : "unknown",
   );
   return Response.json(
     { error: "تعذر إكمال العملية. حاول مرة أخرى" },

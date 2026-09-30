@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import {useDirtyForm} from "@/lib/hr/use-dirty-form";
 import Link from "next/link";
 import { Plus, PenLine, ArrowUpLeft, Eye, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -389,8 +390,11 @@ function UserEditor({
   const [active, setActive] = useState(user?.is_active ?? true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [edits,setEdits]=useState(0);
+  const guard=useDirtyForm({edits,role,active},busy,user?.id);
+  const requestClose=()=>{if(guard.canClose())onClose();};
   return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
+    <Dialog open onOpenChange={(v) => !v && requestClose()}>
       <DialogContent dir="rtl">
         <DialogHeader>
           <DialogTitle>{user ? "تعديل المستخدم" : "إضافة مستخدم"}</DialogTitle>
@@ -400,6 +404,7 @@ function UserEditor({
         </DialogHeader>
         <form
           className="form-stack"
+          onChangeCapture={()=>setEdits(n=>n+1)}
           onSubmit={async (e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);
@@ -487,7 +492,7 @@ function UserEditor({
           )}
           <div className="form-actions">
             <Button disabled={busy}>حفظ</Button>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={requestClose}>
               إلغاء
             </Button>
           </div>
@@ -689,8 +694,11 @@ function SettingEditor({
       ? item
       : undefined;
   const lookup = item && "name" in item ? item : undefined;
+  const [edits,setEdits]=useState(0);
+  const guard=useDirtyForm({edits,active,linked},busy,item?.id);
+  const requestClose=()=>{if(guard.canClose())onClose();};
   return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
+    <Dialog open onOpenChange={(v) => !v && requestClose()}>
       <DialogContent dir="rtl">
         <DialogHeader>
           <DialogTitle>
@@ -709,6 +717,7 @@ function SettingEditor({
         </DialogHeader>
         <form
           className="form-stack"
+          onChangeCapture={()=>setEdits(n=>n+1)}
           onSubmit={async (e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);
@@ -853,7 +862,7 @@ function SettingEditor({
           )}
           <div className="form-actions">
             <Button disabled={busy}>حفظ</Button>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={requestClose}>
               إلغاء
             </Button>
           </div>

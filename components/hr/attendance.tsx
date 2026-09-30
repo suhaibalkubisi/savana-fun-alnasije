@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useDirtyForm } from '@/lib/hr/use-dirty-form';
 import type { parseFingerprint } from "@/lib/hr/fingerprint";
 import type { MonthlyPosition } from "@/lib/hr/monthly-position.mjs";
 import { useSearchParams } from "next/navigation";
@@ -39,11 +40,10 @@ import {
 } from "@/lib/hr/import-workflow.mjs";
 import {
   baghdadDate,
-  daysInMonth,
   departmentLabel,
   type Reference,
 } from "@/lib/hr/types";
-import { download, tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
+import { download, brandedExcelBytes as tableExcelBytes, tablePdfBytes, dailyColumnWeights } from "@/lib/hr/exports";
 import { formatClock12 } from "@/lib/hr/time-format.mjs";
 import { MonthlyPositionPage } from './monthly-position';
 import {
@@ -69,10 +69,11 @@ type DayRow = {
   scheduled_start_minute: number | null;
   entry_minute: number | null;
   exit_minute: number | null;
+  next_day?: boolean;
   duration_minutes: number | null;
   attendance_state: string;
   status: string;
-  late_minutes: number;
+  late_minutes: number | null;
   manual_status: string | null;
   status_record_id: string | null;
   status_record_version: number | null;
@@ -83,32 +84,6 @@ type DayRow = {
   expected: boolean;
   daily_note_text: string;
   needs_review: boolean;
-};
-type MonthRow = {
-  employee_id: string;
-  employee_number: string | null;
-  name: string;
-  department: string;
-  manager: string | null;
-  present: number;
-  late: number;
-  late_minutes: number;
-  absence: number;
-  absence2: number;
-  absence3: number;
-  weighted: number;
-  leave: number;
-  no_entry: number;
-  missing_schedule: number;
-  cells?: Record<
-    string,
-    {
-      entry: number | null;
-      exit: number | null;
-      duration: number | null;
-      state: string;
-    }
-  >;
 };
 type Batch = {
   id: string;
@@ -131,6 +106,10 @@ const labels: Record<string, string> = {
   leave: "إجازة",
   no_entry: "بلا بصمة دخول",
   missing_schedule: "الدوام غير محدد",
+  missing_assignment: "الانتماء التاريخي غير موثق",
+  pending_review: "بصمات تحتاج مراجعة",
+  future: "تاريخ لاحق",
+  exit_only: "بصمة خارج نافذة الدخول",
   off_day: "يوم راحة",
   preview: "معاينة",
   applied: "تم الاعتماد",
@@ -180,7 +159,7 @@ function ExportButtons({
     try {
       const report = { title, period, headers, rows, columnWeights, notesArea };
       download(
-        pdf ? await tablePdfBytes(report) : tableExcelBytes(report),
+        pdf ? await tablePdfBytes(report) : await tableExcelBytes(report),
         `${title}-${period}.${pdf ? "pdf" : "xlsx"}`,
         pdf
           ? "application/pdf"
@@ -278,13 +257,11 @@ function Metrics({ items }: { items: [string, number][] }) {
   );
 }
 
-export function AttendanceReport({
+export function DailyAttendanceReport({
   reference,
-  monthly = false,
   canWrite = false,
 }: {
   reference: Reference;
-  monthly?: boolean;
   canWrite?: boolean;
 }) {
   const params = useSearchParams();
@@ -311,86 +288,63 @@ export function AttendanceReport({
     [decision, setDecision] = useState(""),
     [decisionMinutes, setDecisionMinutes] = useState(""),
     [busy, setBusy] = useState(false);
-  const [manager, setManager] = useState("");
+  const editGuard = useDirtyForm(
+    { notes, procedure, decision, decisionMinutes },
+    busy,
+    edit?.employee_id,
+  );
   const query = useData<{
-    rows: (DayRow & MonthRow)[];
-    approved_import?: {
-      id: string;
-      source_name: string;
-      approved_at: string;
-    } | null;
-  }>(`attendance.${monthly ? "monthly_fingerprint" : "daily"}`, {
+    rows: DayRow[];
+  }>("attendance.daily", {
     date,
     department_id: dep,
-    manager_id: monthly ? manager : "",
     search: useDebounced(search),
   });
-  const title = monthly ? "الحضور الشهري بالبصمة" : "الموقف اليومي";
+  const title = "الموقف اليومي";
   const rawRows = query.data?.rows || [];
   const group = (value: string) =>
     value.startsWith("absence") ? "absence" : value;
   const rows = rawRows.filter((r) => {
-    if (monthly)
-      return !search || `${r.name} ${r.employee_number}`.includes(search);
     if (advanced) return r.status === advanced;
     return quick === null || quick.has(group(r.status));
   });
-  const monthDays = monthly ? daysInMonth(date.slice(0, 7)) : 0;
-  const headers = monthly
-    ? [
-        "رقم الموظف",
-        "الموظف",
-        "القسم",
-        "المسؤول بنهاية الشهر",
-        ...Array.from({ length: monthDays }, (_, i) => String(i + 1)),
-      ]
-    : [
-        "ت",
-        "الكود الوظيفي",
-        "رقم الموظف",
-        "كود البصمة",
-        "الموظف",
-        "القسم",
-        "المسؤول",
-        "وقت الدوام",
-        "الدخول",
-        "دقائق التأخير",
-        "الحالة",
-        "الإجراء",
-        "قرار HR",
-        "الملاحظات",
-      ];
-  const values = rows.map((r) =>
-    monthly
-      ? [
-          r.employee_number || "",
-          r.name,
-          r.department,
-          r.manager || "غير محدد",
-          ...Array.from({ length: monthDays }, (_, i) => {
-            const cell = r.cells?.[String(i + 1)];
-            if (cell?.entry == null) return "—";
-            return `د ${time(cell.entry)}\nخ ${cell.exit == null ? "بانتظار الخروج" : time(cell.exit)}`;
-          }),
-        ]
-      : [
-          rows.indexOf(r) + 1,
-          r.internal_code || "",
-          r.employee_number || "",
-          r.person_code || "",
-          r.name,
-          r.department,
-          r.manager || "غير محدد",
-          time(r.scheduled_start_minute),
-          time(r.entry_minute),
-          r.late_minutes,
-          labels[r.status] || r.status,
-          r.procedure_text,
-          labels[r.manual_status || ""] || "",
-          r.notes,
-        ],
-  );
-  const total = (key: keyof MonthRow) =>
+  const headers = [
+    "ت",
+    "الكود الوظيفي",
+    "رقم الموظف",
+    "كود البصمة",
+    "الموظف",
+    "القسم",
+    "المسؤول",
+    "وقت الدوام",
+    "الدخول",
+    "الخروج",
+    "دقائق العمل الموثقة",
+    "دقائق التأخير",
+    "الحالة",
+    "الإجراء",
+    "قرار HR",
+    "الملاحظات",
+  ];
+  const values = rows.map((r) => [
+    rows.indexOf(r) + 1,
+    r.internal_code || "",
+    r.employee_number || "",
+    r.person_code || "",
+    r.name,
+    r.department,
+    r.manager || "غير محدد",
+    time(r.scheduled_start_minute),
+    time(r.entry_minute),
+    time(r.exit_minute) + (r.next_day ? " (+1)" : ""),
+    r.duration_minutes ?? "—",
+    r.late_minutes ?? "—",
+    labels[r.status] || r.status,
+    r.procedure_text,
+    labels[r.manual_status || ""] || "",
+    r.notes,
+  ]);
+  const total = (key: keyof DayRow) =>
     rows.reduce((n, r) => n + Number(r[key] || 0), 0);
   const count = (s: string) => rows.filter((r) => r.status === s).length;
   function move(n: number) {
@@ -402,32 +356,40 @@ export function AttendanceReport({
     if (!edit) return;
     setBusy(true);
     try {
-      await mutate("attendance.note.save", {
+      const note = {
         id: edit.note_id || undefined,
         version: edit.note_version || undefined,
         employee_id: edit.employee_id,
         work_date: date,
         notes,
         procedure_text: procedure,
-      });
-      if (decision) {
-        await mutate("status.save", {
-          id: edit.status_record_id || undefined,
-          version: edit.status_record_version || undefined,
-          employee_id: edit.employee_id,
-          department_id: edit.department_id,
-          record_date: date,
-          status_type: decision,
-          late_minutes: decision === "late" ? Number(decisionMinutes) : null,
-          notes: notes || null,
-        });
-      } else if (edit.status_record_id && edit.status_record_version) {
-        await mutate("status.delete", {
-          id: edit.status_record_id,
-          version: edit.status_record_version,
-          confirmed: true,
-        });
-      }
+      };
+      const change = decision
+        ? {
+            operation: "save",
+            data: {
+              id: edit.status_record_id || undefined,
+              version: edit.status_record_version || undefined,
+              employee_id: edit.employee_id,
+              department_id: edit.department_id,
+              record_date: date,
+              status_type: decision,
+              late_minutes:
+                decision === "late" ? Number(decisionMinutes) : null,
+              notes: notes || null,
+            },
+          }
+        : edit.status_record_id && edit.status_record_version
+          ? {
+              operation: "delete",
+              data: {
+                id: edit.status_record_id,
+                version: edit.status_record_version,
+                confirmed: true,
+              },
+            }
+          : null;
+      await mutate("attendance.day.save", { note, decision: change });
       setEdit(null);
       await query.refresh();
       toast.success("تم حفظ التعديل");
@@ -444,31 +406,38 @@ export function AttendanceReport({
         actions={
           <ExportButtons
             title={title}
-            period={monthly ? date.slice(0, 7) : date}
+            period={[
+              date,
+              dep
+                ? reference.departments.find((d) => d.id === dep)?.arabic_name
+                : "جميع الأقسام",
+              search ? "البحث: " + search : "",
+              advanced
+                ? labels[advanced]
+                : quick
+                  ? [...quick].map((k) => labels[k] || k).join("، ")
+                  : "كل الحالات",
+              "المصدر: الملفات اليومية المطبقة؛ قرار الموارد البشرية اليدوي له أولوية",
+            ]
+              .filter(Boolean)
+              .join(" · ")}
             headers={headers}
             rows={values}
-            columnWeights={
-              monthly
-                ? [2, 6, 5, 5, ...Array(monthDays).fill(1)]
-                : [4, 12, 8, 8, 15, 16, 13, 9, 9, 8, 9, 24, 11, 18]
-            }
-            notesArea={!monthly}
+            columnWeights={dailyColumnWeights}
+            notesArea={true}
           />
         }
       />
       <PrintHeader title={title} period={date} />
       <div className="filter-bar no-print">
-        <Field label={monthly ? "الشهر" : "التاريخ"}>
+        <Field label={"التاريخ"}>
           <Input
-            type={monthly ? "month" : "date"}
-            value={monthly ? date.slice(0, 7) : date}
-            onChange={(e) =>
-              e.target.value &&
-              setDate(monthly ? e.target.value + "-01" : e.target.value)
-            }
+            type={"date"}
+            value={date}
+            onChange={(e) => e.target.value && setDate(e.target.value)}
           />
         </Field>
-        {!monthly && (
+        {
           <div className="flex gap-1 items-end">
             <Button
               variant="outline"
@@ -488,7 +457,7 @@ export function AttendanceReport({
               <ChevronLeft />
             </Button>
           </div>
-        )}
+        }
         <Choice
           label="القسم"
           value={dep}
@@ -498,19 +467,9 @@ export function AttendanceReport({
             label: departmentLabel(d),
           }))}
         />
-        {monthly && (
-          <Choice
-            label="المسؤول بنهاية الشهر"
-            value={manager}
-            onChange={setManager}
-            options={reference.managers.map((m) => ({
-              value: m.id,
-              label: m.name,
-            }))}
-          />
-        )}
+
         <SearchBox value={search} onChange={setSearch} />
-        {!monthly && (
+        {
           <div className="daily-filter-card">
             <span>التصفية السريعة</span>
             <div className="quick-filter-row">
@@ -554,8 +513,8 @@ export function AttendanceReport({
               </Button>
             </div>
           </div>
-        )}
-        {!monthly && (
+        }
+        {
           <Choice
             label="تصفية متقدمة"
             value={advanced}
@@ -564,7 +523,7 @@ export function AttendanceReport({
               .slice(0, 9)
               .map(([value, label]) => ({ value, label }))}
           />
-        )}
+        }
       </div>
       <LoadState
         loading={query.loading}
@@ -572,35 +531,21 @@ export function AttendanceReport({
         retry={query.refresh}
       >
         <Metrics
-          items={
-            monthly
-              ? [
-                  ["الموظفون", rows.length],
-                  ["أيام الشهر", monthDays],
-                  ["مصدر شهري معتمد", query.data?.approved_import ? 1 : 0],
-                ]
-              : [
-                  ["المتوقعون", rows.filter((r) => r.expected).length],
-                  ["حاضر", count("present")],
-                  ["تأخير", count("late")],
-                  ["دقائق التأخير", total("late_minutes")],
-                  [
-                    "غياب",
-                    count("absence") + count("absence2") + count("absence3"),
-                  ],
-                  ["إجازة", count("leave")],
-                  ["بلا بصمة دخول", count("no_entry")],
-                  [
-                    "يحتاج مراجعة",
-                    rawRows.filter((r) => r.needs_review).length,
-                  ],
-                ]
-          }
+          items={[
+            ["المتوقعون", rows.filter((r) => r.expected).length],
+            ["حاضر", count("present")],
+            ["تأخير", count("late")],
+            ["دقائق التأخير", total("late_minutes")],
+            ["غياب", count("absence") + count("absence2") + count("absence3")],
+            ["إجازة", count("leave")],
+            ["بلا بصمة دخول", count("no_entry")],
+            ["يحتاج مراجعة", rawRows.filter((r) => r.needs_review).length],
+          ]}
         />
         <Grid
-          headers={canWrite && !monthly ? [...headers, "تعديل"] : headers}
+          headers={canWrite ? [...headers, "تعديل"] : headers}
           rows={values.map((v, i) =>
-            canWrite && !monthly
+            canWrite
               ? [
                   ...v,
                   <Button
@@ -621,7 +566,10 @@ export function AttendanceReport({
           )}
         />
       </LoadState>
-      <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
+      <Dialog
+        open={!!edit}
+        onOpenChange={(o) => !o && editGuard.canClose() && setEdit(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{edit?.name}</DialogTitle>

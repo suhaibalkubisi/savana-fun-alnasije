@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import {useDirtyForm} from "@/lib/hr/use-dirty-form";
 import Link from "next/link";
 import {
   Check,
@@ -77,6 +78,7 @@ export function StatusPage({ reference }: { reference: Reference }) {
       ? saved
       : "";
   });
+  const closeGuard=useRef<()=>boolean>(()=>true);
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [page, setPage] = useState(1);
   const chooseDepartment = (value: string) => {
@@ -98,7 +100,7 @@ export function StatusPage({ reference }: { reference: Reference }) {
       <div className="entry-mode no-print">
         <Tabs
           value={mode}
-          onValueChange={(value) => setMode(value as typeof mode)}
+          onValueChange={(value) => {if(closeGuard.current())setMode(value as typeof mode);}}
           dir="rtl"
         >
           <TabsList>
@@ -129,6 +131,7 @@ export function StatusPage({ reference }: { reference: Reference }) {
             </div>
             <StatusForm
               reference={reference}
+              closeGuard={closeGuard}
               initialDate={date}
               departmentId={department}
               onDepartment={chooseDepartment}
@@ -149,6 +152,7 @@ export function StatusPage({ reference }: { reference: Reference }) {
         </div>
       ) : (
         <QuickBulkEntry
+          closeGuard={closeGuard}
           key={`${date}:${department}`}
           reference={reference}
           date={date}
@@ -244,6 +248,7 @@ export function StatusForm({
   onDepartment,
   onDate,
   onSaved,
+  closeGuard,
 }: {
   reference: Reference;
   record?: StatusRecord;
@@ -253,6 +258,7 @@ export function StatusForm({
   onDepartment?: (value: string) => void;
   onDate?: (value: string) => void;
   onSaved?: () => void;
+  closeGuard?: {current:()=>boolean};
 }) {
   const [data, setData] = useState({
     id: record?.id,
@@ -268,6 +274,7 @@ export function StatusForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState<StatusRecord | null>(null);
+  useDirtyForm(data.employee_id?data:null,busy,record?.id,closeGuard);
   const [notesOpen, setNotesOpen] = useState(!!record?.notes);
   const formRef = useRef<HTMLFormElement>(null);
   const minutesRef = useRef<HTMLInputElement>(null);
@@ -566,12 +573,14 @@ type BulkOperation =
     };
 
 function QuickBulkEntry({
+  closeGuard,
   reference,
   date,
   department,
   onDate,
   onDepartment,
 }: {
+  closeGuard: {current:()=>boolean};
   reference: Reference;
   date: string;
   department: string;
@@ -664,6 +673,7 @@ function QuickBulkEntry({
     });
     return items;
   }, []);
+  const guard=useDirtyForm(changedItems,busy,null,closeGuard);
   return (
     <section className="panel quick-entry-panel">
       <div className="quick-entry-head no-print">
@@ -671,13 +681,13 @@ function QuickBulkEntry({
           <Input
             type="date"
             value={date}
-            onChange={(event) => onDate(event.target.value)}
+            onChange={(event) => {if(guard.canClose())onDate(event.target.value);}}
           />
         </Field>
         <Choice
           label="القسم"
           value={department}
-          onChange={onDepartment}
+          onChange={value=>{if(guard.canClose())onDepartment(value);}}
           empty="اختر القسم"
           options={reference.departments
             .filter((item) => item.is_active)
@@ -810,6 +820,7 @@ export function RecordTable({
   canWrite: boolean;
   employee?: Employee;
 }) {
+  const editCloseGuard=useRef<()=>boolean>(()=>true);
   const [edit, setEdit] = useState<StatusRecord | null>(null);
   const [remove, setRemove] = useState<StatusRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -887,7 +898,7 @@ export function RecordTable({
         </TableBody>
       </Table>
       {edit && (
-        <Dialog open onOpenChange={(open) => !open && setEdit(null)}>
+        <Dialog open onOpenChange={(open) => {if(!open&&editCloseGuard.current())setEdit(null);}}>
           <DialogContent dir="rtl">
             <DialogHeader>
               <DialogTitle>تعديل الحالة</DialogTitle>
@@ -895,6 +906,7 @@ export function RecordTable({
             </DialogHeader>
             <StatusForm
               reference={reference}
+              closeGuard={editCloseGuard}
               record={edit}
               employee={employee}
               onSaved={() => setEdit(null)}

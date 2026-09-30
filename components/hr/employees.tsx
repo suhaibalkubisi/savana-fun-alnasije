@@ -1,4 +1,6 @@
 "use client";
+import {useDirtyForm} from '@/lib/hr/use-dirty-form';
+import {AssignmentHistory} from './employee-assignments';
 import { useState } from "react";
 import Link from "next/link";
 import { BrandImage } from "./brand-image";
@@ -12,8 +14,6 @@ import {
   FileSpreadsheet,
   Printer,
   ScanSearch,
-  Merge,
-  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,7 @@ import {
   SearchPicker,
 } from "./shared";
 import { RecordTable } from "./status";
-import { download, tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
+import { download, brandedExcelBytes as tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
 import { ActionStateBadge } from "./operations";
 export function EmployeesPage({
   reference,
@@ -267,121 +267,13 @@ function DuplicateEmployees({ onClose }: { onClose: () => void }) {
   const q = useData<{ rows: DuplicateEmployee[] }>(
     "attendance.employee_duplicates",
   );
-  const [source, setSource] = useState("");
-  const [target, setTarget] = useState("");
-  const [busy, setBusy] = useState(false);
-  const rows = q.data?.rows || [];
-  const selected = rows.find((row) => row.id === source);
-  const linked = selected
-    ? selected.status_count +
-      selected.fingerprint_count +
-      selected.action_count +
-      selected.note_count
-    : 0;
-  async function execute(action: "merge" | "delete_permanent") {
-    if (!source || (action === "merge" && !target)) return;
-    const message =
-      action === "merge"
-        ? "سيتم نقل الروابط الآمنة إلى الموظف الصحيح ثم إزالة السجل المكرر. هل أنت متأكد؟"
-        : "سيتم حذف السجل نهائياً لأنه بلا روابط. هل أنت متأكد؟";
-    if (!window.confirm(message)) return;
-    setBusy(true);
-    try {
-      await mutate(`attendance.employee.${action}`, {
-        source_employee_id: source,
-        target_employee_id: action === "merge" ? target : undefined,
-        confirmed: true,
-      });
-      toast.success(
-        action === "merge" ? "تم دمج الموظفين" : "تم حذف السجل المكرر",
-      );
-      setSource("");
-      setTarget("");
-      await q.refresh();
-    } catch (error) {
-      toast.error((error as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="employee-dialog" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>كشف وتنظيف الموظفين المكررين</DialogTitle>
-          <DialogDescription>
-            التطابق هنا للمراجعة فقط ولا يتم دمج الأسماء تلقائياً.
-          </DialogDescription>
-        </DialogHeader>
-        <LoadState
-          loading={q.loading}
-          error={q.error}
-          retry={q.refresh}
-          empty={!rows.length}
-          emptyText="لا توجد أسماء مكررة مشتبهة"
-        >
-          <div className="form-stack">
-            <Choice
-              label="السجل المكرر"
-              value={source}
-              onChange={setSource}
-              options={rows.map((row) => ({
-                value: row.id,
-                label: `${row.name} — ${row.employee_number || "بلا رقم"} — ${row.department}`,
-              }))}
-            />
-            {selected && (
-              <div className="duplicate-summary">
-                <strong>{selected.name}</strong>
-                <span>كود البصمة: {selected.person_code || "غير محدد"}</span>
-                <span>
-                  الحالات: {selected.status_count} · البصمة:{" "}
-                  {selected.fingerprint_count} · الإجراءات:{" "}
-                  {selected.action_count} · الملاحظات: {selected.note_count}
-                </span>
-              </div>
-            )}
-            <Choice
-              label="الموظف الصحيح للدمج"
-              value={target}
-              onChange={setTarget}
-              options={rows
-                .filter(
-                  (row) =>
-                    row.id !== source &&
-                    (!selected ||
-                      row.normalized_name === selected.normalized_name),
-                )
-                .map((row) => ({
-                  value: row.id,
-                  label: `${row.name} — ${row.employee_number || "بلا رقم"} — ${row.department}`,
-                }))}
-            />
-            <div className="form-actions">
-              <Button
-                disabled={busy || !source || !target}
-                onClick={() => void execute("merge")}
-              >
-                <Merge size={17} />
-                دمج آمن
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={busy || !source || linked > 0}
-                onClick={() => void execute("delete_permanent")}
-              >
-                <Trash2 size={17} />
-                حذف نهائي بلا روابط
-              </Button>
-              <Button variant="outline" onClick={onClose}>
-                إلغاء
-              </Button>
-            </div>
-          </div>
-        </LoadState>
-      </DialogContent>
-    </Dialog>
-  );
+  const rows=q.data?.rows || [];
+  return <Dialog open onOpenChange={open=>!open&&onClose()}><DialogContent className="employee-dialog" dir="rtl">
+    <DialogHeader><DialogTitle>مراجعة الأسماء المتشابهة</DialogTitle><DialogDescription>الاسم المتشابه لا يثبت أن السجلين لشخص واحد. افتح الملف وقارن رقم الجهاز والانتماء والسجل قبل تصحيح البيانات أو إيقاف السجل الزائد. تبقى الهوية والكود والسجلات محفوظة.</DialogDescription></DialogHeader>
+    <LoadState loading={q.loading} error={q.error} retry={q.refresh} empty={!rows.length} emptyText="لا توجد أسماء متشابهة">
+    <div className="table-wrap"><table className="data-table"><thead><tr><th>الموظف</th><th>رقم الجهاز</th><th>القسم</th><th>سجلات مرتبطة</th><th>الملف</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.name}</td><td>{r.employee_number||'غير محدد'}</td><td>{r.department}</td><td>{r.status_count+r.fingerprint_count+r.action_count+r.note_count}</td><td><Link href={'/employees/'+r.id}>فتح الملف</Link></td></tr>)}</tbody></table></div>
+    </LoadState><Button variant="outline" onClick={onClose}>إغلاق</Button>
+  </DialogContent></Dialog>;
 }
 export function EmployeeEditor({
   employee,
@@ -404,10 +296,13 @@ export function EmployeeEditor({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [errors,setErrors]=useState<Record<string,string>>({});
+  const guard=useDirtyForm(data,busy);
+  const close=()=>{if(guard.canClose())onClose();};
   const set = (key: string, value: string) =>
     setData((v) => ({ ...v, [key]: value }));
   return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
+    <Dialog open onOpenChange={(v) => !v && close()}>
       <DialogContent className="employee-dialog" dir="rtl">
         <DialogHeader>
           <DialogTitle>
@@ -422,9 +317,11 @@ export function EmployeeEditor({
           onSubmit={async (event) => {
             event.preventDefault();
             setError("");
+            setErrors({});
             const p = employeeSchema.safeParse(data);
             if (!p.success) {
               setError(p.error.issues[0].message);
+              setErrors(Object.fromEntries(p.error.issues.map(i=>[String(i.path[0]),i.message])));
               return;
             }
             setBusy(true);
@@ -442,15 +339,17 @@ export function EmployeeEditor({
           }}
         >
           <div className="form-grid">
-            <Field label="اسم الموظف">
+            <Field label="اسم الموظف" required error={errors.name}>
               <Input
                 value={data.name}
                 onChange={(e) => set("name", e.target.value)}
                 required
+                autoFocus
+                aria-invalid={!!errors.name}
                 maxLength={150}
               />
             </Field>
-            <Field label="رقم الموظف">
+            <Field label="رقم الموظف في المصدر" hint="رقم اختياري منفصل عن الكود الوظيفي الدائم وعن هوية جهاز البصمة." error={errors.employee_number}>
               <Input
                 dir="ltr"
                 value={data.employee_number}
@@ -507,7 +406,7 @@ export function EmployeeEditor({
             <Button type="submit" disabled={busy}>
               {busy ? "جار الحفظ…" : "حفظ الموظف"}
             </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={close} disabled={busy}>
               إلغاء
             </Button>
           </div>
@@ -624,7 +523,7 @@ export function EmployeeDetail({
       const period = `${monthLabel(month)} · الكود الوظيفي ${q.data.internal_code || "غير متاح"} · رقم ${q.data.employee_number || "غير محدد"} · ${q.data.department} · ${q.data.shift || "شفت غير محدد"} · ${q.data.manager || "مسؤول غير محدد"}`;
       const bytes =
         format === "excel"
-          ? tableExcelBytes({
+          ? await tableExcelBytes({
               title,
               period,
               headers: reportHeaders,
@@ -747,6 +646,7 @@ export function EmployeeDetail({
               <TabsTrigger value="leave">الإجازات</TabsTrigger>
               <TabsTrigger value="late">التأخيرات</TabsTrigger>
               <TabsTrigger value="actions">الإجراءات الإدارية</TabsTrigger>
+              <TabsTrigger value="assignments">الانتماء الوظيفي</TabsTrigger>
               {user.role === "ADMIN" && (
                 <TabsTrigger value="audit">سجل التعديلات</TabsTrigger>
               )}
@@ -764,7 +664,7 @@ export function EmployeeDetail({
             />
           </Field>
         </div>
-        {tab === "overview" ? (
+        {tab==='assignments'&&q.data ? <AssignmentHistory employee={q.data} reference={reference} canWrite={user.role!=='VIEWER'}/> : tab === "overview" ? (
           <div className="employee-overview">
             {[
               ["الغياب", reportRow?.absence || 0],
@@ -862,7 +762,7 @@ export function EmployeeDetail({
             />
           </LoadState>
         )}
-        {tab !== "overview" && (
+        {tab !== "overview" && tab!=='assignments' && (
           <Pager
             page={page}
             total={

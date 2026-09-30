@@ -1,3 +1,5 @@
+// Historical pre-cutover compatibility contract. Current-schema denial and canonical
+// evidence calculations are verified in read-cutover and monthly-workflow tests.
 import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
@@ -11,7 +13,7 @@ before(async () => {
     create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);
     create function auth.uid() returns uuid language sql stable as
     $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`);
-  for (const file of (await readdir("supabase/migrations")).filter(f => f.endsWith(".sql")).sort())
+  for (const file of (await readdir("supabase/migrations")).filter(f => f.endsWith(".sql") && !f.endsWith("_restrict_legacy_attendance_reads.sql")).sort())
     await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
   await db.exec("set hr.test_fixture='on'");
   await db.exec(await readFile("supabase/seed.sql", "utf8"));
@@ -34,7 +36,7 @@ async function fixture(run) {
     }
     const people = (await db.query(`insert into public.employees(name,employee_number,department_id,employment_status)
       values('Same name','MONTH-ONE',$1,'active'),('Same name','MONTH-TWO',$1,'active') returning *`, [departments[0].id])).rows;
-    const rpc = async (action, data) => (await db.query("select public.attendance_write_v3($1,$2) data", [action, data])).rows[0].data;
+    const rpc = async (action, data) => (await db.query("select public.attendance_write_v5($1,$2) data", [action,action==='import.preview'&&data.import_kind==='monthly'?{coverage_start:data.period_start,coverage_end:data.period_end,...data}:data])).rows[0].data;
     const monthly = async (filters = {}) => (await db.query("select public.attendance_read_v3('monthly_fingerprint',$1) data", [{date:"2099-09-01",...filters}])).rows[0].data;
     const payload = {
       source_name:"monthly-rows.xls",source_hash:"7".repeat(64),import_kind:"monthly",period_start:"2099-09-01",period_end:"2099-09-30",
@@ -130,11 +132,11 @@ test("monthly matrix: preview and reviewed evidence stay hidden until explicit a
   assert.equal((await monthly()).approved_import.id,batch.id);
 }));
 
-test("monthly UI and Excel/PDF share filtered values and month-end manager semantics", async () => {
-  const source = await readFile("components/hr/attendance.tsx","utf8");
-  assert.match(source,/manager_id: monthly \? manager : ""/);
-  assert.match(source,/المسؤول بنهاية الشهر/);
-  assert.match(source,/rows=\{values\}/);
-  assert.match(source,/rows=\{values\.map/);
-  assert.match(source,/pdf \? await tablePdfBytes\(report\) : tableExcelBytes\(report\)/);
+test("daily page no longer exposes the superseded monthly calculation", async () => {
+  const source = await readFile("components/hr/attendance.tsx", "utf8");
+  const daily = source.slice(source.indexOf("export function DailyAttendanceReport("), source.indexOf("export function FingerprintImport("));
+  assert.ok(daily.includes('"attendance.daily"'));
+  assert.doesNotMatch(daily, /monthly_fingerprint|MonthRow/);
+  const app = await readFile("components/hr/app.tsx", "utf8");
+  assert.match(app, /content=<MonthlyPositionPage/);
 });

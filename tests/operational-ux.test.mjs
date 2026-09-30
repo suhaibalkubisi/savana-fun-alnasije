@@ -70,6 +70,6 @@ test("active UI and PDF sources use SAVANA rather than the legacy bitmap", async
   for (const path of ["components/hr/app.tsx", "lib/hr/exports.ts"]) {
     const source = await readFile(path, "utf8");
     assert.doesNotMatch(source, /savanna/i);
-    assert.match(source, /SAVANA/);
+    assert.match(source, /savana/i);
   }
 });

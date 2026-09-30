@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./workspace-theme.css";
+import "./workspace-shell.css";
 
 export const metadata: Metadata = {
   title: "قسم الموارد البشرية – مسائي | FANU ALNASIJ",

@@ -100,15 +100,23 @@ export function Field({
   label,
   children,
   className = "",
+  required = false,
+  error,
+  hint,
 }: {
   label: string;
   children: ReactNode;
   className?: string;
+  required?:boolean;
+  error?:string;
+  hint?:string;
 }) {
   return (
     <label className={`field ${className}`}>
-      <span className="field-label">{label}</span>
+      <span className="field-label">{label}{required&&<span className="required-mark" aria-label="مطلوب">*</span>}</span>
       {children}
+      {hint&&<span className="field-hint">{hint}</span>}
+      {error&&<span className="field-error" role="alert">{error}</span>}
     </label>
   );
 }
