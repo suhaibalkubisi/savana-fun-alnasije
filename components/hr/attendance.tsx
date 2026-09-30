@@ -43,7 +43,7 @@ import {
   departmentLabel,
   type Reference,
 } from "@/lib/hr/types";
-import { download, brandedExcelBytes as tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
+import { download, brandedExcelBytes as tableExcelBytes, tablePdfBytes, dailyColumnWeights } from "@/lib/hr/exports";
 import { formatClock12 } from "@/lib/hr/time-format.mjs";
 import { MonthlyPositionPage } from './monthly-position';
 import {
@@ -423,7 +423,7 @@ export function DailyAttendanceReport({
               .join(" · ")}
             headers={headers}
             rows={values}
-            columnWeights={[4, 12, 8, 8, 15, 16, 13, 9, 9, 8, 9, 24, 11, 18]}
+            columnWeights={dailyColumnWeights}
             notesArea={true}
           />
         }

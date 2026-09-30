@@ -70,7 +70,7 @@ permission to infer it. Release evidence is recorded separately from this plan.
 - Synthetic browser upload → review → approval survives local restart: two identities, six punches, 1125 work minutes, 20 late minutes; no real attendance approval.
 - PDF actual download: five seven-day A3 pages, Arabic text, repeated headings, both brands, real exit dates and footer. XLSX clocks/dates are numeric, identifiers/text remain safe inline strings.
 - Authorized private recovery snapshot rehearsed: 231 unchanged employee identities, 28 unchanged imports; 231 additive assignment-history rows. Raw/manual evidence checksums matched the production recheck at 19:43 Baghdad. This is an affected-scope recovery snapshot, not a full Auth/PITR backup.
-- NOT VERIFIED: native Excel rendering, native browser print, exhaustive keyboard/confirm-dialog paths, authenticated production workflow pending user sign-in, production release until its deployment receipt exists.
+- NOT VERIFIED: native Excel rendering, native browser print, exhaustive keyboard/confirm-dialog paths, production HR/VIEWER sign-in and native print. ADMIN production reads and actual exports are now verified; see september30-verification.md for deployment receipts and limits.
 
 ## Measured local performance
 

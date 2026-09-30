@@ -21,9 +21,23 @@ const {
   tableExcelBytes,
   tablePdfBytes,
   layoutTablePdf,
+  dailyColumnWeights,
   triggerDownload,
 } = await import(compiled.href);
 after(() => rm(compiled, { force: true }));
+
+test('daily PDF keeps permanent codes intact across all sixteen columns',async()=>{
+ const {jsPDF}=await import('jspdf');
+ const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a3'});
+ const font=(await readFile('public/fonts/DejaVuSans.ttf')).toString('base64');
+ doc.addFileToVFS('Arabic.ttf',font);doc.addFont('Arabic.ttf','Arabic','normal');doc.setFont('Arabic');
+ const headers=['ت','الكود الوظيفي','رقم الموظف','كود البصمة','الموظف','القسم','المسؤول','وقت الدوام','الدخول','الخروج','دقائق العمل الموثقة','دقائق التأخير','الحالة','الإجراء','قرار HR','الملاحظات'];
+ const row=[1,'FANU-000200','','5176','موظف اختبار عربي','انتماء الفترة غير موثق','غير محدد','—','—','—','—','—','الانتماء التاريخي غير موثق','','',''];
+ const layout=layoutTablePdf(doc,headers,[row],dailyColumnWeights,true);
+ assert.equal(dailyColumnWeights.length,headers.length);
+ assert.deepEqual(layout.pages[0][0].lines[1],['FANU-000200']);
+ assert.ok(layout.widths[4]>layout.widths[0]*4);
+});
 
 test('segmented monthly PDF repeats identity and separates all day ranges without losing subrows',async()=>{
  const fontBase64=(await readFile('public/fonts/DejaVuSans.ttf')).toString('base64');

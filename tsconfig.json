@@ -41,6 +41,9 @@
     "**/*.mts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "dist",
+    "outputs",
+    ".sites-runtime"
   ]
 }
