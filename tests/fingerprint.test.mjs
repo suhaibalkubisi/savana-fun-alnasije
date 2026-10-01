@@ -23,6 +23,11 @@ test("real binary XLS daily parser preserves both calendar punches, ignores misl
  const result=parseFingerprint(workbook([header,["001","احمد علي","Packing","2026-09-06","Sun","01:31","16:27","14:56"]]),"daily","2026-09-06");
  assert.deepEqual(result.rows[0].punch_minutes,[91,987]);assert.equal(result.rows[0].person_code,"001");assert.equal(result.rows[0].source_row,2);
 });
+test('identity normalization cannot alter the retained source values',()=>{
+ const result=parseFingerprint(workbook([header,[' 001 ',' Test ','Dept','2026-09-06','Sun',' 01:31 ','16:27','15:00']]),'daily','2026-09-06');
+ assert.equal(result.rows[0].person_code,'001');assert.equal(result.rows[0].source_name,'Test');
+ assert.equal(result.rows[0].raw_values[0],' 001 ');assert.equal(result.rows[0].raw_values[5],' 01:31 ');
+});
 test("monthly MM-DD headers use explicit year and keep empty punch days",()=>{
  const result=parseFingerprint(workbook([["Person Code","Name","02-28","02-29"],["1","احمد","16:27\n01:31",""]]),"monthly","2024-02");
  assert.equal(result.rows[1].calendar_date,"2024-02-29");assert.deepEqual(result.rows[1].punch_minutes,[]);

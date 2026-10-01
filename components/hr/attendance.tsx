@@ -1135,12 +1135,16 @@ type Issue = {
 export function FingerprintIssues({
   reference,
   canWrite,
+  forcedImportId,
+  embedded=false,
 }: {
   reference: Reference;
   canWrite: boolean;
+  forcedImportId?:string;
+  embedded?:boolean;
 }) {
   const params = useSearchParams();
-  const importId = params.get("import_id") || "";
+  const importId = forcedImportId || params.get("import_id") || "";
   const [state, setState] = useState("open"),
     [page, setPage] = useState(0),
     [issue, setIssue] = useState<Issue | null>(null),
@@ -1198,9 +1202,9 @@ export function FingerprintIssues({
   return (
     <>
       <PageTitle
-        title="مشاكل البصمة"
+        title={embedded?"قرارات مطابقة الهوية":"مراجعة هويات البصمة"}
         actions={
-          importId && (
+          importId && !embedded && (
             <Button asChild variant="outline">
               <Link
                 href={`/fingerprint-${params.get("import_kind") === "daily" ? "daily" : "monthly"}?import_id=${importId}`}

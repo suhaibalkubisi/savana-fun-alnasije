@@ -9,6 +9,8 @@ import {isolatedDatabase} from '../helpers/isolated-db.mjs';
 import {buildMonthlyPosition} from '../../lib/hr/monthly-position.mjs';
 import {buildDailyPosition} from '../../lib/hr/attendance-engine.mjs';
 if(process.argv[2]!=='--synthetic-only')throw Error('Use --synthetic-only; this server never uses a production database');
+const port=Number(process.env.HR_QA_PORT||4179);
+await mkdir('outputs/rebuild',{recursive:true});
 await isolatedDatabase(async({db,who,hr,read,write,fresh})=>{
  if(fresh){
  await db.exec("with n as(select id,row_number() over(order by id) n from public.employees) update public.employees e set name='موظف تجريبي '||lpad(n.n::text,3,'0') from n where n.id=e.id");
@@ -34,14 +36,14 @@ await isolatedDatabase(async({db,who,hr,read,write,fresh})=>{
  const vite=await createServer({configFile:false,root:process.cwd(),plugins:[react()],
   // Independent from the UI test server/build: shared optimized-dependency hashes
   // caused 504 Outdated Optimize Dep during file selection in the QA browser.
-  cacheDir:path.resolve('node_modules/.vite-browser-qa'),
+  cacheDir:path.resolve(`node_modules/.vite-browser-qa-${port}`),
   optimizeDeps:{include:['xlsx','jspdf','fflate']},
   resolve:{alias:[{find:'next/navigation',replacement:path.resolve('tests/browser/navigation.tsx')},{find:'next/link',replacement:path.resolve('tests/browser/link.ts')},{find:'next/image',replacement:path.resolve('tests/browser/image.ts')},{find:'@',replacement:process.cwd()}]},
-  server:{middlewareMode:true,hmr:{port:24179},watch:{usePolling:true},fs:{allow:[process.cwd(),path.resolve('node_modules')]}},appType:'custom'});
+  server:{middlewareMode:true,hmr:{port:20000+port},watch:{usePolling:true,ignored:['**/outputs/**','**/work/**','**/.sites-runtime/**','**/.wrangler/**']},fs:{allow:[process.cwd(),path.resolve('node_modules')]}},appType:'custom'});
  const send=(res,status,data)=>{res.writeHead(status,{'content-type':'application/json','cache-control':'no-store'});res.end(JSON.stringify(data));};
  const server=createHttpServer(async(req,res)=>{
   const url=new URL(req.url,'http://127.0.0.1');
-  if(req.headers.host!=='127.0.0.1:4179'){send(res,403,{error:'Local synthetic QA only'});return;}
+  if(req.headers.host!==`127.0.0.1:${port}`){send(res,403,{error:'Local synthetic QA only'});return;}
   if(url.pathname.startsWith('/api/')){
    try{
     if(url.pathname==='/api/auth'){
@@ -71,8 +73,8 @@ await isolatedDatabase(async({db,who,hr,read,write,fresh})=>{
    res.writeHead(200,{'content-type':'text/html; charset=utf-8'});res.end(html);
   });
  });
- await new Promise(resolve=>server.listen(4179,'127.0.0.1',resolve));
- console.log('Synthetic-only HR preview: http://127.0.0.1:4179');
+ await new Promise(resolve=>server.listen(port,'127.0.0.1',resolve));
+ console.log(`Synthetic-only HR preview: http://127.0.0.1:${port}`);
  await new Promise(resolve=>{for(const signal of ['SIGINT','SIGTERM'])process.once(signal,resolve);});
  await new Promise(resolve=>server.close(resolve));await vite.close();
 },{dataDir:path.resolve('outputs/rebuild/synthetic-qa-db')});

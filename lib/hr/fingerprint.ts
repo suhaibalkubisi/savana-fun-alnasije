@@ -119,6 +119,7 @@ export function parseFingerprint(
     if (kind === "daily" && (first < 0 || last < 0))
       throw new Error("أعمدة البصمة غير موجودة");
     for (let i = headerRow + 1; i < grid.length; i++) {
+      const original = grid[i].map(value => String(value ?? ""));
       const raw = grid[i].map(clean);
       if (!raw[code] && !raw[name]) continue;
       const cells =
@@ -127,13 +128,13 @@ export function parseFingerprint(
               {
                 day: dateValue(raw[date]),
                 values: [raw[first], raw[last]],
-                raw,
+                raw: original,
               },
             ]
           : dayColumns.map((x) => ({
               day: dateValue(`${year}-${x.h}`),
               values: [raw[x.i] || ""],
-              raw: [raw[code], raw[name], x.h, raw[x.i] || ""],
+              raw: [original[code], original[name], headers[x.i], original[x.i] || ""],
             }));
       for (const cell of cells) {
         if (

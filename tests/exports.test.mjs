@@ -8,7 +8,8 @@ import { report } from "./export-fixture.mjs";
 import { formatClock12 } from "../lib/hr/time-format.mjs";
 const compiled = new URL("./.export-check.mjs", import.meta.url);
 await build({
-  entryPoints: ["lib/hr/exports.ts"],
+  absWorkingDir: fileURLToPath(new URL('../', import.meta.url)),
+  entryPoints: [fileURLToPath(new URL('../lib/hr/exports.ts', import.meta.url))],
   bundle: true,
   platform: "node",
   format: "esm",
@@ -173,6 +174,10 @@ test("Summary and department Excel export use the same filtered report values", 
   assert.equal((department.match(/<row /g) || []).length, rows.length + 6);
 });
 test("Operational exports are genuine branded XLSX and Arabic PDF", async () => {
+  // Exercise the original on-disk logos, rather than silently skipping them in Node.
+  const previousFetch=globalThis.fetch;
+  globalThis.fetch=async url=>new Response(await readFile(new URL('../public'+String(url),import.meta.url)));
+  try {
   const zip = unzipSync(
     tableExcelBytes({
       title: "تقرير التأخيرات",
@@ -200,6 +205,16 @@ test("Operational exports are genuine branded XLSX and Arabic PDF", async () => 
   ).toString("latin1");
   assert.ok(pdf.startsWith("%PDF-"));
   assert.ok(pdf.includes("/FontFile2"));
+  assert.ok(pdf.includes('/Subtype /Image'));
+  } finally { globalThis.fetch=previousFetch; }
+});
+
+test('monthly PDF keeps each entry and exit together across page breaks',async()=>{
+ const {jsPDF}=await import('jspdf');const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+ const rows=Array.from({length:30},(_,i)=>[['TEST-'+i,'entry'],['TEST-'+i,'exit']]).flat();
+ const layout=layoutTablePdf(doc,['Code','Direction'],rows,[1,1],false,112,2);
+ assert.equal(layout.pages.flat().length,60);
+ for(const page of layout.pages){assert.equal(page.length%2,0);for(let i=0;i<page.length;i+=2)assert.deepEqual(page[i].lines[0],page[i+1].lines[0]);}
 });
 test("Arabic PDF exports use embedded font and paginate full source report", async () => {
   const font = (await readFile("public/fonts/DejaVuSans.ttf")).toString(

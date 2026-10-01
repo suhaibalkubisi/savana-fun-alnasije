@@ -59,6 +59,11 @@ export function ReviewPage() {
           q.data ? `${q.data.length} سجل يحتاج استكمال البيانات` : undefined
         }
       />
+      <div className="review-hub-links">
+        <Link href="/fingerprint-issues"><span className="eyebrow">هوية المصدر</span><strong>مطابقة البصمات</strong><p>راجع رقم الجهاز والموظف المقترح واحفظ القرار مع سببه.</p></Link>
+        <Link href="/fingerprint-monthly"><span className="eyebrow">الحساب والفترة</span><strong>متابعة الملف الشهري</strong><p>افحص الأدلة والمشاكل والاعتماد في مساحة عمل واحدة.</p></Link>
+        <Link href="/attendance-settings"><span className="eyebrow">قواعد مؤرخة</span><strong>الدوام والانتماء</strong><p>جدول الدوام من الإعدادات؛ الانتماء التاريخي من ملف الموظف.</p></Link>
+      </div>
       <section className="panel">
         <LoadState
           loading={q.loading && !q.data}

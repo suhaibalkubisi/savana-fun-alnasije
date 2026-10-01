@@ -287,6 +287,7 @@ export function layoutTablePdf(
   columnWeights?: number[],
   notesArea = false,
   headerTop = 112,
+  rowGroupSize = 1,
 ) {
   const tableWidth = doc.internal.pageSize.getWidth() - 56;
   const weights = columnWeights?.length === headers.length
@@ -304,16 +305,16 @@ export function layoutTablePdf(
   const bodyBottom = doc.internal.pageSize.getHeight() - (notesArea ? 175 : 50);
   const pages: { lines: string[][]; height: number }[][] = [[]];
   let y = bodyTop;
-  for (const row of rows) {
-    const lines = wrap(row);
-    const height = Math.max(30, ...lines.map(cell => cell.length * lineHeight + 12));
+  for (let index=0;index<rows.length;index+=rowGroupSize) {
+    const group=rows.slice(index,index+rowGroupSize).map(row=>{const lines=wrap(row);return {lines,height:Math.max(30,...lines.map(cell=>cell.length*lineHeight+12))};});
+    const height=group.reduce((sum,row)=>sum+row.height,0);
     if (height > bodyBottom - bodyTop)
       throw new Error("نص خلية التقرير أطول من مساحة الصفحة");
     if (y + height > bodyBottom) {
       pages.push([]);
       y = bodyTop;
     }
-    pages[pages.length - 1].push({ lines, height });
+    pages[pages.length - 1].push(...group);
     y += height;
   }
   return { widths, headerLines, headerHeight, bodyTop, bodyBottom, pages };
@@ -372,7 +373,7 @@ export async function tablePdfBytes({
   const generationLabel = `تاريخ الإصدار: ${generatedAt()} · بغداد`;
   const sections = segments?.length ? segments : [{headers, rows, columnWeights}];
   const allPages = sections.flatMap(section => {
-    const layout = layoutTablePdf(doc, section.headers, section.rows, section.columnWeights, notesArea, headerTop);
+    const layout = layoutTablePdf(doc, section.headers, section.rows, section.columnWeights, notesArea, headerTop, section.headers.includes('الحركة') ? 2 : 1);
     return layout.pages.map(pageRows => ({layout, pageRows, headers: section.headers}));
   });
   const [companyAsset,savanaAsset] = await Promise.all([webAsset(brandAssets.company.src),webAsset(brandAssets.savana.src)]);
