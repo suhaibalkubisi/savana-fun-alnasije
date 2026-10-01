@@ -998,6 +998,7 @@ export function CentralReportsPage({ reference }: { reference: Reference }) {
   const reports = useMemo(
     () =>
       [
+        ["الدخول والخروج الشهري", "دليل البصمة المعتمد؛ منفصل عن قرارات HR", "/monthly-position", CalendarClock],
         [
           "الموقف الشامل",
           "المصفوفة الشهرية لجميع الموظفين",
@@ -1029,7 +1030,8 @@ export function CentralReportsPage({ reference }: { reference: Reference }) {
   );
   return (
     <>
-      <PageTitle title="التقارير" subtitle="مركز التقارير التشغيلية" />
+      <PageTitle title="التقارير" subtitle="اختر الفترة ثم التقرير؛ المعاينة والتصدير يستخدمان النطاق نفسه" />
+      <div className="workspace-panel report-period-selector"><Field label="الفترة المشتركة للتقارير"><Input type="month" value={month} onChange={e=>setMonth(e.target.value)}/></Field><p className="scope-note">الدخول والخروج من مصدر البصمة المعتمد. الغياب ×2 و×3 والإجازة والتأخير من قرارات HR، دون استنتاج أجور أو خصومات.</p></div>
       <section className="report-catalog">
         {reports.map(([title, description, href, Icon]) => (
           <Link

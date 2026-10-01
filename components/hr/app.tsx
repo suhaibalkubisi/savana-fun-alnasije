@@ -72,6 +72,7 @@ import {
 import { LoadState, PageTitle, StatusBadge, Field } from "./shared";
 import { WorkspaceTools } from "./workspace-tools";
 import { BrandImage } from "./brand-image";
+import {WorkDashboard as Dashboard} from './work-dashboard';
 const EmployeesPage = lazy(() =>
   import("./employees").then((m) => ({ default: m.EmployeesPage })),
 );
@@ -110,7 +111,7 @@ const DailyAttendanceReport = lazy(() =>
 );
 const MonthlyPositionPage = lazy(() => import('./monthly-position').then(m=>({default:m.MonthlyPositionPage})));
 const FingerprintImport = lazy(() =>
-  import("./attendance").then((m) => ({ default: m.FingerprintImport })),
+  import("./fingerprint-workspace").then((m) => ({ default: m.FingerprintWorkspace })),
 );
 const FingerprintIssues = lazy(() =>
   import("./attendance").then((m) => ({ default: m.FingerprintIssues })),
@@ -183,7 +184,7 @@ const navigation = [
   { path: "/employees", label: "الموظفون", icon: Users, group: "مساحة العمل" },
   {
     path: "/status",
-    label: "تسجيل الحالة",
+    label: "الحالات اليومية",
     icon: CalendarPlus,
     write: true,
     group: "العمليات",
@@ -282,10 +283,10 @@ const navigation = [
     group: "الإدارة",
   },
 ];
-const primaryPaths=['/','/employees','/status','/fingerprint-daily','/fingerprint-monthly','/monthly-position','/actions','/review'];
+const primaryPaths=['/','/employees','/status','/fingerprint-daily','/fingerprint-monthly','/review','/reports','/audit'];
 const secondaryGroups=[
-  {label:'التقارير',icon:FileBarChart,paths:['/reports','/daily-position','/monthly-dashboard','/monthly','/departments','/summary','/lateness','/absence-leave']},
-  {label:'الإدارة والإعدادات',icon:Settings,paths:['/organization','/attendance-settings','/fingerprint-issues','/audit','/users','/settings']},
+  {label:'سجلات وملخصات',icon:FileBarChart,paths:['/monthly-position','/daily-position','/monthly-dashboard','/monthly','/departments','/summary','/lateness','/absence-leave','/actions']},
+  {label:'المستخدمون والإعدادات',icon:Settings,paths:['/organization','/attendance-settings','/users','/settings']},
 ];
 export function HRApp() {
   const [user, setUser] = useState<Profile | null>(null);
@@ -745,7 +746,7 @@ interface DashboardData {
   }[];
   departments: { id: string; name: string; count: number }[];
 }
-function Dashboard({ canWrite }: { canWrite: boolean }) {
+export function LegacyDashboard({ canWrite }: { canWrite: boolean }) {
   const q = useData<DashboardData>("dashboard");
   const queue=useData<{monthly_pending:number;ready_for_approval:number;open_identity_groups:number}>('attendance.work_queue');
   const cards = [

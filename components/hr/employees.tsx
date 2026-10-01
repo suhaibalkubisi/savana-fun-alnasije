@@ -1,6 +1,8 @@
 "use client";
 import {useDirtyForm} from '@/lib/hr/use-dirty-form';
 import {AssignmentHistory} from './employee-assignments';
+import {MonthlyPositionPage} from './monthly-position';
+import type {MonthlyPosition} from '@/lib/hr/monthly-position.mjs';
 import { useState } from "react";
 import Link from "next/link";
 import { BrandImage } from "./brand-image";
@@ -66,6 +68,11 @@ import {
 import { RecordTable } from "./status";
 import { download, brandedExcelBytes as tableExcelBytes, tablePdfBytes } from "@/lib/hr/exports";
 import { ActionStateBadge } from "./operations";
+function EmployeeDeviceEvidence({employeeId,month}:{employeeId:string;month:string}) {
+  const evidence=useData<MonthlyPosition>('attendance.monthly_position',{month});
+  const person=evidence.data?.rows.find(row=>row.employee_id===employeeId);
+  return <section className="workspace-panel"><h2>أرقام الأجهزة في المصدر الشهري المعتمد</h2><p className="scope-note">هذه الأرقام مرتبطة بالموظف داخل مصدر الشهر المحدد. لا تمثل سجلاً شاملاً لكل الأجهزة ولا تستبدل الكود الوظيفي الدائم. الرقم المسجل في بطاقة الموظف حقل مستقل.</p><LoadState loading={evidence.loading} error={evidence.error} retry={evidence.refresh} empty={!person} emptyText="لا توجد هوية مصدر مرتبطة بهذا الموظف في ملف شهري معتمد لهذه الفترة.">{person&&<><p>{evidence.data?.batch?.source_name} · {month}</p><Table><TableHeader><TableRow><TableHead>أرقام المصدر المرتبطة</TableHead><TableHead>أسماء المصدر</TableHead><TableHead>نطاق الدليل</TableHead></TableRow></TableHeader><TableBody><TableRow><TableCell>{person.person_codes.map(code=><div key={code}><bdi>{code}</bdi></div>)}</TableCell><TableCell>{person.source_names.join(' / ')}</TableCell><TableCell><bdi>{person.first_evidence||'—'} — {person.last_evidence||'—'}</bdi></TableCell></TableRow></TableBody></Table><Button variant="outline" asChild><Link href={`/monthly-position?month=${month}&employee_key=${employeeId}`}>افتح دليل الشهر</Link></Button></>}</LoadState></section>;
+}
 export function EmployeesPage({
   reference,
   user,
@@ -86,7 +93,7 @@ export function EmployeesPage({
       ? params.get("manager_id")!
       : "",
   );
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(params.get('status')||"");
   const [page, setPage] = useState(1);
   const [duplicatesOpen, setDuplicatesOpen] = useState(false);
   const [edit, setEdit] = useState<Employee | null | undefined>(
@@ -598,12 +605,14 @@ export function EmployeeDetail({
         error={q.error}
         retry={q.refresh}
       >
+        <div className="profile-context-grid">
+          {q.data&&<aside className="profile-identity-card"><span className="profile-avatar">{q.data.name.slice(0,1)}</span><strong>{q.data.name}</strong><bdi>{q.data.internal_code||'الكود غير متاح'}</bdi><EmploymentBadge status={q.data.employment_status}/><p className="scope-note">هوية الموظف الدائمة</p></aside>}
         <div className="profile-strip">
           {q.data && (
             <>
               <div><small>الكود الوظيفي · دائم</small><strong><bdi>{q.data.internal_code || "غير متاح"}</bdi></strong></div>
               <div>
-                <small>رقم الموظف</small>
+                <small>رقم المرجع / الجهاز المسجل</small>
                 <strong>{q.data.employee_number || "غير محدد"}</strong>
               </div>
               <div>
@@ -627,6 +636,7 @@ export function EmployeeDetail({
             </>
           )}
         </div>
+        </div>
       </LoadState>
       <section className="panel employee-detail-panel report-surface">
         <div className="print-brand">
@@ -641,6 +651,8 @@ export function EmployeeDetail({
           <Tabs value={tab} onValueChange={setTab} dir="rtl">
             <TabsList>
               <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
+              <TabsTrigger value="fingerprint">دليل الحضور</TabsTrigger>
+              <TabsTrigger value="devices">هويات الأجهزة</TabsTrigger>
               <TabsTrigger value="history">السجل</TabsTrigger>
               <TabsTrigger value="absence">الغيابات</TabsTrigger>
               <TabsTrigger value="leave">الإجازات</TabsTrigger>
@@ -664,7 +676,7 @@ export function EmployeeDetail({
             />
           </Field>
         </div>
-        {tab==='assignments'&&q.data ? <AssignmentHistory employee={q.data} reference={reference} canWrite={user.role!=='VIEWER'}/> : tab === "overview" ? (
+        {tab==='devices'?<EmployeeDeviceEvidence employeeId={id} month={month}/>:tab==='fingerprint'?<MonthlyPositionPage key={month} reference={reference} period={month} employeeId={id} embedded initialView="summary"/>:tab==='assignments'&&q.data ? <AssignmentHistory employee={q.data} reference={reference} canWrite={user.role!=='VIEWER'}/> : tab === "overview" ? (
           <div className="employee-overview">
             {[
               ["الغياب", reportRow?.absence || 0],
