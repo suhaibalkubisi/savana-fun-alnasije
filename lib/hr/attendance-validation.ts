@@ -8,6 +8,7 @@ const minute = z.number().int().min(0).max(1439);
 export const attendanceSchemas: Record<string, z.ZodTypeAny> = {
   "import.preview": z.object({
     source_name: z.string().min(1).max(250),
+    device_namespace: z.string().trim().min(1).max(100).optional(),
     source_hash: z.string().regex(/^[a-f0-9]{64}$/),
     import_kind: z.enum(["daily", "monthly"]),
     period_start: date,
@@ -43,13 +44,13 @@ export const attendanceSchemas: Record<string, z.ZodTypeAny> = {
     ...revision,
     state: z.enum(["resolved", "ignored"]),
     employee_id: z.string().uuid().optional(),
-    resolution_note: z.string().trim().min(1).max(2000),
+    resolution_note: z.string().trim().min(3).max(2000),
   }),
   "identity.resolve": z.object({
     ...revision,
     employee_id: z.string().uuid(),
     group_token: z.string().regex(/^[a-f0-9]{32}$/),
-    resolution_note: z.string().trim().min(1).max(2000),
+    resolution_note: z.string().trim().min(3).max(2000),
   }),
   "issue.reprocess": z.object(revision),
   "rule.save": z.object({

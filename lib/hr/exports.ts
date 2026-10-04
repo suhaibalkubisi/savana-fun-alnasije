@@ -19,7 +19,7 @@ const keys: (keyof Totals)[] = [
   "late_minutes",
   "weighted",
 ];
-export const dailyColumnWeights = [3, 12, 7, 7, 16, 14, 10, 7, 7, 7, 8, 7, 16, 10, 10, 12];
+export const dailyColumnWeights = [3, 12, 18, 14, 10, 8, 8, 8, 16, 20, 10, 10, 12];
 
 export const totalHeaders = [
   "غياب",

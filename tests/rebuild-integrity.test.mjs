@@ -56,7 +56,7 @@ test('future dates and open identity issues cannot generate worked or late minut
 test('daily manual decision remains distinct from immutable punch evidence',()=>{
  const result=buildDailyPosition({date:'2026-09-10',as_of:'2026-09-25',employees:[{id:'employee',name:'Synthetic',department_id:'department'}],rules:[rule],assignments:[assignment],
  sources:[{id:'s',employee_id:'employee',calendar_date:'2026-09-10',punch_minutes:[1000,1200]}],manual_records:[{employee_id:'employee',status_type:'leave'}]});
- assert.equal(result.rows[0].status,'leave');assert.equal(result.rows[0].late_minutes,0);assert.equal(result.rows[0].evidence.late_minutes,40);assert.equal(result.rows[0].duration_minutes,200);
+ assert.equal(result.rows[0].status,'leave');assert.equal(result.rows[0].late_minutes,0);assert.equal(result.rows[0].evidence.late_minutes,40);assert.equal(result.rows[0].duration_minutes,null);
 });
 test('history, transaction rollback and live role denial in disposable database',async()=>{
  await isolatedDatabase(async({db,who,hr,write})=>{
@@ -108,7 +108,7 @@ test('name-only matching stays unresolved; a human-confirmed mapping is reusable
  assert.equal((await read('import',{id:second.id})).rows[0].employee_id,e.id);
  await write('import.apply',{id:second.id,version:second.version});
  await db.exec('reset role');
- await db.query("insert into public.fingerprint_issues(source_row_id,issue_type,details) select id,'punch_conflict','Synthetic historical cancelled warning' from public.fingerprint_source_rows where import_id=$1",[batch.id]);
+ await assert.rejects(db.query("insert into public.fingerprint_issues(source_row_id,issue_type,details) select id,'punch_conflict','Synthetic historical cancelled warning' from public.fingerprint_source_rows where import_id=$1",[batch.id]),/مغلق/);
  await who();
  const evidence=(await db.query('select public.attendance_daily_evidence($1) value',[{date:'2026-09-10'}])).rows[0].value;
  assert.equal(evidence.sources.length,1);assert.equal(evidence.sources[0].import_id,second.id);assert.equal(evidence.issues.length,0);

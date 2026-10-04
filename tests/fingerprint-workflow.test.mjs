@@ -76,6 +76,9 @@ async function fixture(run) {
     for(const [i,e] of people.entries()) {
       if(!e.employee_number){e.employee_number='WORKFLOW-VERIFIED-'+i;await db.query('update public.employees set employee_number=$1 where id=$2',[e.employee_number,e.id]);}
     }
+    // Established test-device mappings are explicit fixtures, never HR-number inference.
+    for (const e of people.filter(e=>e.employment_status==='active')) await db.query('insert into public.fingerprint_identities(person_code,employee_id,source_name,confirmation_reason) values($1,$2,$3,$4)',[e.employee_number,e.id,e.name,'Synthetic verified device registry']);
+    people.sort((a,b)=>Number(b.employment_status==='active')-Number(a.employment_status==='active'));
     const payload = {
       source_name: "synthetic-review.xls",
       source_hash: "a".repeat(64),
@@ -191,7 +194,7 @@ test("monthly identity journey resolves related days explicitly, keeps evidence,
     assert.equal(
       (
         await db.query(
-          "select count(*)::int n from public.fingerprint_identities",
+          "select count(*)::int n from public.fingerprint_identities where person_code='UNKNOWN-REVIEW'",
         )
       ).rows[0].n,
       1,
@@ -273,7 +276,7 @@ test("identity mapping conflict is not silently overwritten and inactive employe
     assert.ok(group);
     await assert.rejects(
       resolve(group, people.find((p) => p.id !== inactive.id).id),
-      /مرتبط/,
+      /مرتبط|تعارض/,
     );
     await db.exec("reset role");
     assert.equal(
@@ -367,7 +370,7 @@ test("import history filters daily/monthly before limiting and returns newest 50
     assert.equal((await read("imports", { import_kind: "monthly" })).length, 1);
   }));
 
-test("replacement approval rejects reopened issues and preserves the previous approved import", () =>
+test("reviewed evidence rejects issue insertion and stale replacement preserves the approved import", () =>
   fixture(async ({ db, who, write, read, people, payload }) => {
     const person = people[0];
     const p = {
@@ -393,10 +396,10 @@ test("replacement approval rejects reopened issues and preserves the previous ap
       version: b.lifecycle_version,
     });
     await db.exec("reset role");
-    await db.query(
+    await assert.rejects(db.query(
       "insert into public.fingerprint_issues(source_row_id,issue_type,details) select id,'punch_conflict','Synthetic reopened issue' from public.fingerprint_source_rows where import_id=$1 limit 1",
       [b.id],
-    );
+    ),/مغلق/);
     await who("admin");
     const current = (await read("import", { id: a.id })).batch;
     await assert.rejects(
@@ -404,9 +407,9 @@ test("replacement approval rejects reopened issues and preserves the previous ap
         id: a.id,
         version: current.lifecycle_version,
         replacement_id: b.id,
-        replacement_version: br.lifecycle_version,
+        replacement_version: br.lifecycle_version - 1,
       }),
-      /مشاكل/,
+      /تغيير/,
     );
     assert.equal(
       (await read("import", { id: a.id })).batch.lifecycle_state,

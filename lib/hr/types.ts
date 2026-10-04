@@ -27,6 +27,9 @@ export interface Lookup {
   employee_id?: string | null;
 }
 export interface Employee {
+  phone?: string | null;
+  emergency_phone?: string | null;
+  education?: string | null;
   id: string;
   internal_code?: string;
   employee_number: string | null;

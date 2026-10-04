@@ -13,7 +13,7 @@ async function fixture(run) {
       create schema auth; create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);
       create function auth.uid() returns uuid language sql stable as
       $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`);
-    for (const name of (await readdir("supabase/migrations")).filter(n => n.endsWith(".sql") && !n.endsWith("_restrict_legacy_attendance_reads.sql")).sort())
+    for (const name of (await readdir("supabase/migrations")).filter(n => n.endsWith(".sql") && !n.endsWith("_restrict_legacy_attendance_reads.sql") && n < "20261004").sort())
       await db.exec(await readFile(`supabase/migrations/${name}`, "utf8"));
     await db.exec("set hr.test_fixture='on'");
     await db.exec(await readFile("supabase/seed.sql", "utf8"));

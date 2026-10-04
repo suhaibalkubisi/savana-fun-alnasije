@@ -327,7 +327,7 @@ export function StatusForm({
     .filter((item) => item.department_id === data.department_id)
     .map((item) => ({
       value: item.id,
-      label: `${item.name} — ${item.department} — ${item.employee_number || "سجل " + item.id.slice(0, 6)}`,
+      label: `${item.name} — ${item.internal_code || "سجل " + item.id.slice(0, 6)} — ${item.department}${item.employee_number ? " — مرجع إداري " + item.employee_number : ""}`,
     }));
   if (record && !options.some((option) => option.value === record.employee_id))
     options.push({
@@ -620,6 +620,7 @@ function QuickBulkEntry({
     (employee) =>
       !search ||
       employee.name.includes(search) ||
+      (employee.internal_code || "").toLowerCase().includes(search.toLowerCase()) ||
       (employee.employee_number || "")
         .toLowerCase()
         .includes(search.toLowerCase()),
@@ -747,7 +748,7 @@ function QuickBulkEntry({
                     <strong>{employee.name}</strong>
                     <small>
                       <bdi>
-                        {employee.employee_number || employee.id.slice(0, 6)}
+                        {employee.internal_code || employee.id.slice(0, 6)}
                       </bdi>
                     </small>
                   </div>

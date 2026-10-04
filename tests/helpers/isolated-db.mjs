@@ -1,6 +1,6 @@
 import {PGlite} from '@electric-sql/pglite';
 import {readFile,readdir} from 'node:fs/promises';
-export async function isolatedDatabase(run,{beforeCode=false,dataDir}={}) {
+export async function isolatedDatabase(run,{beforeCode=false,beforeRepair=false,dataDir}={}) {
  const db=new PGlite(dataDir);
  const admin='11111111-1111-4111-8111-111111111111';
  try {
@@ -11,6 +11,7 @@ export async function isolatedDatabase(run,{beforeCode=false,dataDir}={}) {
    create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`);
   for (const n of (await readdir('supabase/migrations')).filter(n=>n.endsWith('.sql')).sort()) {
    if(beforeCode&&n>='20260924181305')continue;
+   if(beforeRepair&&n>='20261004')continue;
    await db.exec(await readFile(`supabase/migrations/${n}`,'utf8'));
   }
   await db.exec("set hr.test_fixture='on'");await db.exec(await readFile('supabase/seed.sql','utf8'));

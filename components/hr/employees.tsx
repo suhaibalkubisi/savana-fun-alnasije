@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner";
 import { mutate, useData, useDebounced } from "@/lib/hr/api";
 import { employeeSchema } from "@/lib/hr/validation";
+import {EmployeeIdentityRegistry} from './identity-evidence';
 import {
   baghdadDate,
   departmentLabel,
@@ -195,7 +196,7 @@ export function EmployeesPage({
             <TableHeader>
               <TableRow>
                 <TableHead>الموظف</TableHead>
-                <TableHead>رقم الموظف</TableHead>
+                <TableHead>الرقم الإداري المرجعي</TableHead>
                 <TableHead>القسم</TableHead>
                 <TableHead>الشفت</TableHead>
                 <TableHead>المسؤول المباشر</TableHead>
@@ -296,6 +297,9 @@ export function EmployeeEditor({
     version: employee?.version,
     name: employee?.name || "",
     employee_number: employee?.employee_number || "",
+    phone: employee?.phone || "",
+    emergency_phone: employee?.emergency_phone || "",
+    education: employee?.education || "",
     department_id: employee?.department_id || "",
     shift_id: employee?.shift_id || "",
     direct_manager_id: employee?.direct_manager_id || "",
@@ -356,7 +360,7 @@ export function EmployeeEditor({
                 maxLength={150}
               />
             </Field>
-            <Field label="رقم الموظف في المصدر" hint="رقم اختياري منفصل عن الكود الوظيفي الدائم وعن هوية جهاز البصمة." error={errors.employee_number}>
+            <Field label="الرقم الإداري المرجعي" hint="رقم اختياري منفصل عن الكود الوظيفي الدائم وعن هوية جهاز البصمة." error={errors.employee_number}>
               <Input
                 dir="ltr"
                 value={data.employee_number}
@@ -364,6 +368,9 @@ export function EmployeeEditor({
                 maxLength={50}
               />
             </Field>
+            <Field label="الهاتف (اختياري)"><Input dir="ltr" value={data.phone} onChange={e=>set('phone',e.target.value)} maxLength={50}/></Field>
+            <Field label="هاتف الطوارئ (اختياري)"><Input dir="ltr" value={data.emergency_phone} onChange={e=>set('emergency_phone',e.target.value)} maxLength={50}/></Field>
+            <Field label="التحصيل الدراسي (اختياري)"><Input value={data.education} onChange={e=>set('education',e.target.value)} maxLength={150}/></Field>
             <Choice
               label="القسم"
               value={data.department_id}
@@ -437,7 +444,7 @@ export function EmployeeDetail({
       ? params.get("month")!
       : baghdadDate().slice(0, 7),
   );
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState(params.get('tab')==='fingerprint'?'fingerprint':params.get('tab')==='assignments'?'assignments':'overview');
   const [page, setPage] = useState(1);
   const [edit, setEdit] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -612,7 +619,7 @@ export function EmployeeDetail({
             <>
               <div><small>الكود الوظيفي · دائم</small><strong><bdi>{q.data.internal_code || "غير متاح"}</bdi></strong></div>
               <div>
-                <small>رقم المرجع / الجهاز المسجل</small>
+                <small>الرقم الإداري المرجعي</small>
                 <strong>{q.data.employee_number || "غير محدد"}</strong>
               </div>
               <div>
@@ -648,10 +655,11 @@ export function EmployeeDetail({
           <p>{month}</p>
         </div>
         <div className="history-toolbar">
+          <Button asChild variant="outline"><Link href={`/daily-position?employee_id=${id}&date=${month}-01`}>دليل الدخول اليومي للفترة</Link></Button>
           <Tabs value={tab} onValueChange={setTab} dir="rtl">
             <TabsList>
               <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-              <TabsTrigger value="fingerprint">دليل الحضور</TabsTrigger>
+              <TabsTrigger value="fingerprint">الجلسات الشهرية</TabsTrigger>
               <TabsTrigger value="devices">هويات الأجهزة</TabsTrigger>
               <TabsTrigger value="history">السجل</TabsTrigger>
               <TabsTrigger value="absence">الغيابات</TabsTrigger>
@@ -676,7 +684,7 @@ export function EmployeeDetail({
             />
           </Field>
         </div>
-        {tab==='devices'?<EmployeeDeviceEvidence employeeId={id} month={month}/>:tab==='fingerprint'?<MonthlyPositionPage key={month} reference={reference} period={month} employeeId={id} embedded initialView="summary"/>:tab==='assignments'&&q.data ? <AssignmentHistory employee={q.data} reference={reference} canWrite={user.role!=='VIEWER'}/> : tab === "overview" ? (
+        {tab==='devices'?<><EmployeeIdentityRegistry employeeId={id}/><EmployeeDeviceEvidence employeeId={id} month={month}/></>:tab==='fingerprint'?<MonthlyPositionPage key={month} reference={reference} period={month} importId={params.get('import_id')||undefined} employeeId={id} embedded initialView="summary"/>:tab==='assignments'&&q.data ? <AssignmentHistory employee={q.data} reference={reference} canWrite={user.role!=='VIEWER'}/> : tab === "overview" ? (
           <div className="employee-overview">
             {[
               ["الغياب", reportRow?.absence || 0],

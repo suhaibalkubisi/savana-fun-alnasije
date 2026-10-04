@@ -6,6 +6,9 @@ const optionalId = z
   .union([id, z.literal(""), z.null()])
   .transform((v) => v || null);
 export const employeeSchema = z.object({
+  phone: z.string().trim().max(50).nullable().optional(),
+  emergency_phone: z.string().trim().max(50).nullable().optional(),
+  education: z.string().trim().max(150).nullable().optional(),
   id: id.optional(),
   version: z.number().int().positive().optional(),
   name: text.pipe(

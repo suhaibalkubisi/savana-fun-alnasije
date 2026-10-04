@@ -6,6 +6,7 @@ const month='2026-09';
 async function fixture(ctx){
  const {db,who,hr,write}=ctx;const dep=(await db.query('select id from public.departments limit 1')).rows[0].id;
  await who();const e=await hr('employee.save',{name:'Synthetic monthly employee',employee_number:'TEST-DEVICE',department_id:dep,shift_id:null,direct_manager_id:null,employment_status:'active'});
+ await db.exec('reset role');await db.query('insert into public.fingerprint_identities(person_code,employee_id,source_name,confirmation_reason) values($1,$2,$3,$4)',[e.employee_number,e.id,e.name,'Explicit synthetic device register fixture']);await who();
  await write('rule.save',{department_id:dep,effective_from:'2026-09-01',start_minute:960,grace_minutes:15,entry_window_start:720,entry_window_end:1439,working_weekdays:[0,1,2,3,4,5,6],default_manager_id:null});
  await db.query('select public.employee_assignment_record($1)',[{employee_id:e.id,employee_version:e.version,department_id:dep,shift_id:null,direct_manager_id:null,employment_status:'active',valid_from:'2026-09-01',valid_to:'2026-09-24',reason:'Explicit synthetic schedule evidence'}]);
  const row=(date,minutes,name=e.name,code=e.employee_number)=>({source_sheet:'Punch Record',source_row:2,calendar_date:date,person_code:code,source_name:name,raw_values:[code,name,date,minutes.map(m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`).join('\n')],punch_minutes:minutes,invalid:false});

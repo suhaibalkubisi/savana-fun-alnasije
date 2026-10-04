@@ -245,6 +245,7 @@ export function ReportPage({
               : ""}
           </p>
         </div>
+        <p className="scope-note">المصدر: قرارات HR اليدوية والإجراءات الإدارية. فلاتر القسم والشفت والمسؤول تتبع التنظيم الحالي؛ افتح دليل البصمة من ملف الموظف لعرض الانتماء التاريخي والحضور الخام للفترة.</p>
         <div className="filterbar no-print">
           <Field label="الشهر والسنة">
             <Input
@@ -326,7 +327,7 @@ export function ReportPage({
                         className={i === 1 ? "sticky-name" : ""}
                       >
                         {i === 1 ? (
-                          <><Link href={`/employees/${r.id}`}>{v}</Link>{r.internal_code&&<bdi className="internal-code">{r.internal_code}</bdi>}</>
+                          <><Link href={`/employees/${r.id}?month=${month}`}>{v}</Link>{r.internal_code&&<bdi className="internal-code">{r.internal_code}</bdi>}</>
                         ) : (
                           <bdi>{v}</bdi>
                         )}
@@ -385,7 +386,7 @@ export function ReportPage({
                         {r.employee_number || "—"}
                       </TableCell>
                       <TableCell className="sticky-name">
-                        <Link href={`/employees/${r.id}`}>{r.name}</Link>
+                        <Link href={`/employees/${r.id}?month=${month}`}>{r.name}</Link>
                         <bdi className="internal-code">{r.internal_code}</bdi>
                       </TableCell>
                       <TableCell>

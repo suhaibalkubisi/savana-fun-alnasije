@@ -57,6 +57,7 @@ export async function GET(request: Request) {
     }
     if (kind === 'attendance.daily') return json(buildDailyPosition(await rpc('attendance_daily_evidence',{p_filters:filters},s.token),filters));
     if (kind === 'employee.assignments') return json(await rpc('employee_assignments',{p_employee_id:z.string().uuid().parse(filters.employee_id)},s.token));
+    if (kind === 'attendance.identity_proposal' || kind === 'attendance.identity_registry') return json(await rpc(kind === 'attendance.identity_proposal'?'attendance_identity_proposal':'attendance_identity_registry',{p_filters:filters},s.token));
     return json(
       await rpc(
         kind.startsWith("attendance.") ? "attendance_read_v5" : "hr_read_v4",
@@ -76,6 +77,8 @@ export async function POST(request: Request) {
     if (s.profile.role === "VIEWER")
       throw new AppError("ليست لديك صلاحية لهذه العملية", 403);
     let schema: z.ZodTypeAny;
+    if (action === 'attendance.daily.replace') return json(await rpc('attendance_daily_replace',{p_data:z.object({id:z.string().uuid(),version:z.number().int().positive(),replacement_id:z.string().uuid(),replacement_version:z.number().int().positive(),reason:z.string().trim().min(3).max(2000)}).parse(data)},s.token));
+    if (action === 'attendance.boundary.record') return json(await rpc('attendance_boundary_record',{p_data:z.object({id:z.string().uuid(),version:z.number().int().positive(),adjacent_import_id:z.string().uuid(),reason:z.string().trim().min(3).max(2000)}).parse(data)},s.token));
     if (action === 'employee.assignment.record') {
       const parsed=z.object({id:z.string().uuid().optional(),version:z.number().int().positive().optional(),employee_id:z.string().uuid(),employee_version:z.number().int().positive(),department_id:z.string().uuid(),shift_id:z.string().uuid().nullable(),direct_manager_id:z.string().uuid().nullable(),employment_status:z.enum(['active','inactive','resigned','long_leave']),valid_from:z.string().date(),valid_to:z.string().date(),reason:z.string().trim().min(3).max(2000)}).parse(data);
       return json(await rpc('employee_assignment_record',{p_data:parsed},s.token));

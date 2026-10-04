@@ -18,9 +18,9 @@ import {BrandImage} from './brand-image';
 const lifecycle:Record<string,string>={preview:'معاينة غير معتمدة',reviewed:'تمت المراجعة · بانتظار الاعتماد',approved:'حضور معتمد',cancelled:'ملغى · للرجوع فقط',superseded:'مستبدل · للرجوع فقط'};
 const conditions=[{value:'with_punch',label:'لديها بصمات'},{value:'complete',label:'دخول وخروج'},{value:'incomplete',label:'بصمات ناقصة'},{value:'no_punch',label:'لا توجد بصمات'},{value:'pending',label:'تحتاج مراجعة'},{value:'unmatched',label:'هوية غير مطابقة'}];
 const summaryHeaders=['الكود الوظيفي','الموظف','القسم','البصمات الخام في الملف','البصمات الفعلية في الملف','أيام ببصمة','دخول وخروج','بصمات ناقصة','تواريخ بلا بصمات','تحتاج مراجعة','دقائق بين البصمات','دقائق تأخير','أول دليل في الملف','آخر دليل في الملف'];
-const summaryValues=(r:MonthlyPerson)=>([r.internal_code||'غير مطابق',r.name,r.department,r.raw_punch_count,r.effective_punch_count,r.summary.with_punch,r.summary.complete,r.summary.incomplete,r.summary.no_punch,r.summary.pending,r.summary.worked_minutes,r.summary.late_minutes,r.first_evidence||'—',r.last_evidence||'—']);
+const summaryValues=(r:MonthlyPerson)=>([r.internal_code||'غير مطابق',r.name,r.department,r.raw_punch_count,r.effective_punch_count,r.summary.with_punch,r.summary.complete,r.summary.incomplete,r.summary.no_punch,r.summary.pending,r.summary.worked_minutes ?? '—',r.summary.late_minutes,r.first_evidence||'—',r.last_evidence||'—']);
 const matrixHeaders=(from:number,to:number)=>['الكود الوظيفي','الموظف','القسم','الحركة',...Array.from({length:to-from+1},(_,i)=>String(from+i)),'مكتمل','ناقص','بلا بصمات','مراجعة','دقائق موثقة'];
-const hourDuration=(m:number)=>`${Math.floor(m/60)} س ${m%60} د`;
+const hourDuration=(m:number|null)=>m===null?'غير متاح':`${Math.floor(m/60)} س ${m%60} د`;
 const reportDate=(date:string)=>new Intl.DateTimeFormat('ar-IQ',{day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Baghdad'}).format(new Date(date+'T12:00:00Z'));
 const exportLegend='+1 خروج اليوم التالي؛ ناقص خروج غير مسجل؛ — لا قيمة موثقة. الملخص الشهري مكرر للرجوع ولا يُجمع عبر أجزاء الأيام.';
 
@@ -42,7 +42,7 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
  const position=source?scopeMonthlyPosition(source,{search,department_id:dep,manager_id:manager,condition,employee_key:employeeScope}):undefined;
  const selectedPerson=position?.rows.find(r=>r.key===selected)||null;
  const activeFilters=[search,dep,manager,condition,from,through,employeeScope].filter(Boolean).length;
- const scopeLabel=[period||month,position?.coverage?`${position.coverage.start} - ${position.coverage.end}`:'التغطية غير متاحة',lifecycle[position?.batch?.lifecycle_state||'preview'],dep?reference.departments.find(d=>d.id===dep)?.arabic_name:'كل الأقسام',manager?reference.managers.find(m=>m.id===manager)?.name:'كل المسؤولين',condition?conditions.find(c=>c.value===condition)?.label:'كل الحالات',search?`بحث: ${search}`:''].filter(Boolean).join(' · ');
+ const scopeLabel=[period||month,position?.batch?position.batch.source_name+' · v'+position.batch.version:'',position?.calculation_basis==='approval_snapshot'?'سياق الاعتماد المحفوظ':'الأدلة المتاحة حالياً',position?.coverage?`${position.coverage.start} - ${position.coverage.end}`:'التغطية غير متاحة',lifecycle[position?.batch?.lifecycle_state||'preview'],dep?reference.departments.find(d=>d.id===dep)?.arabic_name:'كل الأقسام',manager?reference.managers.find(m=>m.id===manager)?.name:'كل المسؤولين',condition?conditions.find(c=>c.value===condition)?.label:'كل الحالات',search?`بحث: ${search}`:''].filter(Boolean).join(' · ');
  async function exportFile(pdf:boolean,detail?:MonthlyPerson) {
   if(!position?.available||exporting)return;setExporting(true);setExportError('');
   try{
@@ -74,8 +74,8 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
    <div className="filterbar">
     {!embedded&&<Field label="الشهر والسنة"><Input type="month" value={month} onChange={e=>{setMonth(e.target.value);setFrom('');setThrough('');setSelected(null);}}/></Field>}
     <SearchBox value={search} onChange={setSearch} placeholder="الاسم، الكود الوظيفي أو رقم البصمة"/>
-    <Choice label="القسم بتاريخ العرض" value={dep} onChange={setDep} options={reference.departments.map(d=>({value:d.id,label:departmentLabel(d)}))}/>
-    <Choice label="المسؤول بتاريخ العرض" value={manager} onChange={setManager} options={reference.managers.map(m=>({value:m.id,label:m.name}))}/>
+    <Choice label="القسم بنهاية الفترة المعروضة" value={dep} onChange={setDep} options={reference.departments.map(d=>({value:d.id,label:departmentLabel(d)}))}/>
+    <Choice label="المسؤول بنهاية الفترة المعروضة" value={manager} onChange={setManager} options={reference.managers.map(m=>({value:m.id,label:m.name}))}/>
     <Choice label="حالة البصمة" value={condition} onChange={setCondition} options={conditions}/>
    </div>
    <div className="scope-toolbar">
@@ -93,6 +93,7 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
      <div><strong dir="ltr">{position.coverage?.start} — {position.coverage?.end}</strong><span>{position.coverage?.confirmed?'نطاق التغطية الذي حُدد عند الاستيراد':'نطاق الأدلة المرصودة · اكتمال جمع البصمات غير مؤكد'}</span></div>
      {position.batch?.approved_at&&<div><span>آخر اعتماد</span><time>{new Date(position.batch.approved_at).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad'})}</time></div>}
     </div>
+    <p className="scope-note">نسخة المصدر: {position.batch?.version??'محلية'} · {position.calculation_basis==='approval_snapshot'?'الحساب بسياق الاعتماد المحفوظ':'الحساب بالأدلة المتاحة حالياً'}{position.boundary_import_id?' · يتضمن دليل حد الشهر المثبت صراحةً':''}</p>
     <p className="scope-note">مطابقة المصدر الأصلي كاملاً — هذه الأعداد لا تتغير بفلاتر العرض أدناه.</p>
     <div className="monthly-source-strip">
      <span><b>{position.source_counts?.identities}</b> هوية مصدر</span><span><b>{position.source_counts?.matched_identities}</b> مطابقة</span><span><b>{position.source_counts?.populated_cells}</b> خلية ممتلئة</span><span><b>{position.source_counts?.raw_punches}</b> بصمة خام</span><span><b>{position.source_counts?.effective_punches}</b> بصمة بعد دمج التكرار</span>
@@ -117,7 +118,7 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
   </LoadState>
   <Dialog open={!!selectedPerson} onOpenChange={open=>{if(!open)setSelected(null);}}><DialogContent className="monthly-detail-dialog"><DialogHeader><DialogTitle>{selectedPerson?.name} <bdi>{selectedPerson?.internal_code||'هوية غير مطابقة'}</bdi></DialogTitle><DialogDescription>الأدلة الأصلية وتواريخها لا تتغير عند حساب تاريخ الوردية.</DialogDescription></DialogHeader>{selectedPerson&&<>
    <div className="profile-strip"><span>رقم البصمة: <bdi>{selectedPerson.person_codes.join(' / ')}</bdi></span><span>{selectedPerson.department}</span><span>{selectedPerson.employment_status?employmentLabels[selectedPerson.employment_status as keyof typeof employmentLabels]:'غير مطابق'}</span><span>{selectedPerson.raw_punch_count} بصمة خام / {selectedPerson.summary.complete} يوم مكتمل</span></div>
-   <div className="flex flex-wrap gap-2"><Button disabled={exporting} variant="outline" onClick={()=>exportFile(false,selectedPerson)}>Excel للتفاصيل</Button><Button disabled={exporting} variant="outline" onClick={()=>exportFile(true,selectedPerson)}>PDF للتفاصيل</Button>{selectedPerson.employee_id&&<Button asChild variant="outline"><Link href={`/employees/${selectedPerson.employee_id}`}>ملف الموظف</Link></Button>}{selectedImport&&<Button asChild variant="outline"><Link href={`/fingerprint-issues?import_id=${selectedImport}&import_kind=monthly`}>معالجة مشاكل الملف</Link></Button>}</div>
+   <div className="flex flex-wrap gap-2"><Button disabled={exporting} variant="outline" onClick={()=>exportFile(false,selectedPerson)}>Excel للتفاصيل</Button><Button disabled={exporting} variant="outline" onClick={()=>exportFile(true,selectedPerson)}>PDF للتفاصيل</Button>{selectedPerson.employee_id&&<Button asChild variant="outline"><Link href={`/employees/${selectedPerson.employee_id}?month=${month}&tab=fingerprint${position?.batch?.id?'&import_id='+position.batch.id:''}`}>ملف الموظف</Link></Button>}{selectedImport&&<Button asChild variant="outline"><Link href={`/fingerprint-issues?import_id=${selectedImport}&import_kind=monthly`}>معالجة مشاكل الملف</Link></Button>}</div>
    <p className="scope-note">أول دليل في الملف: <bdi>{selectedPerson.first_evidence||'غير متاح'}</bdi> · آخر دليل: <bdi>{selectedPerson.last_evidence||'غير متاح'}</bdi> · أعداد الأيام والمدة تتبع الفلاتر؛ أعداد البصمات الخام والفعلية تخص أدلة الموظف في الملف كاملاً.</p>
    <Choice label="تصفية الأيام" value={condition} onChange={setCondition} options={conditions}/>
    {!!selectedPerson.unassigned_timeline.length&&<details className="workflow-notice"><summary>{selectedPerson.unassigned_timeline.length} بصمة تحتاج إعداد دوام أو دليل حدود الشهر</summary><PunchTimeline punches={selectedPerson.unassigned_timeline}/></details>}

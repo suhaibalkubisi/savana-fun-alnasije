@@ -28,7 +28,7 @@ test('same-calendar morning is never fabricated as the evening shift next-day ex
 });
 test('single punch remains incomplete and valid lateness does not require an exit',()=>{
  const r=buildMonthlyPosition(fixture({10:[1000]})).rows[0];assert.equal(r.cells[10].state,'single');
- assert.equal(r.cells[10].exit,null);assert.equal(r.cells[10].late_minutes,40);assert.equal(r.summary.late_minutes,40);assert.equal(r.summary.worked_minutes,0);
+ assert.equal(r.cells[10].exit,null);assert.equal(r.cells[10].late_minutes,40);assert.equal(r.summary.late_minutes,40);assert.equal(r.summary.worked_minutes,null);
 });
 test('missing historical schedule exposes evidence without guessed pairing or duration',()=>{
  const r=buildMonthlyPosition(fixture({1:[90,965,1100]},{rules:[{...rule,effective_from:'2026-09-08'}]})).rows[0];
@@ -72,7 +72,7 @@ test('manual HR annotation does not erase fingerprint evidence or turn it into a
 });
 test('blocking evidence issues keep duration unavailable and pending filters reconcile',()=>{
  const f=fixture({10:[960,1100]},{issues:[{id:'issue',source_row_id:'source-0',state:'open',issue_type:'punch_conflict'}]});
- const p=scopeMonthlyPosition(buildMonthlyPosition(f),{condition:'pending'});assert.equal(p.metrics.pending,1);assert.equal(p.rows[0].cells[10].duration,null);assert.equal(p.metrics.worked_minutes,0);
+ const p=scopeMonthlyPosition(buildMonthlyPosition(f),{condition:'pending'});assert.equal(p.metrics.pending,1);assert.equal(p.rows[0].cells[10].duration,null);assert.equal(p.metrics.worked_minutes,null);
 });
 test('matrix exports use explicit entry/exit labels and +1 without conflating punch and day counts',()=>{
  const p=buildMonthlyPosition(fixture({10:[960],11:[90]}));const rows=monthlyMatrixRows(p);

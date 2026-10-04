@@ -1,5 +1,5 @@
 "use client";
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import {
   Search,
   Inbox,
@@ -177,8 +177,9 @@ export function SearchPicker({
 }) {
   const id = useId();
   const selected = options.find((o) => o.value === value) || null;
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   return (
-    <div className="field">
+    <div className="field" ref={setContainer} data-selected-value={value}>
       <label htmlFor={inputId || id}>{label}</label>
       <Combobox
         items={options}
@@ -194,7 +195,7 @@ export function SearchPicker({
           className="w-full h-11 bg-white"
           showClear
         />
-        <ComboboxContent>
+        <ComboboxContent container={container}>
           <ComboboxEmpty>لا توجد نتائج</ComboboxEmpty>
           <ComboboxList>
             {(item: Option) => (

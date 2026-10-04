@@ -43,8 +43,9 @@ import {
   departmentLabel,
   type Reference,
 } from "@/lib/hr/types";
-import { download, brandedExcelBytes as tableExcelBytes, tablePdfBytes, dailyColumnWeights } from "@/lib/hr/exports";
+import { download, brandedExcelBytes, tablePdfBytes, dailyColumnWeights } from "@/lib/hr/exports";
 import { formatClock12 } from "@/lib/hr/time-format.mjs";
+import { IdentityProposal } from "./identity-evidence";
 import { MonthlyPositionPage } from './monthly-position';
 import {
   Choice,
@@ -84,6 +85,9 @@ type DayRow = {
   expected: boolean;
   daily_note_text: string;
   needs_review: boolean;
+  raw_timeline: {calendar_date:string;minute:number;source_id:string}[];
+  source_names: string[];
+  calculation_basis:string;
 };
 type Batch = {
   id: string;
@@ -105,6 +109,9 @@ const labels: Record<string, string> = {
   absence3: "غياب ×3",
   leave: "إجازة",
   no_entry: "بلا بصمة دخول",
+  no_file: "لا يوجد ملف يومي معتمد",
+  entry_recorded: "دخول موثق",
+  outside_entry_window: "بصمات خارج نافذة الدخول",
   missing_schedule: "الدوام غير محدد",
   missing_assignment: "الانتماء التاريخي غير موثق",
   pending_review: "بصمات تحتاج مراجعة",
@@ -145,6 +152,7 @@ function ExportButtons({
   rows,
   columnWeights,
   notesArea = false,
+  disabled = false,
 }: {
   title: string;
   period: string;
@@ -152,6 +160,7 @@ function ExportButtons({
   rows: (string | number)[][];
   columnWeights?: number[];
   notesArea?: boolean;
+  disabled?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   async function run(pdf: boolean) {
@@ -159,8 +168,8 @@ function ExportButtons({
     try {
       const report = { title, period, headers, rows, columnWeights, notesArea };
       download(
-        pdf ? await tablePdfBytes(report) : await tableExcelBytes(report),
-        `${title}-${period}.${pdf ? "pdf" : "xlsx"}`,
+        pdf ? await tablePdfBytes(report) : await brandedExcelBytes(report),
+        `FANU-daily-${period.slice(0,10)}.${pdf ? "pdf" : "xlsx"}`,
         pdf
           ? "application/pdf"
           : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -173,11 +182,11 @@ function ExportButtons({
   }
   return (
     <div className="flex gap-2 no-print">
-      <Button variant="outline" disabled={busy} onClick={() => run(false)}>
+      <Button variant="outline" disabled={busy || disabled} onClick={() => run(false)}>
         <FileSpreadsheet size={16} />
         Excel
       </Button>
-      <Button variant="outline" disabled={busy} onClick={() => run(true)}>
+      <Button variant="outline" disabled={busy || disabled} onClick={() => run(true)}>
         <FileDown size={16} />
         PDF
       </Button>
@@ -293,12 +302,17 @@ export function DailyAttendanceReport({
     busy,
     edit?.employee_id,
   );
+  const debouncedSearch=useDebounced(search);
+  const [evidenceRow,setEvidenceRow]=useState<DayRow|null>(null);
   const query = useData<{
     rows: DayRow[];
+    imports: {id:string;source_name:string;linked_rows:number;unlinked_rows:number}[];
+    unmatched_sources: {id:string;source_name:string;person_code:string;punch_minutes:number[]}[];
   }>("attendance.daily", {
     date,
     department_id: dep,
-    search: useDebounced(search),
+    search: debouncedSearch,
+    employee_id: params.get("employee_id") || "",
   });
   const title = "الموقف اليومي";
   const rawRows = query.data?.rows || [];
@@ -311,17 +325,14 @@ export function DailyAttendanceReport({
   const headers = [
     "ت",
     "الكود الوظيفي",
-    "رقم الموظف",
-    "كود البصمة",
     "الموظف",
     "القسم",
     "المسؤول",
     "وقت الدوام",
     "الدخول",
-    "الخروج",
-    "دقائق العمل الموثقة",
     "دقائق التأخير",
-    "الحالة",
+    "حالة الدليل",
+    "المصدر / الحساب",
     "الإجراء",
     "قرار HR",
     "الملاحظات",
@@ -329,17 +340,14 @@ export function DailyAttendanceReport({
   const values = rows.map((r) => [
     rows.indexOf(r) + 1,
     r.internal_code || "",
-    r.employee_number || "",
-    r.person_code || "",
     r.name,
     r.department,
     r.manager || "غير محدد",
     time(r.scheduled_start_minute),
     time(r.entry_minute),
-    time(r.exit_minute) + (r.next_day ? " (+1)" : ""),
-    r.duration_minutes ?? "—",
     r.late_minutes ?? "—",
-    labels[r.status] || r.status,
+    labels[r.attendance_state] || r.attendance_state,
+    `${r.source_names.join(" / ") || "لا يوجد مصدر مرتبط"} · ${r.calculation_basis==="approval_snapshot"?"سياق الاعتماد":"أدلة تاريخية متاحة"}`,
     r.procedure_text,
     labels[r.manual_status || ""] || "",
     r.notes,
@@ -403,9 +411,11 @@ export function DailyAttendanceReport({
     <>
       <PageTitle
         title={title}
+        subtitle="دخول فقط · التصفية حسب انتماء يوم العمل الموثق · البصمات لا تنشئ غياباً إدارياً"
         actions={
           <ExportButtons
             title={title}
+            disabled={query.loading || !!query.error || search!==debouncedSearch}
             period={[
               date,
               dep
@@ -530,6 +540,8 @@ export function DailyAttendanceReport({
         error={query.error}
         retry={query.refresh}
       >
+        {query.data?.imports?.map(b=><p key={b.id} className="workflow-notice">{b.source_name} · {b.linked_rows} صف مرتبط · {b.unlinked_rows} صف غير مرتبط {b.unlinked_rows>0?'— اعتماد جزئي؛ الصفوف غير المرتبطة لا تدخل الموقف':''}</p>)}
+        {!!query.data?.unmatched_sources?.length&&<details className="workspace-panel"><summary>متابعة الأدلة غير المرتبطة ({query.data.unmatched_sources.length})</summary>{query.data.unmatched_sources.map(s=><p key={s.id}>{s.source_name} · {s.person_code} · {s.punch_minutes.map(time).join(' / ')}</p>)}<p>المصدر المعتمد ثابت؛ راجع هذه الأدلة في مصدر تصحيحي مستقل قبل أي اعتماد جديد.</p></details>}
         <Metrics
           items={[
             ["المتوقعون", rows.filter((r) => r.expected).length],
@@ -539,15 +551,16 @@ export function DailyAttendanceReport({
             ["غياب", count("absence") + count("absence2") + count("absence3")],
             ["إجازة", count("leave")],
             ["بلا بصمة دخول", count("no_entry")],
-            ["يحتاج مراجعة", rawRows.filter((r) => r.needs_review).length],
+            ["يحتاج مراجعة", rows.filter((r) => r.needs_review).length],
           ]}
         />
         <Grid
-          headers={canWrite ? [...headers, "تعديل"] : headers}
+          headers={[...headers, "الدليل الخام", ...(canWrite ? ["تعديل"] : [])]}
           rows={values.map((v, i) =>
             canWrite
               ? [
                   ...v,
+                  <Button key="evidence" variant="outline" onClick={()=>setEvidenceRow(rows[i])}>عرض البصمات ({rows[i].raw_timeline.length})</Button>,
                   <Button
                     key="edit"
                     variant="ghost"
@@ -562,10 +575,11 @@ export function DailyAttendanceReport({
                     <PencilLine size={15} /> تعديل
                   </Button>,
                 ]
-              : v,
+              : [...v,<Button key="evidence" variant="outline" onClick={()=>setEvidenceRow(rows[i])}>عرض البصمات ({rows[i].raw_timeline.length})</Button>],
           )}
         />
       </LoadState>
+      <Dialog open={!!evidenceRow} onOpenChange={o=>!o&&setEvidenceRow(null)}><DialogContent><DialogHeader><DialogTitle>{evidenceRow?.name} · دليل {date}</DialogTitle></DialogHeader><p>هذه أوقات المصدر الأصلية؛ لا تعني كل بصمة دخولاً. غياب الانتماء أو الدوام يمنع الحساب فقط ولا يخفي الدليل.</p><p>{evidenceRow?.raw_timeline.map(p=>time(p.minute)).join(' / ') || 'لا توجد بصمات مرتبطة'}</p><p>{labels[evidenceRow?.attendance_state || '']}</p><Link href={"/employees/"+evidenceRow?.employee_id+"?month="+date.slice(0,7)}>ملف الموظف وتوثيق الفترة</Link></DialogContent></Dialog>
       <Dialog
         open={!!edit}
         onOpenChange={(o) => !o && editGuard.canClose() && setEdit(null)}
@@ -1222,7 +1236,7 @@ export function FingerprintIssues({
             : "المشاكل المعروضة تخص الملفات غير الملغاة. افتح المشاكل من معاينة الملف لتحديد نطاق العمل."}
         </p>
         <p>
-          تُجمع مشاكل المطابقة الشهرية حسب الملف والكود والاسم. لا تختَر موظفاً
+          تُعرض مشاكل المطابقة حسب الملف ونطاق الجهاز والكود والاسم. لا تختَر موظفاً
           اعتماداً على الاسم وحده؛ تحقق من الرقم والقسم وحالة الخدمة. الربط لا
           يعتمد الحضور.
         </p>
@@ -1270,7 +1284,7 @@ export function FingerprintIssues({
               : `${r.first_date} — ${r.last_date}`,
             r.person_code,
             r.source_name,
-            r.details,
+            r.candidates.length===1 ? "مرشح معروف يحتاج تأكيداً" : r.candidates.length>1 ? "مرشحون متعددون" : r.details,
             r.related_open_count || 1,
             canWrite && state === "open" ? (
               <Button
@@ -1311,7 +1325,8 @@ export function FingerprintIssues({
               البصمات:{" "}
               {issue?.punch_minutes?.map(time).join(" / ") || "لا توجد"}
             </p>
-            <p>{issue?.details}</p>
+            <p>{issue?.candidates.length ? `${issue.candidates.length} مرشح للمراجعة؛ الاسم وحده لا يثبت الهوية.` : issue?.details}</p>
+            {issue && <IdentityProposal issueId={issue.id}/>}
             {issue?.group_token && (
               <p className="workflow-notice">
                 تأكيد الربط سيعالج {issue.related_open_count} مشاكل يومية لنفس
@@ -1324,13 +1339,14 @@ export function FingerprintIssues({
             label="الموظف الصحيح"
             value={employee}
             onChange={setEmployee}
-            disabled={busy || employees.loading}
+            disabled={busy || (employees.loading && !employees.data)}
             options={(employees.data || reference.employees).map((e) => ({
               value: e.id,
               label: `${e.name} — ${'internal_code' in e ? e.internal_code : ''} — ${e.department} — رقم ${e.employee_number || 'غير محدد'}${"employment_status" in e && e.employment_status !== "active" ? " — غير نشط" : ""}${issue?.candidates.some((c) => c.id === e.id) ? " — مرشح للمراجعة" : ""}`,
             }))}
           />
           {employees.error && <p role="alert">{employees.error}</p>}
+          <Button variant="outline" disabled={busy} onClick={async()=>{if(!issue)return;setBusy(true);try{const result=await mutate<{state:string}>("attendance.issue.reprocess",{id:issue.id,version:issue.version});toast.info(result.state==='resolved'?'أعيد الربط من هوية مؤكدة؛ لم يُعتمد حضور':'لا توجد هوية مؤكدة آمنة؛ ما زالت تحتاج قراراً');setIssue(null);}catch(e){toast.error((e as Error).message);}finally{setBusy(false);query.refresh();}}}>إعادة التحقق من الربط المؤكد</Button>
           <Field label="سبب المعالجة">
             <Input
               value={note}
@@ -1344,7 +1360,7 @@ export function FingerprintIssues({
               employees.loading ||
               !!employees.error ||
               !employee ||
-              !note.trim()
+              note.trim().length<3
             }
             onClick={() => resolve()}
           >
@@ -1356,7 +1372,7 @@ export function FingerprintIssues({
           </Button>
           <Button
             variant="outline"
-            disabled={busy || !note.trim()}
+            disabled={busy || note.trim().length<3}
             onClick={() => resolve(true)}
           >
             استبعاد من المعالجة

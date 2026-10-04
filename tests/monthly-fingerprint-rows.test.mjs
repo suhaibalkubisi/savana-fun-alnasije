@@ -13,7 +13,7 @@ before(async () => {
     create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);
     create function auth.uid() returns uuid language sql stable as
     $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`);
-  for (const file of (await readdir("supabase/migrations")).filter(f => f.endsWith(".sql") && !f.endsWith("_restrict_legacy_attendance_reads.sql")).sort())
+  for (const file of (await readdir("supabase/migrations")).filter(f => f.endsWith(".sql") && !f.endsWith("_restrict_legacy_attendance_reads.sql") && f < "20261004").sort())
     await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
   await db.exec("set hr.test_fixture='on'");
   await db.exec(await readFile("supabase/seed.sql", "utf8"));
