@@ -38,7 +38,7 @@ test('additive migration preserves old rows and local backup restores the same e
  for(const t of tables){columns[t]=(await db.query('select column_name from information_schema.columns where table_schema=$1 and table_name=$2 order by ordinal_position',['public',t])).rows.map(x=>'"'+x.column_name+'"').join(',');before[t]=(await db.query('select '+columns[t]+' from public.'+t+' order by id')).rows;}
  const backup=await db.dumpDataDir();const restored=new PGlite({loadDataDir:backup});
  try{assert.deepEqual((await restored.query('select '+columns.fingerprint_source_rows+' from public.fingerprint_source_rows order by id')).rows,before.fingerprint_source_rows);}finally{await restored.close();}
- await db.exec(await readFile('supabase/migrations/20261004174921_hr_audit_repair.sql','utf8'));
+ await db.exec(await readFile('supabase/migrations/20261004191207_hr_audit_repair.sql','utf8'));
  for(const t of tables)assert.deepEqual((await db.query('select '+columns[t]+' from public.'+t+' order by id')).rows,before[t],t+' changed existing rows');
  assert.equal((await db.query("select count(*) n from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and not c.relrowsecurity")).rows[0].n,0);
 },{beforeRepair:true}));

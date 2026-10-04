@@ -5,7 +5,7 @@ Prepared 2026-10-04. **Not executed.** The user's authorization covers local imp
 ## Release artifact
 
 - Isolated branch: `codex/hr-audit-repair-2026-10-04`, in `work/audit-repair`.
-- New migration only: `supabase/migrations/20261004174921_hr_audit_repair.sql`.
+- New migration only: `supabase/migrations/20261004191207_hr_audit_repair.sql`.
 - Deployment anchor to recheck: Sites project `appgprj_6a9af274e9908191a04ba042ed441523`, v23, source `c12f78142273cef209868785f40658014ea95db9`.
 - Database anchor: Supabase `fkusqnasptkvpusczxpm`. No production credentials belong in scripts, screenshots, Git or reports.
 - No production identities, assignment backfills, attendance import state changes or HR decisions are contained in the migration. Existing evidence receives additive metadata; existing data and history are retained.
@@ -38,7 +38,7 @@ Also disconnect a client after server commit but before response, refetch state/
 
 1. Revalidate all gates and the exact final commit. Put the application in maintenance/read-only mode using an explicitly authorized deployment mechanism; do not change business data to simulate maintenance.
 2. Take and verify the fresh database backup (schema, data, roles/privileges and required extension configuration), record restore instructions and preservation digests. Preserve previous application artifact and source. Do not print secrets or export employee data into public artifacts.
-3. Apply only migration `20261004174921_hr_audit_repair.sql` using the approved Supabase migration workflow. Inspect the migration plan first; confirm no pending unrelated migrations. The SQL has its own transaction. On an error, stop and investigate; do not mark a failed migration applied manually.
+3. Apply only migration `20261004191207_hr_audit_repair.sql` using the approved Supabase migration workflow. Inspect the migration plan first; confirm no pending unrelated migrations. The SQL has its own transaction. On an error, stop and investigate; do not mark a failed migration applied manually.
 4. Verify migration history, function definitions, constrained search_path/roles, RLS, identity uniqueness, no orphaned relations, equal original raw counts/digests, preserved employee UUIDs/codes and HR/audit records. Additive columns and new audit activity must be evaluated separately from pre-existing row values.
 5. Deploy the exact reviewed application commit through Sites. Record new deployment/version/source. Verify actual artifact content rather than assuming branch names imply the right release. Avoid exposing full connector output containing bypass tokens.
 6. Run read-only live smoke tests: sign-in/session roles, employee list/detail, daily raw evidence and entry-only layout, historical missing-context explanation, monthly no-approved-source state, source/registry views, report labels and settings/audit access. Use synthetic staging for writes; never approve attendance or confirm real identities as a live smoke test.
