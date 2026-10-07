@@ -190,7 +190,7 @@ function ExportButtons({
         <FileDown size={16} />
         PDF
       </Button>
-      <Button variant="outline" onClick={() => window.print()}>
+      <Button variant="outline" disabled={busy || disabled} onClick={() => window.print()}>
         <Printer size={16} />
         طباعة
       </Button>
@@ -274,6 +274,7 @@ export function DailyAttendanceReport({
   canWrite?: boolean;
 }) {
   const params = useSearchParams();
+  const employeeScope = params.get("employee_id") || "";
   const [date, setDate] = useState(
       /^\d{4}-\d{2}-\d{2}$/.test(params.get("date") || "")
         ? params.get("date")!
@@ -312,7 +313,7 @@ export function DailyAttendanceReport({
     date,
     department_id: dep,
     search: debouncedSearch,
-    employee_id: params.get("employee_id") || "",
+    employee_id: employeeScope,
   });
   const title = "الموقف اليومي";
   const rawRows = query.data?.rows || [];
@@ -479,6 +480,7 @@ export function DailyAttendanceReport({
         />
 
         <SearchBox value={search} onChange={setSearch} />
+        {employeeScope&&<div className="workflow-notice">عرض موظف واحد: {reference.employees.find(e=>e.id===employeeScope)?.name||"الموظف المختار"} <Button asChild variant="outline"><Link href={`/daily-position?date=${date}`}>عرض كل الموظفين</Link></Button></div>}
         {
           <div className="daily-filter-card">
             <span>التصفية السريعة</span>

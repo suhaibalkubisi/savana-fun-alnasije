@@ -684,7 +684,7 @@ export function EmployeeDetail({
             />
           </Field>
         </div>
-        {tab==='devices'?<><EmployeeIdentityRegistry employeeId={id}/><EmployeeDeviceEvidence employeeId={id} month={month}/></>:tab==='fingerprint'?<MonthlyPositionPage key={month} reference={reference} period={month} importId={params.get('import_id')||undefined} employeeId={id} embedded initialView="summary"/>:tab==='assignments'&&q.data ? <AssignmentHistory employee={q.data} reference={reference} canWrite={user.role!=='VIEWER'}/> : tab === "overview" ? (
+        {tab==='devices'?<><EmployeeIdentityRegistry employeeId={id}/><EmployeeDeviceEvidence employeeId={id} month={month}/></>:tab==='fingerprint'?<MonthlyPositionPage key={month} reference={reference} period={month} importId={month===params.get('month')?params.get('import_id')||undefined:undefined} employeeId={id} embedded initialView="summary"/>:tab==='assignments'&&q.data ? <AssignmentHistory employee={q.data} reference={reference} canWrite={user.role!=='VIEWER'}/> : tab === "overview" ? (
           <div className="employee-overview">
             {[
               ["الغياب", reportRow?.absence || 0],
@@ -782,7 +782,7 @@ export function EmployeeDetail({
             />
           </LoadState>
         )}
-        {tab !== "overview" && tab!=='assignments' && (
+        {['history','absence','leave','late','actions','audit'].includes(tab) && (
           <Pager
             page={page}
             total={

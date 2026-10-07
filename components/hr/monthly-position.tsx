@@ -27,11 +27,12 @@ const exportLegend='+1 خروج اليوم التالي؛ ناقص خروج غي
 export function MonthlyPositionPage({reference,importId,period,embedded=false,initialView='matrix',localPosition,employeeId}:{reference:Reference;importId?:string;period?:string;embedded?:boolean;initialView?:'matrix'|'dashboard'|'summary'|'evidence';localPosition?:MonthlyPosition;employeeId?:string}) {
  const params=useSearchParams();
  const [month,setMonth]=useState(period||params.get('month')||baghdadDate().slice(0,7));
- const selectedImport=importId||params.get('import_id')||undefined;
+ const [pinnedImport,setPinnedImport]=useState(params.get('import_id')||undefined);
+ const selectedImport=importId||(embedded?undefined:pinnedImport);
  const [view,setView]=useState(initialView),[search,setSearch]=useState(''),[dep,setDep]=useState(''),[manager,setManager]=useState(''),[condition,setCondition]=useState(params.get('condition')||'');
  const [from,setFrom]=useState(''),[through,setThrough]=useState('');
  const [selected,setSelected]=useState<string|null>(null),[exporting,setExporting]=useState(false);
- const [exportFileLink,setExportFileLink]=useState<{url:string;name:string;bytes:number}|null>(null);
+ const [exportFileLink,setExportFileLink]=useState<{url:string;name:string;bytes:number;scope:string}|null>(null);
  const [exportError,setExportError]=useState('');
  const [printing,setPrinting]=useState(false);
  useEffect(()=>{const before=()=>flushSync(()=>setPrinting(true)),after=()=>setPrinting(false);window.addEventListener('beforeprint',before);window.addEventListener('afterprint',after);return()=>{window.removeEventListener('beforeprint',before);window.removeEventListener('afterprint',after);};},[]);
@@ -64,7 +65,7 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
    const bytes=pdf?await tablePdfBytes(report):await tableExcelBytes(report);
    const name=`FANU-fingerprint-${position.month}${detail?'-employee':''}.${pdf?'pdf':'xlsx'}`;
    const mime=pdf?'application/pdf':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-   setExportFileLink({url:URL.createObjectURL(new Blob([bytes as BlobPart],{type:mime})),name,bytes:bytes.length});
+   setExportFileLink({url:URL.createObjectURL(new Blob([bytes as BlobPart],{type:mime})),name,bytes:bytes.length,scope:scopeLabel+'|'+view+'|'+(detail?.key||'')});
    download(bytes,name,mime);
   }catch(e){const message=(e as Error).message||'تعذر تصدير التقرير';setExportError(message);toast.error(message);}finally{setExporting(false);}
  }
@@ -72,7 +73,7 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
   {!embedded&&<PageTitle title="الموقف الشهري بالبصمة" subtitle="دليل البصمة مستقل عن قرارات HR اليدوية" actions={<Button asChild><Link href="/fingerprint-monthly">فتح ملفات الشهر <ArrowUpLeft size={16}/></Link></Button>}/>}
   <div className="monthly-filter-panel no-print">
    <div className="filterbar">
-    {!embedded&&<Field label="الشهر والسنة"><Input type="month" value={month} onChange={e=>{setMonth(e.target.value);setFrom('');setThrough('');setSelected(null);}}/></Field>}
+    {!embedded&&<Field label="الشهر والسنة"><Input type="month" value={month} onChange={e=>{if(!e.target.value)return;setMonth(e.target.value);setPinnedImport(undefined);setFrom('');setThrough('');setSelected(null);}}/></Field>}
     <SearchBox value={search} onChange={setSearch} placeholder="الاسم، الكود الوظيفي أو رقم البصمة"/>
     <Choice label="القسم بنهاية الفترة المعروضة" value={dep} onChange={setDep} options={reference.departments.map(d=>({value:d.id,label:departmentLabel(d)}))}/>
     <Choice label="المسؤول بنهاية الفترة المعروضة" value={manager} onChange={setManager} options={reference.managers.map(m=>({value:m.id,label:m.name}))}/>
@@ -81,16 +82,16 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
    <div className="scope-toolbar">
     <span>{activeFilters?`${activeFilters} فلاتر فعالة`:'كل النتائج ضمن الملف والفترة'}</span>
     {!!activeFilters&&<Button variant="ghost" onClick={()=>{setSearch('');setDep('');setManager('');setCondition('');setFrom('');setThrough('');}}><RotateCcw size={15}/>مسح الفلاتر</Button>}
-    {!localPosition&&position?.coverage&&<details><summary>نطاق التغطية</summary><div className="flex flex-wrap gap-3 p-3"><Field label="من تاريخ"><Input type="date" value={from||position.coverage.start} onChange={e=>setFrom(e.target.value)}/></Field><Field label="إلى تاريخ"><Input type="date" value={through||position.coverage.end} onChange={e=>setThrough(e.target.value)}/></Field><p className="scope-note">تغيير النطاق هنا يرشح العرض فقط؛ لا يعدل أدلة الملف أو اعتماده.</p></div></details>}
+    {!localPosition&&position?.coverage&&<details><summary>نطاق التغطية</summary><div className="flex flex-wrap gap-3 p-3"><Field label="من تاريخ"><Input type="date" min={position.coverage.source_start||position.coverage.start} max={position.coverage.source_end||position.coverage.end} value={from||position.coverage.start} onChange={e=>setFrom(e.target.value)}/></Field><Field label="إلى تاريخ"><Input type="date" min={from||position.coverage.source_start||position.coverage.start} max={position.coverage.source_end||position.coverage.end} value={through||position.coverage.end} onChange={e=>setThrough(e.target.value)}/></Field><p className="scope-note">تغيير النطاق هنا يرشح العرض فقط؛ لا يعدل أدلة الملف أو اعتماده.</p></div></details>}
    </div>
   </div>
   <LoadState loading={!localPosition&&q.loading&&!q.data} error={localPosition?'':q.error} retry={q.refresh}>
    {exportError&&<p role="alert" className="workflow-notice">تعذر تجهيز التقرير: {exportError}</p>}
-   {exportFileLink&&<div role="status" className="workflow-notice no-print">تم تجهيز التقرير ({Math.ceil(exportFileLink.bytes/1024)} كيلوبايت). إذا لم يبدأ التنزيل: <a className="employee-link" href={exportFileLink.url} download={exportFileLink.name}>تنزيل <bdi>{exportFileLink.name}</bdi></a></div>}
+   {exportFileLink?.scope===scopeLabel+'|'+view+'|'+(selectedPerson?.key||'')&&<div role="status" className="workflow-notice no-print">تم تجهيز التقرير ({Math.ceil(exportFileLink.bytes/1024)} كيلوبايت). إذا لم يبدأ التنزيل: <a className="employee-link" href={exportFileLink.url} download={exportFileLink.name}>تنزيل <bdi>{exportFileLink.name}</bdi></a></div>}
    {!position?.available?<div className="monthly-unavailable"><h2>لا يوجد ملف شهري معتمد لهذه الفترة</h2><p>الأرقام غير متاحة، وليست صفراً. افتح معاينة ملف لمراجعة الأدلة؛ لا يظهر في الموقف الرسمي إلا بعد الاعتماد الصريح.</p><Button asChild variant="outline"><Link href="/fingerprint-monthly">ملفات البصمة الشهرية</Link></Button></div>:<>
     <div className="monthly-provenance" data-state={position.batch?.lifecycle_state}>
      <div><strong>{lifecycle[position.batch?.lifecycle_state||'preview']}</strong><span>{position.batch?.source_name||'معاينة محلية قبل الحفظ'}</span></div>
-     <div><strong dir="ltr">{position.coverage?.start} — {position.coverage?.end}</strong><span>{position.coverage?.confirmed?'نطاق التغطية الذي حُدد عند الاستيراد':'نطاق الأدلة المرصودة · اكتمال جمع البصمات غير مؤكد'}</span></div>
+     <div><strong dir="ltr">{position.coverage?.start} — {position.coverage?.end}</strong><span>{position.coverage?.confirmed?'النطاق المعروض ضمن تغطية المصدر الموثقة':'النطاق المعروض ضمن الأدلة المرصودة · اكتمال الجمع غير مؤكد'}</span></div>
      {position.batch?.approved_at&&<div><span>آخر اعتماد</span><time>{new Date(position.batch.approved_at).toLocaleString('ar-IQ',{timeZone:'Asia/Baghdad'})}</time></div>}
     </div>
     <p className="scope-note">نسخة المصدر: {position.batch?.version??'محلية'} · {position.calculation_basis==='approval_snapshot'?'الحساب بسياق الاعتماد المحفوظ':'الحساب بالأدلة المتاحة حالياً'}{position.boundary_import_id?' · يتضمن دليل حد الشهر المثبت صراحةً':''}</p>
@@ -107,7 +108,7 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
     </div>
     {view==='evidence'?<CalendarEvidence position={position} onEmployee={setSelected}/>:view==='dashboard'?<div className="monthly-dashboard-grid">
      {([['هويات في العرض',position.metrics?.employees,''],['هويات لديها بصمات',position.metrics?.with_punch,'with_punch'],['أيام دخول وخروج موثق',position.metrics?.complete,'complete'],['أيام ببصمات ناقصة',position.metrics?.incomplete,'incomplete'],['تواريخ بلا بصمات مسجلة',position.metrics?.no_punch,'no_punch'],['أيام تحتاج مراجعة',position.metrics?.pending,'pending']] as const).map(([label,value,filter])=><button key={label} onClick={()=>{setCondition(filter);setView('matrix');}}><span>{label}</span><strong>{value??'غير متاح'}</strong><small>{filter&&filter!=='with_punch'?'موظف / يوم · ضمن النطاق المعروض':'هويات الملف ضمن الفلاتر'}</small><ArrowUpLeft size={16}/></button>)}
-     <article><span>مدة البصمات المرصودة</span><strong>{hourDuration(position.metrics?.worked_minutes||0)}</strong><small>الأزواج المكتملة فقط؛ لا تُحسب الناقصة أو الملتبسة</small></article>
+     <article><span>مدة البصمات المرصودة</span><strong>{hourDuration(position.metrics?.worked_minutes ?? null)}</strong><small>الأزواج المكتملة فقط؛ لا تُحسب الناقصة أو الملتبسة</small></article>
      <article><span>مجموع التأخير المحسوب</span><strong>{position.metrics?.late_minutes} دقيقة</strong><small>حسب الدوام المؤرخ المتاح؛ ليس اقتطاعاً مالياً</small></article>
      {selectedImport&&<Button asChild variant="outline"><Link href={`/fingerprint-issues?import_id=${selectedImport}&import_kind=monthly`}>مجموعات مراجعة الهوية: {position.source_counts?.open_issue_groups} <ArrowUpLeft size={16}/></Link></Button>}
     </div>:view==='summary'?<div className="table-card monthly-scroll" tabIndex={0} role="region" aria-label="ملخص الموظفين الشهري"><table><thead><tr>{summaryHeaders.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{position.rows.map(r=><tr key={r.key}>{summaryValues(r).map((v,i)=><td key={i}>{i===1?<button className="employee-link" onClick={()=>setSelected(r.key)}>{v}</button>:<bdi>{v}</bdi>}</td>)}</tr>)}</tbody></table></div>:<MonthlyMatrix position={position} onEmployee={setSelected}/>}

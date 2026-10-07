@@ -841,7 +841,7 @@ export function ActionEditor({
     setData((v) => ({ ...v, [key]: value }));
   const employeeOptions = reference.employees.map((e) => ({
     value: e.id,
-    label: `${e.name} — ${e.department} — ${e.employee_number || e.id.slice(0, 6)}`,
+    label: `${e.name} — ${e.internal_code || e.id.slice(0, 6)} — ${e.department}${e.employee_number ? " — مرجع إداري " + e.employee_number : ""}`,
   }));
   return (
     <Dialog open onOpenChange={(open) => !open && close()}>
@@ -1064,7 +1064,7 @@ export function CentralReportsPage({ reference }: { reference: Reference }) {
             onChange={setEmployee}
             options={reference.employees.map((e) => ({
               value: e.id,
-              label: `${e.name} — ${e.department} — ${e.employee_number || e.id.slice(0, 6)}`,
+              label: `${e.name} — ${e.internal_code || e.id.slice(0, 6)} — ${e.department}${e.employee_number ? " — مرجع إداري " + e.employee_number : ""}`,
             }))}
           />
           <Field label="الشهر والسنة">

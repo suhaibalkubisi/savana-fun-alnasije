@@ -47,6 +47,26 @@ test('all-month headers do not establish coverage when only partial evidence is 
  const p=buildMonthlyPosition(fixture({4:[960,1100],12:[960],30:[]},{batch:{id:'batch',lifecycle_state:'preview'}}));
  assert.equal(p.coverage.start,'2026-09-04');assert.equal(p.coverage.end,'2026-09-12');assert.equal(p.coverage.confirmed,false);assert.equal(p.rows[0].cells[20].state,'outside_coverage');
 });
+
+test('report filters cannot expand saved coverage or fabricate covered blank days',()=>{
+ const f=fixture({10:[960,1100],11:[960],12:[]},{batch:{id:'batch',lifecycle_state:'approved',coverage_start:'2026-09-10',coverage_end:'2026-09-12'}});
+ const baseline=buildMonthlyPosition(f);
+ const expanded=buildMonthlyPosition(f,{coverage_start:'2026-09-01',coverage_end:'2026-09-23'});
+ assert.equal(expanded.coverage.start,'2026-09-10');assert.equal(expanded.coverage.end,'2026-09-12');
+ assert.equal(expanded.rows[0].cells[1].state,'outside_coverage');assert.equal(expanded.rows[0].cells[20].state,'outside_coverage');
+ assert.deepEqual(expanded.metrics,baseline.metrics);assert.deepEqual(expanded.source_counts,baseline.source_counts);
+ const narrow=buildMonthlyPosition(f,{coverage_start:'2026-09-11',coverage_end:'2026-09-12'});
+ assert.equal(narrow.coverage.source_start,'2026-09-10');assert.equal(narrow.rows[0].cells[10].state,'outside_coverage');assert.equal(narrow.metrics.worked_minutes,null);
+ assert.throws(()=>buildMonthlyPosition(f,{coverage_start:'2026-09-20',coverage_end:'2026-09-23'}),/لا يتقاطع/);
+});
+
+test('an explicitly covered blank source means no recorded punch, while undocumented empty coverage remains unknown',()=>{
+ const confirmed=buildMonthlyPosition(fixture({10:[]},{batch:{id:'batch',lifecycle_state:'preview',coverage_start:'2026-09-10',coverage_end:'2026-09-12'}}));
+ assert.equal(confirmed.rows[0].cells[10].state,'no_punch');assert.equal(confirmed.metrics.no_punch,3);assert.equal(confirmed.metrics.worked_minutes,null);
+ assert.ok(!Object.values(confirmed.rows[0].cells).some(c=>c.state==='absence'));
+ const unknown=buildMonthlyPosition(fixture({10:[]},{batch:{id:'batch',lifecycle_state:'preview'}}));
+ assert.equal(unknown.metrics.no_punch,0);assert.equal(unknown.rows[0].cells[10].state,'outside_coverage');
+});
 test('duplicate source timestamps keep raw count but cannot create duplicate worked time',()=>{
  const f=fixture({10:[960,1100]});f.sources.push({...f.sources[0],id:'duplicate',source_row:3});
  const p=buildMonthlyPosition(f);assert.equal(p.rows[0].raw_punch_count,4);assert.equal(p.rows[0].effective_punch_count,2);assert.equal(p.rows[0].summary.worked_minutes,140);assert.equal(p.rows.length,1);
