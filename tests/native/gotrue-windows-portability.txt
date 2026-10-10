@@ -1,0 +1,13 @@
+Pinned official Auth v2.197.0 source. Only Unix socket reuseport setup/imports changed for one Windows loopback listener. No authentication, JWT, session, token, authorization or migration logic changed.
+Removed block:
+	lc := net.ListenConfig{
+		Control: func(network, address string, c syscall.RawConn) error {
+			var serr error
+			if err := c.Control(func(fd uintptr) {
+				serr = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1) // #nosec G115
+			}); err != nil {
+				return err
+			}
+			return serr
+		},
+	}

@@ -83,12 +83,12 @@ async function fixture(run) {
       source_name: "synthetic-review.xls",
       source_hash: "a".repeat(64),
       import_kind: "monthly",
-      period_start: "2099-01-01",
-      period_end: "2099-01-31",
+      period_start: "2026-09-01",
+      period_end: "2026-09-30",
       rows: [1, 2, 3].map((d) => ({
         source_sheet: "Punch Record",
         source_row: 2,
-        calendar_date: `2099-01-0${d}`,
+        calendar_date: `2026-09-0${d}`,
         person_code: "UNKNOWN-REVIEW",
         source_name: "هوية اصطناعية غير مطابقة",
         raw_values: [
@@ -99,9 +99,12 @@ async function fixture(run) {
         invalid: false,
       })),
     };
+    for(const e of people)e.version=(await db.query('select version from public.employees where id=$1',[e.id])).rows[0].version;
     const groups = async (id) =>
       (await read("issues", { import_id: id, group_identities: "true" })).rows;
     await who("admin");
+    for(const e of people.filter(e=>e.employment_status==='active')) await db.query('select public.employee_assignment_record($1)',[{employee_id:e.id,employee_version:e.version,department_id:e.department_id,employment_status:'active',valid_from:'2026-09-01',valid_to:'2026-09-30',reason:'Explicit synthetic historical register'}]);
+    for(const department_id of new Set(people.map(e=>e.department_id))) await write('rule.save',{department_id,effective_from:'2026-09-01',start_minute:960,grace_minutes:15,entry_window_start:720,entry_window_end:1439,working_weekdays:[0,1,2,3,4,5,6],default_manager_id:null});
     await run({
       db,
       who,
@@ -408,6 +411,7 @@ test("reviewed evidence rejects issue insertion and stale replacement preserves 
         version: current.lifecycle_version,
         replacement_id: b.id,
         replacement_version: br.lifecycle_version - 1,
+        reason: "Synthetic stale replacement check",
       }),
       /تغيير/,
     );

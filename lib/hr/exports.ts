@@ -27,8 +27,8 @@ export const totalHeaders = [
   "غياب ×3",
   "إجازات",
   "تأخيرات",
-  "دقائق التأخير",
-  "إجمالي الغياب المحتسب",
+  "دقائق\nالتأخير",
+  "الغياب\nالمحتسب",
 ];
 export const summaryKeys: (keyof Totals)[] = [
   "absence",
@@ -100,9 +100,9 @@ function excelClock(value: unknown) {
 }
 function codedReportTable(report: Report, summary: boolean, from=1, through=daysInMonth(report.month)) {
   const headers=summary?['الكود الوظيفي',...summaryHeaders]:['الكود الوظيفي','رقم الموظف','اسم الموظف','القسم',...Array.from({length:through-from+1},(_,i)=>String(i+from)),...totalHeaders];
-  const rows=report.rows.map(r=>summary?[r.internal_code||'',...summaryValues(r)]:[r.internal_code||'',r.employee_number||'',r.name,r.department,...Array.from({length:through-from+1},(_,i)=>r.cells[i+from]?statuses[r.cells[i+from]].code:''),...values(r)]);
+  const rows=report.rows.map(r=>summary?[r.internal_code||'',...summaryValues(r)]:[r.internal_code||'',r.employee_number||'',r.name,r.department,...Array.from({length:through-from+1},(_,i)=>r.cells[i+from]==='attendance'?'✓':r.cells[i+from]?statuses[r.cells[i+from] as keyof typeof statuses].code:''),...values(r)]);
   const total:(string|number)[]=Array(headers.length-(summary?summaryKeys.length:keys.length)).fill('');total[2]='الإجمالي';total.push(...(summary?summaryTotals(report.totals):values(report.totals)));rows.push(total);
-  return {headers,rows,columnWeights:summary?[11,8,21,16,8,16,...Array(8).fill(7)]:[11,8,21,16,...Array(through-from+1).fill(5),...Array(7).fill(7)]};
+  return {headers,rows,columnWeights:summary?[11,8,21,16,8,16,...Array(8).fill(7)]:[14,8,22,16,...Array(through-from+1).fill(4.5),6,7,7,7,8,10,12]};
 }
 export function excelBytes(report: Report, title: string, summary = false, scope = '', brands?: ExcelBrands) {
   return tableExcelBytes({title,period:scope || monthLabel(report.month),brands,...codedReportTable(report,summary)});
@@ -194,7 +194,7 @@ function fillReportCell(
   doc.restoreGraphicsState();
 }
 export async function pdfBytes(report: Report,title: string,summary = false,fontBase64?: string,scope = '') {
-  return tablePdfBytes({title,period:scope || monthLabel(report.month),fontBase64,...codedReportTable(report,summary),...(!summary?{segments:Array.from({length:Math.ceil(daysInMonth(report.month)/10)},(_,i)=>codedReportTable(report,false,i*10+1,Math.min(daysInMonth(report.month),i*10+10)))}:{})});
+  return tablePdfBytes({title,period:scope || monthLabel(report.month),fontBase64,...codedReportTable(report,summary),...(!summary?{compact:true}:{})});
 }
 
 export function tableExcelBytes({
@@ -262,7 +262,7 @@ export function tableExcelBytes({
   );
   add(
     "xl/workbook.xml",
-    `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="${escape(safeSheet)}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'${escape(safeSheet.replaceAll("'","''"))}'!$1:$5,'${escape(safeSheet.replaceAll("'","''"))}'!$A:$C</definedName></definedNames></workbook>`,
+    `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="${escape(safeSheet)}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">'${escape(safeSheet.replaceAll("'","''"))}'!$1:$5,'${escape(safeSheet.replaceAll("'","''"))}'!$A:$C</definedName><definedName name="_xlnm.Print_Area" localSheetId="0">'${escape(safeSheet.replaceAll("'","''"))}'!$A$1:${last}${grid.length}</definedName></definedNames></workbook>`,
   );
   add(
     "xl/_rels/workbook.xml.rels",
@@ -274,7 +274,7 @@ export function tableExcelBytes({
   );
   add(
     "xl/worksheets/sheet1.xml",
-    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="${headers.length>16?0:1}"/></sheetPr><dimension ref="A1:${last}${grid.length}"/><sheetViews><sheetView workbookViewId="0" rightToLeft="1" showGridLines="0"><pane xSplit="3" ySplit="5" topLeftCell="D6" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/><cols>${headers.map((h, i) => `<col min="${i + 1}" max="${i + 1}" width="${widths[i]}" customWidth="1"/>`).join("")}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="A5:${last}${5 + rows.length}"/><mergeCells count="3"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/><mergeCell ref="A3:${last}3"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.45" header="0.15" footer="0.15"/><pageSetup paperSize="${headers.length>12?8:9}" orientation="landscape" scale="100" fitToWidth="${headers.length>16?0:1}" fitToHeight="0"/><headerFooter><oddFooter>&amp;Lصنع من قبل صهيب الكبيسي&amp;C&amp;P / &amp;N&amp;Rقسم الموارد البشرية – مسائي</oddFooter></headerFooter>${brands?'<drawing r:id="rIdBrand"/>':''}</worksheet>`,
+    `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${last}${grid.length}"/><sheetViews><sheetView workbookViewId="0" rightToLeft="1" showGridLines="0"><pane xSplit="3" ySplit="5" topLeftCell="D6" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="24"/><cols>${headers.map((h, i) => `<col min="${i + 1}" max="${i + 1}" width="${widths[i]}" customWidth="1"/>`).join("")}</cols><sheetData>${sheetRows}</sheetData><autoFilter ref="A5:${last}${5 + rows.length}"/><mergeCells count="3"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/><mergeCell ref="A3:${last}3"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.45" header="0.15" footer="0.15"/><pageSetup paperSize="${headers.length>12?8:9}" orientation="landscape" scale="100" fitToWidth="1" fitToHeight="0"/><headerFooter><oddFooter>&amp;Lصنع من قبل صهيب الكبيسي&amp;C&amp;P / &amp;N&amp;Rقسم الموارد البشرية – مسائي</oddFooter></headerFooter>${brands?'<drawing r:id="rIdBrand"/>':''}</worksheet>`,
   );
   return zipSync(files, { level: 6 });
 }
@@ -288,17 +288,19 @@ export function layoutTablePdf(
   notesArea = false,
   headerTop = 112,
   rowGroupSize = 1,
+  compact = false,
 ) {
   const tableWidth = doc.internal.pageSize.getWidth() - 56;
   const weights = columnWeights?.length === headers.length
     ? columnWeights : Array(headers.length).fill(1);
   const totalWeight = weights.reduce((sum, value) => sum + value, 0);
   const widths = weights.map((value) => tableWidth * value / totalWeight);
-  const lineHeight = 12;
-  doc.setFontSize(10);
-  doc.setLineHeightFactor(lineHeight / 10);
+  const lineHeight = compact?10:12;
+  const fontSize=compact?8:10;
+  doc.setFontSize(fontSize);
+  doc.setLineHeightFactor(lineHeight / fontSize);
   const wrap = (row: (string | number)[]) => headers.map((_, i) =>
-    doc.splitTextToSize(String(row[i] ?? "—"), widths[i] - 7) as string[]);
+    doc.splitTextToSize(String(row[i] ?? "—"), widths[i] - (compact?4:7)) as string[]);
   const headerLines = wrap(headers);
   const headerHeight = Math.max(40, ...headerLines.map(lines => lines.length * lineHeight + 16));
   const bodyTop = headerTop + headerHeight;
@@ -306,7 +308,7 @@ export function layoutTablePdf(
   const pages: { lines: string[][]; height: number }[][] = [[]];
   let y = bodyTop;
   for (let index=0;index<rows.length;index+=rowGroupSize) {
-    const group=rows.slice(index,index+rowGroupSize).map(row=>{const lines=wrap(row);return {lines,height:Math.max(30,...lines.map(cell=>cell.length*lineHeight+12))};});
+    const group=rows.slice(index,index+rowGroupSize).map(row=>{const lines=wrap(row);return {lines,height:Math.max(compact?28:30,...lines.map(cell=>cell.length*lineHeight+(compact?8:12)))};});
     const height=group.reduce((sum,row)=>sum+row.height,0);
     if (height > bodyBottom - bodyTop)
       throw new Error("نص خلية التقرير أطول من مساحة الصفحة");
@@ -320,7 +322,7 @@ export function layoutTablePdf(
   return { widths, headerLines, headerHeight, bodyTop, bodyBottom, pages };
 }
 
-export async function tablePdfBytes({
+async function pdfLayout({
   title,
   period,
   headers,
@@ -330,6 +332,7 @@ export async function tablePdfBytes({
   columnWeights,
   notesArea = false,
   segments,
+  compact = false,
 }: {
   title: string;
   period: string;
@@ -339,6 +342,7 @@ export async function tablePdfBytes({
   landscape?: boolean;
   columnWeights?: number[];
   notesArea?: boolean;
+  compact?:boolean;
   segments?: {headers: string[]; rows: (string | number)[][]; columnWeights?: number[]}[];
 }) {
   const { jsPDF } = await import("jspdf");
@@ -349,7 +353,7 @@ export async function tablePdfBytes({
     compress: true,
   });
   if (!fontBase64) {
-    const response = await fetch("/fonts/DejaVuSans.ttf");
+    const response = await fetch("/fonts/FANUArabic.ttf");
     if (!response.ok) throw new Error("تعذر تحميل خط التقرير");
     const bytes = new Uint8Array(await response.arrayBuffer());
     let binary = "";
@@ -373,9 +377,37 @@ export async function tablePdfBytes({
   const generationLabel = `تاريخ الإصدار: ${generatedAt()} · بغداد`;
   const sections = segments?.length ? segments : [{headers, rows, columnWeights}];
   const allPages = sections.flatMap(section => {
-    const layout = layoutTablePdf(doc, section.headers, section.rows, section.columnWeights, notesArea, headerTop, section.headers.includes('الحركة') ? 2 : 1);
+    const layout = layoutTablePdf(doc, section.headers, section.rows, section.columnWeights, notesArea, headerTop, section.headers.includes('الحركة') ? 2 : 1,compact);
     return layout.pages.map(pageRows => ({layout, pageRows, headers: section.headers}));
   });
+  return {doc,width,height,margin,tableWidth,titleLines,titleExtra,periodLines,headerTop,generationLabel,allPages};
+}
+export async function estimateTablePdfPages(report:Parameters<typeof tablePdfBytes>[0]){return (await pdfLayout(report)).allPages.length;}
+
+export async function tablePdfBytes({
+  title,
+  period,
+  headers,
+  rows,
+  fontBase64,
+  landscape = true,
+  columnWeights,
+  notesArea = false,
+  segments,
+  compact = false,
+}: {
+  title: string;
+  period: string;
+  headers: string[];
+  rows: (string | number)[][];
+  fontBase64?: string;
+  landscape?: boolean;
+  columnWeights?: number[];
+  notesArea?: boolean;
+  compact?:boolean;
+  segments?: {headers: string[]; rows: (string | number)[][]; columnWeights?: number[]}[];
+}) {
+  const {doc,width,height,margin,tableWidth,titleLines,titleExtra,periodLines,headerTop,generationLabel,allPages}=await pdfLayout({title,period,headers,rows,fontBase64,landscape,columnWeights,notesArea,segments,compact});
   const [companyAsset,savanaAsset] = await Promise.all([webAsset(brandAssets.company.src),webAsset(brandAssets.savana.src)]);
   const pages = allPages.length;
   for (let page = 0; page < pages; page++) {
@@ -404,7 +436,7 @@ export async function tablePdfBytes({
       doc.setDrawColor("#FFFFFF");
       doc.rect(x, headerTop, widths[i], headerHeight, "S");
       doc.setTextColor("#FFFFFF");
-      doc.setFontSize(10);
+      doc.setFontSize(compact?8:10);
       doc.text(
         headerLines[i],
         x + widths[i] / 2,
@@ -416,6 +448,7 @@ export async function tablePdfBytes({
     pageRows.forEach((row, ri) => {
       let rowX = width - margin;
       row.lines.forEach((lines, ci) => {
+        doc.setFont("Arabic");
         rowX -= widths[ci];
         const x = rowX;
         doc.setFillColor(ri % 2 ? "#F1F5FA" : "#FFFFFF");
@@ -423,12 +456,12 @@ export async function tablePdfBytes({
         doc.setDrawColor("#B8C5D6");
         doc.rect(x, y, widths[ci], row.height, "S");
         doc.setTextColor("#10233F");
-        doc.setFontSize(10);
+        doc.setFontSize(compact?8:10);
         doc.text(
           lines,
           x + widths[ci] / 2,
-          y + 18,
-          { align: "center", maxWidth: widths[ci] - 7 },
+          y + (compact?13:18),
+          { align: "center", maxWidth: widths[ci] - (compact?4:7) },
         );
       });
       y += row.height;

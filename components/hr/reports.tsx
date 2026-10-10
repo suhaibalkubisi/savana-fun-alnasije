@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import {useState,useEffect,useRef,useLayoutEffect} from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { BrandImage } from "./brand-image";
@@ -109,6 +109,8 @@ export function ReportPage({
   };
   const q = useData<Report>("report", filters, !!month);
   const exportScope = JSON.stringify({ ...filters, search });
+  const scopeRef=useRef(exportScope);
+  useLayoutEffect(()=>{scopeRef.current=exportScope;},[exportScope]);
   useEffect(() => {
     const qp = new URLSearchParams(
       Object.fromEntries(
@@ -128,9 +130,10 @@ export function ReportPage({
   }, [month, dep, delayed, shift, manager, inactive, path, router]);
   async function exportFile(format: "excel" | "pdf") {
     if (!q.data || exporting || search !== delayed) return;
+    const captured=scopeRef.current;
     setExporting(format);
     try {
-      const scope = [monthLabel(month),dep?departmentLabel(reference.departments.find(d=>d.id===dep)!):'جميع الأقسام',shift?'الشفت: '+(reference.shifts.find(s=>s.id===shift)?.name || shift):'جميع الشفتات',manager?'المسؤول: '+(reference.managers.find(m=>m.id===manager)?.name || manager):'جميع المسؤولين',inactive?'جميع حالات التوظيف':'النشطون والسجلات التاريخية',search?'البحث: '+search:'', 'المصدر: قرارات الموارد البشرية المسجلة؛ فلاتر الشفت والمسؤول وفق الانتماء الحالي'].filter(Boolean).join(' · ');
+      const scope = [monthLabel(month),dep?departmentLabel(reference.departments.find(d=>d.id===dep)!):'جميع الأقسام',shift?'الشفت: '+(reference.shifts.find(s=>s.id===shift)?.name || shift):'جميع الشفتات',manager?'المسؤول: '+(reference.managers.find(m=>m.id===manager)?.name || manager):'جميع المسؤولين',inactive?'جميع حالات التوظيف':'النشطون والسجلات التاريخية',search?'البحث: '+search:'', 'المصدر: قرارات HR مع مؤشر دخول مشتق من الدليل المعتمد؛ الانتماء حسب الفترة'].filter(Boolean).join(' · ');
       const reportTitle = dep
         ? `${title} · ${reference.departments.find((d) => d.id === dep) ? departmentLabel(reference.departments.find((d) => d.id === dep)!) : ""}`
         : title;
@@ -138,6 +141,7 @@ export function ReportPage({
         format === "excel"
           ? await excelBytes(q.data, reportTitle, summary, scope)
           : await pdfBytes(q.data, reportTitle, summary, undefined, scope);
+      if(scopeRef.current!==captured)throw Error("تغير نطاق التقرير؛ أعد التصدير");
       const name = `HR_${mode}_${month}.${format === "excel" ? "xlsx" : "pdf"}`;
       const type =
         format === "excel"
@@ -289,7 +293,7 @@ export function ReportPage({
           )}
         </div>
         <div className="report-toolbar no-print">
-          <div className="status-legend">
+          <div className="status-legend"><span className="attendance-check">✓ دخول موثق · قرار HR له الأولوية</span>
             {Object.entries(statuses).map(([key]) => (
               <StatusBadge key={key} type={key as keyof typeof statuses} />
             ))}
@@ -395,7 +399,7 @@ export function ReportPage({
                       {Array.from({ length: days }, (_, i) => (
                         <TableCell key={i} className="day-cell">
                           {r.cells[i + 1] && (
-                            <StatusBadge type={r.cells[i + 1]} code />
+                            r.cells[i+1]==="attendance"?<span className="attendance-check" title={r.cell_details?.[i+1]?.date+" · دخول موثق من مصدر معتمد"} aria-label="دخول موثق">✓</span>:<StatusBadge type={r.cells[i + 1] as keyof typeof statuses} code />
                           )}
                         </TableCell>
                       ))}
@@ -424,7 +428,7 @@ export function ReportPage({
             </Table>
           )}
         </LoadState>
-        <div className="report-footer">
+        {q.data?.attendance_conflicts?<p className="workflow-notice" role="status">{q.data.attendance_conflicts} أيام بها قرار HR ودخول مسجل؛ يحتفظ التقرير بكليهما ويعرض قرار HR في الخلية.</p>:null}<div className="report-footer">
           <span>{q.data?.rows.length || 0} موظف</span>
           <span>{month && monthLabel(month)}</span>
         </div>

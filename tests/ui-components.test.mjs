@@ -1,25 +1,18 @@
 import assert from "node:assert/strict";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, rm, mkdir } from "node:fs/promises";
 import path from "node:path";
 import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createServer } from "vite";
+import { build } from "esbuild";
+import { pathToFileURL } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const vite = await createServer({
-  appType: "custom",
-  configFile: false,
-  root,
-  resolve: { alias: { "@": root } },
-  server: { middlewareMode: true },
-});
-
-after(async () => {
-  await vite.close();
-});
+const compiled=path.join(root,'outputs','acceptance','ui-test');await mkdir(compiled,{recursive:true});
+const vite={ssrLoadModule:async(source)=>{const file=path.join(compiled,path.basename(source)+'.mjs');await build({entryPoints:[path.join(root,source.slice(1))],bundle:true,platform:'node',format:'esm',packages:'external',outfile:file});return import(pathToFileURL(file).href);}};
+after(async()=>{await rm(compiled,{recursive:true,force:true});});
 
 async function readCssTree(directory) {
   const entries = await readdir(directory, { withFileTypes: true });

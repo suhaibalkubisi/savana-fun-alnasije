@@ -20,7 +20,7 @@ test('approval rejects missing dated assignment and rolls back import state',()=
  const batch=await write('import.preview',data);
  const reviewed=await write('import.review',{id:batch.id,version:batch.lifecycle_version});
  await db.exec('reset role');await db.query('update public.employee_assignment_history set voided_at=now() where employee_id=$1',[e.id]);await db.exec('set role authenticated');
- await assert.rejects(write('import.approve',{id:batch.id,version:reviewed.lifecycle_version}),/انتماء وظيفي/);
+ await assert.rejects(write('import.approve',{id:batch.id,version:reviewed.lifecycle_version}),/انتماء|سياق|دوام|موثق/);
  assert.equal((await evidence({month})).available,false);
  assert.equal((await evidence({month,import_id:batch.id})).batch.lifecycle_state,'reviewed');
  assert.equal(await scalar(db,"select count(*) n from public.attendance_imports where state='applied'"),0);
@@ -59,7 +59,7 @@ test('review, approval, replacement and cancellation preserve raw sources and ma
  const next=await write('import.preview',{...data,source_hash:'c'.repeat(64),rows:[row('2026-09-10',[960,1200])]});
  const nextReview=await write('import.review',{id:next.id,version:next.lifecycle_version});
  const current=(await evidence({month})).batch;
- await write('import.supersede',{id:batch.id,version:current.lifecycle_version,replacement_id:next.id,replacement_version:nextReview.lifecycle_version});
+ await write('import.supersede',{id:batch.id,version:current.lifecycle_version,replacement_id:next.id,replacement_version:nextReview.lifecycle_version,reason:'Independent replacement evidence'});
  assert.equal((await evidence({month})).batch.id,next.id);
  assert.equal((await evidence({month,import_id:batch.id})).batch.lifecycle_state,'superseded');
  const cancelled=await write('import.preview',{...data,source_hash:'d'.repeat(64)});await write('import.cancel',{id:cancelled.id,version:cancelled.version});

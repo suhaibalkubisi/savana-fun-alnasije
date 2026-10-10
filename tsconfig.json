@@ -44,6 +44,8 @@
     "node_modules",
     "dist",
     "outputs",
-    ".sites-runtime"
+    ".sites-runtime",
+    "work",
+    "node_modules.previous"
   ]
 }

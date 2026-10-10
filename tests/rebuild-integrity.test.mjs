@@ -106,6 +106,8 @@ test('name-only matching stays unresolved; a human-confirmed mapping is reusable
  await write('import.cancel',{id:batch.id,version:cancelled.version});
  const second=await write('import.preview',{...payload,source_hash:'8'.repeat(64)});
  assert.equal((await read('import',{id:second.id})).rows[0].employee_id,e.id);
+ await db.query('select public.employee_assignment_record($1)',[{employee_id:e.id,employee_version:e.version,department_id:dep,employment_status:'active',valid_from:'2026-09-10',valid_to:'2026-09-10',reason:'Synthetic independent dated assignment for approval'}]);
+ await write('rule.save',{...rule,department_id:dep,default_manager_id:null});
  await write('import.apply',{id:second.id,version:second.version});
  await db.exec('reset role');
  await assert.rejects(db.query("insert into public.fingerprint_issues(source_row_id,issue_type,details) select id,'punch_conflict','Synthetic historical cancelled warning' from public.fingerprint_source_rows where import_id=$1",[batch.id]),/مغلق/);

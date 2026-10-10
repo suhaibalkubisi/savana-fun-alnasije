@@ -49,6 +49,7 @@ import {
   SearchPicker,
   StatusBadge,
 } from "./shared";
+import {PeriodCompleteness} from "./period-completeness";
 export function ReviewPage() {
   const q = useData<ReviewIssue[]>("review");
   return (
@@ -59,6 +60,7 @@ export function ReviewPage() {
           q.data ? `${q.data.length} سجل يحتاج استكمال البيانات` : undefined
         }
       />
+      <PeriodCompleteness/>
       <div className="review-hub-links">
         <Link href="/fingerprint-issues"><span className="eyebrow">هوية المصدر</span><strong>مطابقة البصمات</strong><p>راجع رقم الجهاز والموظف المقترح واحفظ القرار مع سببه.</p></Link>
         <Link href="/fingerprint-monthly"><span className="eyebrow">الحساب والفترة</span><strong>متابعة الملف الشهري</strong><p>افحص الأدلة والمشاكل والاعتماد في مساحة عمل واحدة.</p></Link>
@@ -568,7 +570,7 @@ export function SettingsPage({ reference }: { reference: Reference }) {
                   <TableHead>
                     {tab === "department" ? "القسم" : "الاسم"}
                   </TableHead>
-                  {tab === "department" && <TableHead>ترتيب العرض</TableHead>}
+                  {(tab === "department" || tab==="action_type") && <TableHead>ترتيب العرض</TableHead>}
                   <TableHead>الحالة</TableHead>
                   <TableHead>الإجراء</TableHead>
                 </TableRow>

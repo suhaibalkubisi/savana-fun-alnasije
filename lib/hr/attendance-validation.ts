@@ -13,6 +13,7 @@ export const attendanceSchemas: Record<string, z.ZodTypeAny> = {
     import_kind: z.enum(["daily", "monthly"]),
     period_start: date,
     period_end: date,
+    coverage_confirmed:z.boolean().optional(),
     coverage_start: date.optional(),
     coverage_end: date.optional(),
     rows: z
@@ -31,11 +32,16 @@ export const attendanceSchemas: Record<string, z.ZodTypeAny> = {
       .min(1)
       .max(20000),
   }),
+  "import.new_attempt":z.object({...revision,reason:z.string().trim().min(3).max(2000),device_source_id:z.string().uuid().optional(),coverage_confirmed:z.boolean().optional()}),
+  "import.reopen":z.object({...revision,reason:z.string().trim().min(3).max(2000)}),
+  "import.reprocess":z.object(revision),
+  "source.save":z.object({id:revision.id.optional(),version:revision.version.optional(),namespace:z.string().trim().min(1).max(100),label:z.string().trim().min(1).max(150),confirmation_reason:z.string().trim().min(3).max(2000)}),
   "import.apply": z.object(revision),
   "import.cancel": z.object(revision),
   "import.review": z.object(revision),
   "import.approve": z.object(revision),
   "import.supersede": z.object({
+    reason:z.string().trim().min(3).max(2000),
     ...revision,
     replacement_id: z.string().uuid(),
     replacement_version: z.number().int().positive(),

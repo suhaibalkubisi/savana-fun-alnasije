@@ -8,6 +8,7 @@ import {
 import { z } from "zod";
 import { attendanceSchemas } from "@/lib/hr/attendance-validation";
 import { buildMonthlyPosition } from "@/lib/hr/monthly-position.mjs";
+import {comprehensivePosition} from "@/lib/hr/comprehensive-position.mjs";
 import { buildDailyPosition } from "@/lib/hr/attendance-engine.mjs";
 import {
   AppError,
@@ -48,6 +49,9 @@ export async function GET(request: Request) {
     const filters = Object.fromEntries(
       [...params].filter(([k]) => k !== "kind"),
     );
+    if(kind==="report")return json(comprehensivePosition(await rpc("hr_comprehensive_evidence",{p_filters:filters},s.token)));
+    if(kind==="attendance.period_gaps")return json(await rpc("attendance_period_gaps",{p_filters:filters},s.token));
+    if(kind==="attendance.sources")return json(await rpc("attendance_sources",{},s.token));
     if (kind === "attendance.monthly_position") {
       const evidence = await rpc("attendance_monthly_evidence_v2", {p_filters: filters}, s.token);
       return json(buildMonthlyPosition(evidence, {
@@ -79,6 +83,10 @@ export async function POST(request: Request) {
     let schema: z.ZodTypeAny;
     if (action === 'attendance.daily.replace') return json(await rpc('attendance_daily_replace',{p_data:z.object({id:z.string().uuid(),version:z.number().int().positive(),replacement_id:z.string().uuid(),replacement_version:z.number().int().positive(),reason:z.string().trim().min(3).max(2000)}).parse(data)},s.token));
     if (action === 'attendance.boundary.record') return json(await rpc('attendance_boundary_record',{p_data:z.object({id:z.string().uuid(),version:z.number().int().positive(),adjacent_import_id:z.string().uuid(),reason:z.string().trim().min(3).max(2000)}).parse(data)},s.token));
+    if(action==='employee.assignment.bulk'){
+      const assignment=z.object({employee_id:z.string().uuid(),employee_version:z.number().int().positive(),department_id:z.string().uuid(),shift_id:z.string().uuid().nullable(),direct_manager_id:z.string().uuid().nullable(),employment_status:z.enum(['active','inactive','resigned','long_leave']),valid_from:z.string().date(),valid_to:z.string().date(),reason:z.string().trim().min(3).max(2000)});
+      return json(await rpc('employee_assignment_bulk',{p_data:z.object({confirmed:z.literal(true),rows:z.array(assignment).min(1).max(500)}).parse(data)},s.token));
+    }
     if (action === 'employee.assignment.record') {
       const parsed=z.object({id:z.string().uuid().optional(),version:z.number().int().positive().optional(),employee_id:z.string().uuid(),employee_version:z.number().int().positive(),department_id:z.string().uuid(),shift_id:z.string().uuid().nullable(),direct_manager_id:z.string().uuid().nullable(),employment_status:z.enum(['active','inactive','resigned','long_leave']),valid_from:z.string().date(),valid_to:z.string().date(),reason:z.string().trim().min(3).max(2000)}).parse(data);
       return json(await rpc('employee_assignment_record',{p_data:parsed},s.token));

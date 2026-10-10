@@ -49,3 +49,4 @@ next-env.d.ts
 /supabase/.temp/
 
 /tests/.transport-check.mjs
+/node_modules.previous/

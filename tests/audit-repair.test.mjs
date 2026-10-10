@@ -111,7 +111,7 @@ test('identity, legacy lifecycle, roles, preservation, daily snapshot and partia
  const renamed=await hr('employee.save',{...e,name:'اسم الموظف الجديد'});assert.equal(renamed.id,e.id);assert.equal(renamed.internal_code,permanent);
  const afterRename=await preview([row('ADMIN-REF')]);assert.equal((await owner(()=>sources(afterRename.id)))[0].employee_id,e.id);
  await hr('employee.save',{...renamed,employment_status:'inactive'});
- const inactive=await preview([row('ADMIN-REF')]);assert.equal((await owner(()=>sources(inactive.id)))[0].employee_id,null);
+ const inactive=await preview([row('ADMIN-REF')]);assert.equal((await owner(()=>sources(inactive.id)))[0].employee_id,e.id,'Identity is retained independently of employment eligibility');
  // Explicit source inclusion and frozen daily calculation, no synthetic HR absence.
  const partial=await preview([row('FRESH'),{...row('UNKNOWN','اسم بلا مرشح'),source_row:3}]);
  f=(await owner(()=>issues(partial.id)))[0];const fsource=(await owner(()=>sources(partial.id))).find(s=>s.id===f.source_row_id);
@@ -119,7 +119,8 @@ test('identity, legacy lifecycle, roles, preservation, daily snapshot and partia
  await write('issue.resolve',{id:f.id,version:f.version,state:'resolved',employee_id:e2.id,resolution_note:'Synthetic explicit manual evidence'});
  await db.query('select public.employee_assignment_record($1)',[{employee_id:e2.id,employee_version:e2.version,department_id:dep,employment_status:'active',valid_from:day,valid_to:day,reason:'Synthetic administrative assignment register'}]);
  await write('rule.save',{...rule,department_id:dep,default_manager_id:null});
- const applied=await write('import.apply',{id:partial.id,version:partial.version});assert.equal(applied.state,'applied');
+ const partialCurrent=(await db.query('select public.attendance_read_v5($1,$2) value',['import',{id:partial.id}])).rows[0].value.batch;
+ const applied=await write('import.apply',{id:partial.id,version:partialCurrent.version});assert.equal(applied.state,'applied');
  const daily=(await db.query('select public.attendance_daily_evidence($1) value',[{date:day}])).rows[0].value;
  const position=buildDailyPosition(daily,{employee_id:e2.id});assert.equal(position.rows[0].entry_minute,965);assert.equal(position.rows[0].duration_minutes,null);assert.equal(position.rows[0].calculation_basis,'approval_snapshot');assert.equal(position.unmatched_sources.length,1);
  const open=(await owner(()=>issues(partial.id))).find(i=>i.state==='open');

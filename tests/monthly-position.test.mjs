@@ -4,7 +4,7 @@ import {buildMonthlyPosition,scopeMonthlyPosition,monthlyMatrixRows,monthlyCellT
 const person={id:'employee-1',name:'موظف تجريبي',internal_code:'FANU-000001',department_id:'dep',department:'قسم تجريبي',employment_status:'active'};
 const rule={department_id:'dep',effective_from:'2020-01-01',start_minute:960,grace_minutes:15,entry_window_start:720,entry_window_end:1439,working_weekdays:[0,1,2,3,4,5,6]};
 function fixture(cells,extra={}) {
- return {month:'2026-09',as_of:'2026-09-24',available:true,batch:{id:'batch',lifecycle_state:'preview',coverage_start:'2026-09-01',coverage_end:'2026-09-23'},employees:[person],rules:[rule],
+ return {month:'2026-09',as_of:'2026-09-24',available:true,batch:{id:'batch',lifecycle_state:'preview',coverage_confirmed:true,coverage_start:'2026-09-01',coverage_end:'2026-09-23'},employees:[person],rules:[rule],
  assignments:[{employee_id:person.id,department_id:'dep',department:'قسم تجريبي',employment_status:'active',valid_from:'2020-01-01',valid_to:null}],
  sources:Object.entries(cells).map(([day,minutes],n)=>({id:`source-${n}`,source_sheet:'Punch Record',source_row:2,calendar_date:`2026-09-${day.padStart(2,'0')}`,person_code:'DVC-1',source_name:'موظف تجريبي',employee_id:person.id,punch_minutes:minutes,raw_values:['DVC-1','موظف تجريبي',`09-${day}`,minutes.map(m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`).join('\n')]})),...extra};
 }
@@ -49,7 +49,7 @@ test('all-month headers do not establish coverage when only partial evidence is 
 });
 
 test('report filters cannot expand saved coverage or fabricate covered blank days',()=>{
- const f=fixture({10:[960,1100],11:[960],12:[]},{batch:{id:'batch',lifecycle_state:'approved',coverage_start:'2026-09-10',coverage_end:'2026-09-12'}});
+ const f=fixture({10:[960,1100],11:[960],12:[]},{batch:{id:'batch',lifecycle_state:'approved',coverage_confirmed:true,coverage_start:'2026-09-10',coverage_end:'2026-09-12'}});
  const baseline=buildMonthlyPosition(f);
  const expanded=buildMonthlyPosition(f,{coverage_start:'2026-09-01',coverage_end:'2026-09-23'});
  assert.equal(expanded.coverage.start,'2026-09-10');assert.equal(expanded.coverage.end,'2026-09-12');
@@ -61,7 +61,7 @@ test('report filters cannot expand saved coverage or fabricate covered blank day
 });
 
 test('an explicitly covered blank source means no recorded punch, while undocumented empty coverage remains unknown',()=>{
- const confirmed=buildMonthlyPosition(fixture({10:[]},{batch:{id:'batch',lifecycle_state:'preview',coverage_start:'2026-09-10',coverage_end:'2026-09-12'}}));
+ const confirmed=buildMonthlyPosition(fixture({10:[]},{batch:{id:'batch',lifecycle_state:'preview',coverage_confirmed:true,coverage_start:'2026-09-10',coverage_end:'2026-09-12'}}));
  assert.equal(confirmed.rows[0].cells[10].state,'no_punch');assert.equal(confirmed.metrics.no_punch,3);assert.equal(confirmed.metrics.worked_minutes,null);
  assert.ok(!Object.values(confirmed.rows[0].cells).some(c=>c.state==='absence'));
  const unknown=buildMonthlyPosition(fixture({10:[]},{batch:{id:'batch',lifecycle_state:'preview'}}));

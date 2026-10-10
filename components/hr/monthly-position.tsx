@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {flushSync} from 'react-dom';
 import {useSearchParams} from 'next/navigation';
 import Link from 'next/link';
@@ -10,19 +10,20 @@ import {Input} from '@/components/ui/input';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import {useData} from '@/lib/hr/api';
 import {baghdadDate,departmentLabel,employmentLabels,statuses,type Reference} from '@/lib/hr/types';
-import {scopeMonthlyPosition,monthlyCellText,monthlyMatrixRows,monthlyStateLabels,minuteText,type MonthlyPosition,type MonthlyPerson,type MonthlyCell} from '@/lib/hr/monthly-position.mjs';
+import {scopeMonthlyPosition,monthlyCellText,monthlyMatrixRows,monthlyPrintableTable,monthlyStateLabels,minuteText,type MonthlyPosition,type MonthlyPerson,type MonthlyCell} from '@/lib/hr/monthly-position.mjs';
 import {download,brandedExcelBytes as tableExcelBytes,tablePdfBytes} from '@/lib/hr/exports';
 import {Choice,Field,LoadState,PageTitle,SearchBox} from './shared';
 import {BrandImage} from './brand-image';
+import {PrintEstimate} from './print-estimate';
 
 const lifecycle:Record<string,string>={preview:'معاينة غير معتمدة',reviewed:'تمت المراجعة · بانتظار الاعتماد',approved:'حضور معتمد',cancelled:'ملغى · للرجوع فقط',superseded:'مستبدل · للرجوع فقط'};
 const conditions=[{value:'with_punch',label:'لديها بصمات'},{value:'complete',label:'دخول وخروج'},{value:'incomplete',label:'بصمات ناقصة'},{value:'no_punch',label:'لا توجد بصمات'},{value:'pending',label:'تحتاج مراجعة'},{value:'unmatched',label:'هوية غير مطابقة'}];
-const summaryHeaders=['الكود الوظيفي','الموظف','القسم','البصمات الخام في الملف','البصمات الفعلية في الملف','أيام ببصمة','دخول وخروج','بصمات ناقصة','تواريخ بلا بصمات','تحتاج مراجعة','دقائق بين البصمات','دقائق تأخير','أول دليل في الملف','آخر دليل في الملف'];
-const summaryValues=(r:MonthlyPerson)=>([r.internal_code||'غير مطابق',r.name,r.department,r.raw_punch_count,r.effective_punch_count,r.summary.with_punch,r.summary.complete,r.summary.incomplete,r.summary.no_punch,r.summary.pending,r.summary.worked_minutes ?? '—',r.summary.late_minutes,r.first_evidence||'—',r.last_evidence||'—']);
+const summaryHeaders=['الكود الوظيفي','الموظف','القسم','البصمات الخام في الملف','البصمات الفعلية في الملف','أيام ببصمة','أيام دخول موثق','دخول وخروج','دخول فقط','خروج فقط','بصمات ناقصة','بلا دخول بتغطية مثبتة','خارج / دون تغطية','تحتاج مراجعة','دقائق بين البصمات','دقائق تأخير','أول دليل في الملف','آخر دليل في الملف'];
+const summaryValues=(r:MonthlyPerson)=>([r.internal_code||'غير مطابق',r.name,r.department,r.raw_punch_count,r.effective_punch_count,r.summary.with_punch,r.summary.valid_entry,r.summary.complete,r.summary.entry_only,r.summary.exit_only,r.summary.incomplete,r.summary.no_punch,r.summary.outside_coverage,r.summary.pending,r.summary.worked_minutes ?? '—',r.summary.late_minutes,r.first_evidence||'—',r.last_evidence||'—']);
 const matrixHeaders=(from:number,to:number)=>['الكود الوظيفي','الموظف','القسم','الحركة',...Array.from({length:to-from+1},(_,i)=>String(from+i)),'مكتمل','ناقص','بلا بصمات','مراجعة','دقائق موثقة'];
 const hourDuration=(m:number|null)=>m===null?'غير متاح':`${Math.floor(m/60)} س ${m%60} د`;
 const reportDate=(date:string)=>new Intl.DateTimeFormat('ar-IQ',{day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Baghdad'}).format(new Date(date+'T12:00:00Z'));
-const exportLegend='+1 خروج اليوم التالي؛ ناقص خروج غير مسجل؛ — لا قيمة موثقة. الملخص الشهري مكرر للرجوع ولا يُجمع عبر أجزاء الأيام.';
+const exportLegend='داخل الخلية: دخول ثم خروج؛ +1 خروج اليوم التالي؛ ناقص خروج غير مسجل؛ — لا قيمة موثقة. ملخص الأيام متاح كتقرير منفصل من عرض ملخص الموظفين.';
 
 export function MonthlyPositionPage({reference,importId,period,embedded=false,initialView='matrix',localPosition,employeeId}:{reference:Reference;importId?:string;period?:string;embedded?:boolean;initialView?:'matrix'|'dashboard'|'summary'|'evidence';localPosition?:MonthlyPosition;employeeId?:string}) {
  const params=useSearchParams();
@@ -40,34 +41,42 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
  const q=useData<MonthlyPosition>('attendance.monthly_position',{month:period||month,import_id:selectedImport,coverage_start:from,coverage_end:through},!localPosition);
  const source=localPosition||q.data;
  const employeeScope=employeeId||params.get('employee_key')||undefined;
- const position=source?scopeMonthlyPosition(source,{search,department_id:dep,manager_id:manager,condition,employee_key:employeeScope}):undefined;
+ const position=source?scopeMonthlyPosition(source,{search,department_id:dep,manager_id:manager,condition,employee_key:employeeScope,coverage_start:from||undefined,coverage_end:through||undefined}):undefined;
  const selectedPerson=position?.rows.find(r=>r.key===selected)||null;
  const activeFilters=[search,dep,manager,condition,from,through,employeeScope].filter(Boolean).length;
  const scopeLabel=[period||month,position?.batch?position.batch.source_name+' · v'+position.batch.version:'',position?.calculation_basis==='approval_snapshot'?'سياق الاعتماد المحفوظ':'الأدلة المتاحة حالياً',position?.coverage?`${position.coverage.start} - ${position.coverage.end}`:'التغطية غير متاحة',lifecycle[position?.batch?.lifecycle_state||'preview'],dep?reference.departments.find(d=>d.id===dep)?.arabic_name:'كل الأقسام',manager?reference.managers.find(m=>m.id===manager)?.name:'كل المسؤولين',condition?conditions.find(c=>c.value===condition)?.label:'كل الحالات',search?`بحث: ${search}`:''].filter(Boolean).join(' · ');
- async function exportFile(pdf:boolean,detail?:MonthlyPerson) {
-  if(!position?.available||exporting)return;setExporting(true);setExportError('');
-  try{
+ const exportScopeKey=scopeLabel+'|'+view+'|'+(selectedPerson?.key||'');
+ const scopeRef=useRef(exportScopeKey),exportBusy=useRef(false);
+ useLayoutEffect(()=>{scopeRef.current=exportScopeKey;},[exportScopeKey]);
+ function printDefinition(pdf:boolean,detail?:MonthlyPerson){if(!position)throw Error('النطاق غير متاح');
    const detailRows=detail?Object.values(detail.cells).filter(c=>c.state!=='filtered').map(c=>[c.date,monthlyCellText(c,'entry'),monthlyCellText(c,'exit'),monthlyStateLabels[c.state],c.duration??'غير متاح',c.late_minutes??'غير متاح',c.timeline.map(p=>`${p.calendar_date} ${minuteText(p.minute)} [${p.source_sheet}:${p.source_row}]`).join('\n'),c.manual?statuses[c.manual.status_type as keyof typeof statuses]?.label||c.manual.status_type:'']):null;
    const exportScope=scopeLabel.replace(period||month,reportDate((period||month)+'-01')).replace(position.coverage?.start||'__none__',position.coverage?reportDate(position.coverage.start):'').replace(position.coverage?.end||'__none__',position.coverage?reportDate(position.coverage.end):'');
    const report={title:detail?`${detail.internal_code||'هوية غير مطابقة'} · ${detail.name}`:view==='summary'?'ملخص البصمة الشهري':'الموقف الشهري بالبصمة',period:exportScope+' · '+exportLegend,
     headers:detail?['تاريخ الوردية','دخول','خروج','الحالة','دقائق بين البصمات','دقائق التأخير','الأدلة التقويمية','قرار HR']:view==='summary'?summaryHeaders:matrixHeaders(1,position.days),
     rows:detailRows|| (view==='summary'?position.rows.map(summaryValues):monthlyMatrixRows(position)),
     columnWeights:detail?[8,7,7,15,7,7,25,10]:undefined,
-    ...(pdf&&!detail&&view!=='summary'?{segments:Array.from({length:Math.ceil(position.days/7)},(_,i)=>({headers:matrixHeaders(i*7+1,Math.min(position.days,i*7+7)),rows:monthlyMatrixRows(position,i*7+1,Math.min(position.days,i*7+7)).map(row=>row.map(value=>typeof value==='string'?value.replace(/ · (\d{4}-\d{2}-\d{2})$/, '\n$1'):value)),columnWeights:[14,18,13,7,...Array(Math.min(7,position.days-i*7)).fill(10),7,7,10,7,9]}))}:{}),
+    ...(pdf&&!detail&&view!=='summary'?monthlyPrintableTable(position):{}),
    };
    if(view==='evidence'&&!detail){
     report.title='الأدلة التقويمية للبصمة · اتجاه غير مصنف';
     report.period+=' · الأدلة التقويمية الكاملة للهويات المعروضة؛ فلتر حالة الوردية لا يحذف بصمات المصدر';
     report.headers=['الكود الوظيفي','هوية المصدر','التاريخ التقويمي','البصمة','المصدر'];
     report.rows=position.rows.flatMap(r=>(r.raw_timeline||[]).map(p=>[r.internal_code||'غير مطابق',r.name,p.calendar_date,minuteText(p.minute),p.source_sheet+':'+p.source_row]));
-    report.columnWeights=[15,30,20,15,20]; delete report.segments;
+    report.columnWeights=[15,30,20,15,20]; delete report.compact;
    }
+   return report;
+ }
+ async function exportFile(pdf:boolean,detail?:MonthlyPerson) {
+  if(!position?.available||exporting||exportBusy.current)return;const captured=scopeRef.current;exportBusy.current=true;setExporting(true);setExportError('');
+  try{
+   const report=printDefinition(pdf,detail);
    const bytes=pdf?await tablePdfBytes(report):await tableExcelBytes(report);
+   if(scopeRef.current!==captured)throw Error('تغير نطاق التقرير؛ أعد التصدير');
    const name=`FANU-fingerprint-${position.month}${detail?'-employee':''}.${pdf?'pdf':'xlsx'}`;
    const mime=pdf?'application/pdf':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
    setExportFileLink({url:URL.createObjectURL(new Blob([bytes as BlobPart],{type:mime})),name,bytes:bytes.length,scope:scopeLabel+'|'+view+'|'+(detail?.key||'')});
    download(bytes,name,mime);
-  }catch(e){const message=(e as Error).message||'تعذر تصدير التقرير';setExportError(message);toast.error(message);}finally{setExporting(false);}
+  }catch(e){const message=(e as Error).message||'تعذر تصدير التقرير';setExportError(message);toast.error(message);}finally{exportBusy.current=false;setExporting(false);}
  }
  return <section className={`monthly-workspace ${embedded?'monthly-embedded':''}`} aria-label="الموقف الشهري بالبصمة">
   {!embedded&&<PageTitle title="الموقف الشهري بالبصمة" subtitle="دليل البصمة مستقل عن قرارات HR اليدوية" actions={<Button asChild><Link href="/fingerprint-monthly">فتح ملفات الشهر <ArrowUpLeft size={16}/></Link></Button>}/>}
@@ -86,6 +95,7 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
    </div>
   </div>
   <LoadState loading={!localPosition&&q.loading&&!q.data} error={localPosition?'':q.error} retry={q.refresh}>
+   <PrintEstimate report={position?.available?printDefinition(true):null}/>
    {exportError&&<p role="alert" className="workflow-notice">تعذر تجهيز التقرير: {exportError}</p>}
    {exportFileLink?.scope===scopeLabel+'|'+view+'|'+(selectedPerson?.key||'')&&<div role="status" className="workflow-notice no-print">تم تجهيز التقرير ({Math.ceil(exportFileLink.bytes/1024)} كيلوبايت). إذا لم يبدأ التنزيل: <a className="employee-link" href={exportFileLink.url} download={exportFileLink.name}>تنزيل <bdi>{exportFileLink.name}</bdi></a></div>}
    {!position?.available?<div className="monthly-unavailable"><h2>لا يوجد ملف شهري معتمد لهذه الفترة</h2><p>الأرقام غير متاحة، وليست صفراً. افتح معاينة ملف لمراجعة الأدلة؛ لا يظهر في الموقف الرسمي إلا بعد الاعتماد الصريح.</p><Button asChild variant="outline"><Link href="/fingerprint-monthly">ملفات البصمة الشهرية</Link></Button></div>:<>
@@ -129,11 +139,8 @@ export function MonthlyPositionPage({reference,importId,period,embedded=false,in
 }
 
 function MonthlyPrint({position,scopeLabel}:{position:MonthlyPosition;scopeLabel:string}) {
- return <div className="monthly-print">{Array.from({length:Math.ceil(position.days/10)},(_,i)=>{
-  const from=i*10+1,to=Math.min(position.days,from+9);
-  const rows=monthlyMatrixRows(position,from,to);
-  return <section key={from} className="monthly-print-segment"><div className="print-brand"><BrandImage kind="header" alt="FANU ALNASIJ — قسم الموارد البشرية – مسائي"/></div><h2>الموقف الشهري بالبصمة · أيام {from}–{to}</h2><p>{scopeLabel}</p><table><thead><tr>{matrixHeaders(from,to).map(h=><th key={h}>{h}</th>)}</tr></thead>{position.rows.map((r,n)=><tbody key={r.key}>{[0,1].map(k=><tr key={k}>{rows[n*2+k].map((v,c)=><td key={c}>{c===0||c>=4?<bdi>{v}</bdi>:v}</td>)}</tr>)}</tbody>)}</table><p>+1: خروج اليوم التالي · ناقص: خروج غير مسجل · —: لا قيمة موثقة · الملخص الشهري مكرر للرجوع فقط ولا يُجمع عبر الأجزاء.</p><footer>جزء الأيام {i+1} / {Math.ceil(position.days/10)}</footer></section>;
- })}</div>;
+ const table=monthlyPrintableTable(position);
+ return <div className="monthly-print"><section className="monthly-print-segment"><div className="print-brand"><BrandImage kind="header" alt="FANU ALNASIJ — قسم الموارد البشرية – مسائي"/></div><h2>الموقف الشهري بالبصمة · {position.month}</h2><p>{scopeLabel}</p><table><thead><tr>{table.headers.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{table.rows.map((r,i)=><tr key={position.rows[i].key}>{r.map((v,c)=><td key={c} style={{whiteSpace:"pre-line"}}><bdi>{v}</bdi></td>)}</tr>)}</tbody></table><p>دخول ثم خروج؛ +1 خروج اليوم التالي؛ ؟ يحتاج مراجعة؛ — لا قيمة موثقة</p></section></div>;
 }
 function MonthlyMatrix({position,onEmployee}:{position:MonthlyPosition;onEmployee:(key:string)=>void}) {
  const [page,setPage]=useState(0);

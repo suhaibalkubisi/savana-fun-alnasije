@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {useDirtyForm} from "@/lib/hr/use-dirty-form";
 import Link from "next/link";
 import { BrandImage } from "./brand-image";
@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { mutate, useData, useDebounced } from "@/lib/hr/api";
+import { mutate, api, useData, useDebounced } from "@/lib/hr/api";
 import {
   actionStateLabels,
   auditDate,
@@ -96,6 +96,21 @@ function Metrics({
   );
 }
 
+function reportMonth(value:string|null){return /^\d{4}-(0[1-9]|1[0-2])$/.test(value||"")?value!:baghdadDate().slice(0,7);}
+function operationalScope(reference:Reference,filters:Record<string,string|number>){return [
+  monthLabel(String(filters.month)),filters.date?'تاريخ القرار: '+filters.date:'',
+  filters.department_id?(reference.departments.find(d=>d.id===filters.department_id)?departmentLabel(reference.departments.find(d=>d.id===filters.department_id)!):String(filters.department_id)):'جميع الأقسام',
+  filters.shift_id?'الشفت: '+(reference.shifts.find(d=>d.id===filters.shift_id)?.name||filters.shift_id):'',
+  filters.manager_id?'المسؤول: '+(reference.managers.find(d=>d.id===filters.manager_id)?.name||filters.manager_id):'',
+  filters.search?'البحث: '+filters.search:'',filters.status_type?'الحالة: '+statuses[filters.status_type as StatusType]?.label:'',
+  filters.status_group==='absence'?'قرارات الغياب بجميع الأوزان':'',filters.min_minutes?'دقائق من '+filters.min_minutes:'',filters.max_minutes?'دقائق إلى '+filters.max_minutes:'',filters.state?'حالة الإجراء: '+filters.state:''
+ ].filter(Boolean).join(' · ');}
+async function fullReportSnapshot<T extends {rows:unknown[];total:number}>(kind:string,filters:Record<string,string|number>){
+ const query=new URLSearchParams({kind,...Object.fromEntries(Object.entries(filters).filter(([k,v])=>k!=="page"&&v!==""&&v!==undefined).map(([k,v])=>[k,String(v)])),export_all:"true"});
+ const result=await api<T>("/api/data?"+query);
+ if(result.total!==result.rows.length)throw new Error("نتائج التصدير غير مكتملة؛ ضيق النطاق وأعد المحاولة");
+ return result;
+}
 async function exportTable(
   format: "excel" | "pdf",
   title: string,
@@ -103,11 +118,13 @@ async function exportTable(
   headers: string[],
   rows: (string | number)[][],
   name: string,
+  isCurrent:()=>boolean=()=>true,
 ) {
   const bytes =
     format === "excel"
       ? await tableExcelBytes({ title, period, headers, rows, sheetName: title })
       : await tablePdfBytes({ title, period, headers, rows });
+  if(!isCurrent())throw new Error("تغير نطاق التقرير؛ أعد التصدير");
   download(
     bytes,
     `${name}.${format === "excel" ? "xlsx" : "pdf"}`,
@@ -129,6 +146,7 @@ interface LatenessData extends Paged<StatusRecord> {
     employee_id: string;
     employee_name: string;
     employee_number: string | null;
+    internal_code?:string;
     department: string;
     occurrences: number;
     total_minutes: number;
@@ -139,29 +157,41 @@ interface LatenessData extends Paged<StatusRecord> {
 }
 
 export function LatenessPage({ reference }: { reference: Reference }) {
-  const [month, setMonth] = useState(baghdadDate().slice(0, 7));
-  const [search, setSearch] = useState("");
-  const [department, setDepartment] = useState("");
+  const params=useSearchParams();
+  const [month, setMonth] = useState(reportMonth(params.get("month")));
+  const [search, setSearch] = useState(params.get("search") || "");
+  const [department, setDepartment] = useState(params.get("department_id") || "");
   const [shift, setShift] = useState("");
   const [manager, setManager] = useState("");
   const [min, setMin] = useState("");
   const [max, setMax] = useState("");
+  const [exactDate,setExactDate]=useState(/^\d{4}-\d{2}-\d{2}$/.test(params.get('date')||'')?params.get('date')!:'');
   const [page, setPage] = useState(1);
   const [summary, setSummary] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const q = useData<LatenessData>("lateness", {
+  const delayedSearch=useDebounced(search);
+  const filters={
     month,
-    search: useDebounced(search),
+    date:exactDate,
+    search: delayedSearch,
     department_id: department,
     shift_id: shift,
     manager_id: manager,
     min_minutes: min,
     max_minutes: max,
     page,
-  });
+  };
+  const q=useData<LatenessData>("lateness",filters);
+  const scopeKey=JSON.stringify({...filters,search,summary});
+  const scopeRef=useRef(scopeKey);useLayoutEffect(()=>{scopeRef.current=scopeKey;},[scopeKey]);
+  const exportBusy=useRef(false);
+  const monthParam=params.get("month");
+  const [previousMonthParam,setPreviousMonthParam]=useState(monthParam);
+  if(previousMonthParam!==monthParam){setPreviousMonthParam(monthParam);if(monthParam)setMonth(reportMonth(monthParam));}
   const title = summary ? "ملخص التأخيرات حسب الموظف" : "تفاصيل التأخيرات";
   const headers = summary
     ? [
+        "الكود الوظيفي",
         "رقم الموظف",
         "الموظف",
         "القسم",
@@ -172,6 +202,7 @@ export function LatenessPage({ reference }: { reference: Reference }) {
         "آخر تأخير",
       ]
     : [
+        "الكود الوظيفي",
         "التاريخ",
         "رقم الموظف",
         "الموظف",
@@ -183,45 +214,29 @@ export function LatenessPage({ reference }: { reference: Reference }) {
         "مدخل السجل",
         "آخر تعديل",
       ];
-  const rows = summary
-    ? (q.data?.summary || []).map((r) => [
-        r.employee_number || "—",
-        r.employee_name,
-        r.department,
-        r.occurrences,
-        r.total_minutes,
-        r.average_minutes,
-        r.highest_minutes,
-        r.last_late,
-      ])
-    : (q.data?.rows || []).map((r) => [
-        r.record_date,
-        r.employee_number || "—",
-        r.employee_name,
-        r.department,
-        r.shift || "—",
-        r.manager || "—",
-        r.late_minutes || 0,
-        r.notes || "—",
-        r.created_by_name || "—",
-        auditDate(r.updated_at),
-      ]);
+  const mapLatenessSummary=(r:LatenessData["summary"][number])=>[r.internal_code||"—",r.employee_number||"—",r.employee_name,r.department,r.occurrences,r.total_minutes,r.average_minutes,r.highest_minutes,r.last_late];
+  const mapLateness=(r:StatusRecord)=>[r.internal_code||"—",r.record_date,r.employee_number||"—",r.employee_name,r.department,r.shift||"—",r.manager||"—",r.late_minutes||0,r.notes||"—",r.created_by_name||"—",auditDate(r.updated_at)];
+  const rows = summary ? (q.data?.summary || []).map(mapLatenessSummary) : (q.data?.rows || []).map(mapLateness);
   const doExport = async (format: "excel" | "pdf") => {
-    setExporting(true);
+    if(!q.data||q.loading||search!==delayedSearch||exportBusy.current)return;
+    const captured=scopeRef.current;exportBusy.current=true;setExporting(true);
     try {
+      const full=await fullReportSnapshot<LatenessData>("lateness",filters);
+      const exportRows=summary ? full.summary.map(mapLatenessSummary) : full.rows.map(mapLateness);
       await exportTable(
         format,
         title,
-        monthLabel(month),
+        operationalScope(reference,filters),
         headers,
-        rows,
+        exportRows,
         `lateness_${month}`,
+        ()=>scopeRef.current===captured,
       );
       toast.success("تم تصدير التقرير");
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
-      setExporting(false);
+      exportBusy.current=false;setExporting(false);
     }
   };
   return (
@@ -231,7 +246,7 @@ export function LatenessPage({ reference }: { reference: Reference }) {
         subtitle={monthLabel(month)}
         actions={
           <ReportActions
-            disabled={!q.data || exporting}
+            disabled={!q.data || exporting || q.loading || search!==delayedSearch}
             excel={() => void doExport("excel")}
             pdf={() => void doExport("pdf")}
           />
@@ -262,11 +277,12 @@ export function LatenessPage({ reference }: { reference: Reference }) {
               type="month"
               value={month}
               onChange={(e) => {
-                setMonth(e.target.value);
+                setMonth(e.target.value);setExactDate("");
                 setPage(1);
               }}
             />
           </Field>
+          <Field label="تاريخ القرار ضمن الشهر (اختياري)"><Input type="date" value={exactDate} min={month+'-01'} max={month+'-31'} onChange={e=>{setExactDate(e.target.value);setPage(1);}}/></Field>
           <SearchBox
             value={search}
             onChange={(v) => {
@@ -359,7 +375,7 @@ export function LatenessPage({ reference }: { reference: Reference }) {
                 >
                   {row.map((value, j) => (
                     <TableCell key={j}>
-                      {j === 2 || (summary && j === 1) ? (
+                      {(summary && j===2)||(!summary&&j===3) ? (
                         <Link
                           href={`/employees/${summary ? q.data!.summary[i].employee_id : q.data!.rows[i].employee_id}`}
                         >
@@ -399,20 +415,34 @@ interface AbsenceData extends Paged<StatusRecord> {
 }
 
 export function AbsenceLeavePage({ reference }: { reference: Reference }) {
-  const [month, setMonth] = useState(baghdadDate().slice(0, 7));
-  const [search, setSearch] = useState("");
-  const [department, setDepartment] = useState("");
-  const [status, setStatus] = useState("");
+  const params=useSearchParams();
+  const [month, setMonth] = useState(reportMonth(params.get("month")));
+  const [search, setSearch] = useState(params.get("search") || "");
+  const [department, setDepartment] = useState(params.get("department_id") || "");
+  const [status, setStatus] = useState(params.get("status_type") || "");
+  const [statusGroup,setStatusGroup]=useState(params.get("status_group") || "");
+  const [exactDate,setExactDate]=useState(/^\d{4}-\d{2}-\d{2}$/.test(params.get('date')||'')?params.get('date')!:'');
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
-  const q = useData<AbsenceData>("absence_leave", {
+  const delayedSearch=useDebounced(search);
+  const filters={
     month,
-    search: useDebounced(search),
+    date:exactDate,
+    search: delayedSearch,
     department_id: department,
     status_type: status,
+    status_group:status? "":statusGroup,
     page,
-  });
+  };
+  const q=useData<AbsenceData>("absence_leave",filters);
+  const scopeKey=JSON.stringify({...filters,search});
+  const scopeRef=useRef(scopeKey);useLayoutEffect(()=>{scopeRef.current=scopeKey;},[scopeKey]);
+  const exportBusy=useRef(false);
+  const monthParam=params.get("month");
+  const [previousMonthParam,setPreviousMonthParam]=useState(monthParam);
+  if(previousMonthParam!==monthParam){setPreviousMonthParam(monthParam);if(monthParam)setMonth(reportMonth(monthParam));}
   const headers = [
+    "الكود الوظيفي",
     "التاريخ",
     "رقم الموظف",
     "الموظف",
@@ -422,32 +452,28 @@ export function AbsenceLeavePage({ reference }: { reference: Reference }) {
     "مدخل السجل",
     "وقت التسجيل",
   ];
-  const rows = (q.data?.rows || []).map((r) => [
-    r.record_date,
-    r.employee_number || "—",
-    r.employee_name,
-    r.department,
-    statuses[r.status_type].label,
-    r.notes || "—",
-    r.created_by_name || "—",
-    auditDate(r.created_at),
-  ]);
+  const mapAbsence=(r:StatusRecord)=>[r.internal_code||"—",r.record_date,r.employee_number||"—",r.employee_name,r.department,statuses[r.status_type].label,r.notes||"—",r.created_by_name||"—",auditDate(r.created_at)];
+  const rows=(q.data?.rows||[]).map(mapAbsence);
   const doExport = async (format: "excel" | "pdf") => {
-    setExporting(true);
+    if(!q.data||q.loading||search!==delayedSearch||exportBusy.current)return;
+    const captured=scopeRef.current;exportBusy.current=true;setExporting(true);
     try {
+      const full=await fullReportSnapshot<AbsenceData>("absence_leave",filters);
+      const exportRows=full.rows.map(mapAbsence);
       await exportTable(
         format,
         "تقرير الغيابات والإجازات",
-        monthLabel(month),
+        operationalScope(reference,filters),
         headers,
-        rows,
+        exportRows,
         `absence_leave_${month}`,
+        ()=>scopeRef.current===captured,
       );
       toast.success("تم تصدير التقرير");
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
-      setExporting(false);
+      exportBusy.current=false;setExporting(false);
     }
   };
   return (
@@ -457,7 +483,7 @@ export function AbsenceLeavePage({ reference }: { reference: Reference }) {
         subtitle={monthLabel(month)}
         actions={
           <ReportActions
-            disabled={!q.data || exporting}
+            disabled={!q.data || exporting || q.loading || search!==delayedSearch}
             excel={() => void doExport("excel")}
             pdf={() => void doExport("pdf")}
           />
@@ -483,11 +509,12 @@ export function AbsenceLeavePage({ reference }: { reference: Reference }) {
               type="month"
               value={month}
               onChange={(e) => {
-                setMonth(e.target.value);
+                setMonth(e.target.value);setExactDate("");
                 setPage(1);
               }}
             />
           </Field>
+          <Field label="تاريخ القرار ضمن الشهر (اختياري)"><Input type="date" value={exactDate} min={month+'-01'} max={month+'-31'} onChange={e=>{setExactDate(e.target.value);setPage(1);}}/></Field>
           <SearchBox
             value={search}
             onChange={(v) => {
@@ -511,7 +538,7 @@ export function AbsenceLeavePage({ reference }: { reference: Reference }) {
             label="الحالة"
             value={status}
             onChange={(v) => {
-              setStatus(v);
+              setStatus(v);setStatusGroup("");
               setPage(1);
             }}
             options={(Object.keys(statuses) as StatusType[])
@@ -537,7 +564,7 @@ export function AbsenceLeavePage({ reference }: { reference: Reference }) {
             <TableBody>
               {q.data?.rows.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell dir="ltr">{r.record_date}</TableCell>
+                  <TableCell dir="ltr">{r.internal_code || "—"}</TableCell><TableCell dir="ltr">{r.record_date}</TableCell>
                   <TableCell dir="ltr">{r.employee_number || "—"}</TableCell>
                   <TableCell>
                     <Link href={`/employees/${r.employee_id}`}>
@@ -597,8 +624,8 @@ export function AdministrativeActionsPage({
       ? params.get("month")!
       : initialDate.slice(0, 7),
   );
-  const [search, setSearch] = useState("");
-  const [department, setDepartment] = useState("");
+  const [search, setSearch] = useState(params.get("search") || "");
+  const [department, setDepartment] = useState(params.get("department_id") || "");
   const [type, setType] = useState("");
   const [state, setState] = useState(
     ["active", "closed", "cancelled"].includes(params.get("state") || "")
@@ -610,15 +637,24 @@ export function AdministrativeActionsPage({
     initialEmployee && canWrite ? null : undefined,
   );
   const [exporting, setExporting] = useState(false);
-  const q = useData<Paged<AdministrativeAction>>("administrative_actions", {
+  const delayedSearch=useDebounced(search);
+  const filters={
     month,
-    search: useDebounced(search),
+    search: delayedSearch,
     department_id: department,
     action_type_id: type,
     state,
     page,
-  });
+  };
+  const q=useData<Paged<AdministrativeAction>>("administrative_actions",filters);
+  const scopeKey=JSON.stringify({...filters,search});
+  const scopeRef=useRef(scopeKey);useLayoutEffect(()=>{scopeRef.current=scopeKey;},[scopeKey]);
+  const exportBusy=useRef(false);
+  const monthParam=params.get("month");
+  const [previousMonthParam,setPreviousMonthParam]=useState(monthParam);
+  if(previousMonthParam!==monthParam){setPreviousMonthParam(monthParam);if(monthParam)setMonth(reportMonth(monthParam));}
   const headers = [
+    "الكود الوظيفي",
     "المرجع",
     "التاريخ",
     "رقم الموظف",
@@ -629,33 +665,27 @@ export function AdministrativeActionsPage({
     "الحالة",
     "أنشأه",
   ];
-  const rows = (q.data?.rows || []).map((a) => [
-    a.reference_number,
-    a.action_date,
-    a.employee_number || "—",
-    a.employee_name,
-    a.department,
-    a.action_type,
-    a.reason,
-    actionStateLabels[a.state],
-    a.created_by_name || "—",
-  ]);
+  const mapAction=(a:AdministrativeAction)=>[a.internal_code||"—",a.reference_number,a.action_date,a.employee_number||"—",a.employee_name,a.department,a.action_type,a.reason,actionStateLabels[a.state],a.created_by_name||"—"];
   const doExport = async (format: "excel" | "pdf") => {
-    setExporting(true);
+    if(!q.data||q.loading||search!==delayedSearch||exportBusy.current)return;
+    const captured=scopeRef.current;exportBusy.current=true;setExporting(true);
     try {
+      const full=await fullReportSnapshot<Paged<AdministrativeAction>>("administrative_actions",filters);
+      const exportRows=full.rows.map(mapAction);
       await exportTable(
         format,
         "تقرير الإجراءات الإدارية",
-        monthLabel(month),
+        operationalScope(reference,filters),
         headers,
-        rows,
+        exportRows,
         `administrative_actions_${month}`,
+        ()=>scopeRef.current===captured,
       );
       toast.success("تم تصدير التقرير");
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
-      setExporting(false);
+      exportBusy.current=false;setExporting(false);
     }
   };
   return (
@@ -666,7 +696,7 @@ export function AdministrativeActionsPage({
         actions={
           <>
             <ReportActions
-              disabled={!q.data || exporting}
+              disabled={!q.data || exporting || q.loading || search!==delayedSearch}
               excel={() => void doExport("excel")}
               pdf={() => void doExport("pdf")}
             />
@@ -750,7 +780,7 @@ export function AdministrativeActionsPage({
             <TableBody>
               {q.data?.rows.map((a) => (
                 <TableRow key={a.id}>
-                  <TableCell dir="ltr">{a.reference_number}</TableCell>
+                  <TableCell dir="ltr">{a.internal_code || "—"}</TableCell><TableCell dir="ltr">{a.reference_number}</TableCell>
                   <TableCell dir="ltr">{a.action_date}</TableCell>
                   <TableCell dir="ltr">{a.employee_number || "—"}</TableCell>
                   <TableCell>
@@ -993,8 +1023,9 @@ function ReportActions({
 }
 
 export function CentralReportsPage({ reference }: { reference: Reference }) {
+  const params=useSearchParams();
   const [employee, setEmployee] = useState("");
-  const [month, setMonth] = useState(baghdadDate().slice(0, 7));
+  const [month, setMonth] = useState(reportMonth(params.get("month")));
   const reports = useMemo(
     () =>
       [

@@ -12,7 +12,9 @@ export function useDirtyForm(value:unknown, busy=false, identity:unknown=null,cl
     const link=(event:MouseEvent)=>{
       if(event.defaultPrevented||event.button!==0)return;
       const target=(event.target as Element)?.closest('a[href]');
-      if(!target||target.getAttribute('href')?.startsWith('#'))return;
+      if(!target||target.hasAttribute('download')||target.getAttribute('href')?.startsWith('#')||/^(blob:|data:)/i.test(target.getAttribute('href')||'')||target.getAttribute('target')==='_blank'||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+      const destination=new URL(target.getAttribute('href')!,window.location.href);
+      if(destination.pathname===window.location.pathname&&destination.search===window.location.search)return;
       if(busy||!window.confirm('لديك تغييرات لم تحفظ. هل تريد مغادرة النموذج؟')){event.preventDefault();event.stopPropagation();}
     };
     window.addEventListener('beforeunload',before);document.addEventListener('click',link,true);

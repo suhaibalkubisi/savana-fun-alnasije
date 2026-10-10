@@ -46,6 +46,7 @@ export interface Employee {
   updated_at: string;
 }
 export interface StatusRecord {
+  internal_code?: string;
   id: string;
   employee_id: string;
   record_date: string;
@@ -77,12 +78,18 @@ export interface Totals {
   administrative_actions: number;
 }
 export interface ReportRow extends Employee, Totals {
-  cells: Record<string, StatusType>;
+  cells: Record<string, StatusType|"attendance">;
+  verified_entry_days?:number;
+  attendance_conflicts?:number;
+  cell_details?:Record<string,{date:string;manual:StatusType|null;recorded_entry:boolean;conflict:boolean;attendance_state:string;source:string;source_id:string|null}>;
 }
 export interface Report {
   rows: ReportRow[];
   month: string;
   totals: Totals;
+  attendance_source?:string;
+  attendance_conflicts?:number;
+  as_of?:string;
 }
 export interface Reference {
   departments: Department[];
@@ -101,6 +108,7 @@ export interface AdministrativeActionType {
   version: number;
 }
 export interface AdministrativeAction {
+  internal_code?: string;
   id: string;
   reference_number: string;
   employee_id: string;

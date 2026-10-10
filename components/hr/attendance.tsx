@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useDirtyForm } from '@/lib/hr/use-dirty-form';
 import type { parseFingerprint } from "@/lib/hr/fingerprint";
 import type { MonthlyPosition } from "@/lib/hr/monthly-position.mjs";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BrandImage } from "./brand-image";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -111,6 +111,11 @@ const labels: Record<string, string> = {
   no_entry: "بلا بصمة دخول",
   no_file: "لا يوجد ملف يومي معتمد",
   entry_recorded: "دخول موثق",
+  context_conflict:"تعارض سياقات مصادر معتمدة",
+  unresolved_identity:"رابط هوية سابق يحتاج إثباتاً",
+  unproven_coverage:"تغطية الموظف غير مثبتة",
+  incomplete_day:"يوم غير مكتمل",
+  ineligible:"خارج أهلية الخدمة",
   outside_entry_window: "بصمات خارج نافذة الدخول",
   missing_schedule: "الدوام غير محدد",
   missing_assignment: "الانتماء التاريخي غير موثق",
@@ -240,7 +245,7 @@ function Grid({
     </div>
   );
 }
-function Metrics({ items }: { items: [string, number][] }) {
+function Metrics({ items }: { items: [string, number | null][] }) {
   return (
     <section className="metric-strip attendance-metrics">
       {items.map(([label, value]) => (
@@ -259,7 +264,7 @@ function Metrics({ items }: { items: [string, number][] }) {
           }
         >
           <span>{label}</span>
-          <strong>{value}</strong>
+          <strong>{value ?? "—"}</strong>
         </article>
       ))}
     </section>
@@ -274,6 +279,7 @@ export function DailyAttendanceReport({
   canWrite?: boolean;
 }) {
   const params = useSearchParams();
+  const router = useRouter();
   const employeeScope = params.get("employee_id") || "";
   const [date, setDate] = useState(
       /^\d{4}-\d{2}-\d{2}$/.test(params.get("date") || "")
@@ -317,10 +323,11 @@ export function DailyAttendanceReport({
   });
   const title = "الموقف اليومي";
   const rawRows = query.data?.rows || [];
+  const sourceAvailable=!!query.data?.imports.some(b=>b.linked_rows>0);
   const group = (value: string) =>
     value.startsWith("absence") ? "absence" : value;
   const rows = rawRows.filter((r) => {
-    if (advanced) return r.status === advanced;
+    if (advanced) return r.status === advanced || r.attendance_state===advanced || (advanced==="pending_review"&&r.needs_review);
     return quick === null || quick.has(group(r.status));
   });
   const headers = [
@@ -348,7 +355,7 @@ export function DailyAttendanceReport({
     time(r.entry_minute),
     r.late_minutes ?? "—",
     labels[r.attendance_state] || r.attendance_state,
-    `${r.source_names.join(" / ") || "لا يوجد مصدر مرتبط"} · ${r.calculation_basis==="approval_snapshot"?"سياق الاعتماد":"أدلة تاريخية متاحة"}`,
+    `${r.source_names.join(" / ") || "لا يوجد مصدر مرتبط"} · ${r.calculation_basis==="approval_snapshot"?"سياق الاعتماد":r.raw_timeline.length?"أدلة الفترة":"لا دليل مرتبط"}`,
     r.procedure_text,
     labels[r.manual_status || ""] || "",
     r.notes,
@@ -496,12 +503,12 @@ export function DailyAttendanceReport({
                   size="sm"
                   variant={quick?.has(value) ? "default" : "outline"}
                   onClick={() =>
-                    setQuick((current) => {
+                    (setAdvanced(""),setQuick((current) => {
                       const next = new Set(current || []);
                       if (next.has(value)) next.delete(value);
                       else next.add(value);
                       return next;
-                    })
+                    }))
                   }
                 >
                   {label}
@@ -511,7 +518,7 @@ export function DailyAttendanceReport({
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => setQuick(null)}
+                onClick={() => {setQuick(null);setAdvanced("");}}
               >
                 تحديد الكل
               </Button>
@@ -519,7 +526,7 @@ export function DailyAttendanceReport({
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => setQuick(new Set())}
+                onClick={() => {setQuick(null);setAdvanced("");setDep("");setSearch("");router.replace(`/daily-position?date=${date}`);}}
               >
                 مسح الكل
               </Button>
@@ -530,9 +537,9 @@ export function DailyAttendanceReport({
           <Choice
             label="تصفية متقدمة"
             value={advanced}
-            onChange={setAdvanced}
+            onChange={value=>{setAdvanced(value);setQuick(null);}}
             options={Object.entries(labels)
-              .slice(0, 9)
+              .filter(([key])=>!["pending_exit","preview","applied","cancelled","reviewed","approved","superseded","code","unmatched","ambiguous","unique_name","confirmed","invalid"].includes(key))
               .map(([value, label]) => ({ value, label }))}
           />
         }
@@ -542,17 +549,21 @@ export function DailyAttendanceReport({
         error={query.error}
         retry={query.refresh}
       >
+        {query.data&&!sourceAvailable&&<p className="workflow-notice" role="status">دليل الحضور غير متاح من مصدر يومي مرتبط. تبقى قرارات HR المسجلة مستقلة؛ لا تعني الأصفار غياباً أو اكتمال التغطية.</p>}
         {query.data?.imports?.map(b=><p key={b.id} className="workflow-notice">{b.source_name} · {b.linked_rows} صف مرتبط · {b.unlinked_rows} صف غير مرتبط {b.unlinked_rows>0?'— اعتماد جزئي؛ الصفوف غير المرتبطة لا تدخل الموقف':''}</p>)}
         {!!query.data?.unmatched_sources?.length&&<details className="workspace-panel"><summary>متابعة الأدلة غير المرتبطة ({query.data.unmatched_sources.length})</summary>{query.data.unmatched_sources.map(s=><p key={s.id}>{s.source_name} · {s.person_code} · {s.punch_minutes.map(time).join(' / ')}</p>)}<p>المصدر المعتمد ثابت؛ راجع هذه الأدلة في مصدر تصحيحي مستقل قبل أي اعتماد جديد.</p></details>}
         <Metrics
           items={[
             ["المتوقعون", rows.filter((r) => r.expected).length],
-            ["حاضر", count("present")],
-            ["تأخير", count("late")],
+            ["حاضر بدليل البصمة", sourceAvailable?count("present"):null],
+            ["تأخير HR مسجل",rows.filter(r=>r.manual_status==="late").length],
+            ["تأخير مشتق من البصمة",sourceAvailable?rows.filter(r=>!r.manual_status&&r.status==="late").length:null],
             ["دقائق التأخير", total("late_minutes")],
             ["غياب", count("absence") + count("absence2") + count("absence3")],
             ["إجازة", count("leave")],
-            ["بلا بصمة دخول", count("no_entry")],
+            ["بلا دخول بتغطية مثبتة", sourceAvailable?rows.filter(r=>r.attendance_state==="no_entry"&&!r.needs_review&&r.expected).length:null],
+            ["تغطية غير مثبتة",rows.filter(r=>r.attendance_state==="unproven_coverage").length],
+            ["لا مصدر يومي",rows.filter(r=>r.attendance_state==="no_file").length],
             ["يحتاج مراجعة", rows.filter((r) => r.needs_review).length],
           ]}
         />

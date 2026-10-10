@@ -17,6 +17,8 @@ export interface PreviewRow {
 const aliases: Record<string, string[]> = {
   name: ["الاسم", "اسم الموظف", "name", "Employee Name"],
   department: ["القسم", "Department", "department"],
+  uuid:["UUID","employee_id","معرف الموظف"],
+  permanent:["الكود الوظيفي","internal_code","Permanent Code"],
   number: ["رقم الموظف", "Employee Number", "employee_number"],
   shift: ["الشفت", "Shift", "shift"],
   manager: ["المسؤول المباشر", "Direct Manager", "manager"],
@@ -48,6 +50,7 @@ export function previewRows(
   employees: Employee[],
 ): PreviewRow[] {
   const numbers = new Set<string>();
+  const targets=new Set<string>();
   return rows.map((r) => {
     const get = (key: string) => {
       const alias = aliases[key].find((a) => Object.hasOwn(r.values, a));
@@ -63,17 +66,20 @@ export function previewRows(
           norm(departmentLabel(d)),
         ].includes(sourceLabels[rawDept] || rawDept) && d.is_active,
     );
-    const number = get("number")?.trim() || null;
-    const old = number
-      ? employees.find((e) => e.employee_number === number)
-      : undefined;
-    const mode = old ? "update" : "create";
-    let error = "";
-    const warning = employees.some((e) => e.name === name && e.id !== old?.id)
-      ? "اسم موجود — هوية مستقلة"
-      : "";
-    if (number && numbers.has(number)) error = "رقم الموظف مكرر داخل الملف";
-    if (number) numbers.add(number);
+    const numberField=get("number"),number=numberField?.trim()||null;
+    const uuid=get("uuid")?.trim(),code=get("permanent")?.trim().toUpperCase();
+    const byUuid=uuid?employees.find(e=>e.id===uuid):undefined,byCode=code?employees.find(e=>e.internal_code===code):undefined,byNumber=number?employees.find(e=>e.employee_number===number):undefined;
+    const old=byUuid||byCode||byNumber;
+    const mode=old?"update":"create";
+    let error="";
+    if(uuid&&!byUuid)error="UUID الموظف غير موجود؛ لا يمكن إنشاء هوية بديلة منه";
+    if(code&&!byCode)error="الكود الوظيفي غير موجود؛ يُولّد النظام الكود للموظف الجديد";
+    if(new Set([byUuid,byCode,byNumber].filter(Boolean).map(e=>e!.id)).size>1)error="معرفات الصف تشير إلى موظفين مختلفين؛ لم يُختَر موظف للتحديث";
+    if(old&&targets.has(old.id))error="الموظف مكرر داخل الملف بمعرف دائم";
+    if(old)targets.add(old.id);
+    const warning=!old&&!number&&!uuid&&!code?"لا يوجد معرف تحديث؛ سيُنشأ سجل مستقل. الاسم وحده لا يثبت الهوية":employees.some(e=>norm(e.name)===norm(name)&&e.id!==old?.id)?"اسم موجود — تحقق من أن السجل الجديد لشخص مستقل":"";
+    if(number&&numbers.has(number))error="رقم الموظف مكرر داخل الملف";
+    if(number)numbers.add(number);
     if (!dept) error = "قسم غير معتمد";
     const shiftText = get("shift");
     const managerText = get("manager");
@@ -89,7 +95,7 @@ export function previewRows(
     const input = {
       ...(old ? { id: old.id, version: old.version } : {}),
       name,
-      employee_number: number,
+      employee_number: numberField===undefined?old?.employee_number||null:number,
       department_id: dept?.id || "",
       shift_id: !shiftText ? old?.shift_id || null : shift[0]?.id || null,
       direct_manager_id: !managerText

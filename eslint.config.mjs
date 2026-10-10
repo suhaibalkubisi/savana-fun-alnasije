@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "dist/**",
     "outputs/**",
+    "work/**",
+    "node_modules.previous/**",
     ".sites-runtime/**",
     "tests/.export-check.mjs",
     "tests/.transport-check.mjs",

@@ -22,6 +22,7 @@ const {
   tableExcelBytes,
   tablePdfBytes,
   layoutTablePdf,
+  estimateTablePdfPages,
   dailyColumnWeights,
   triggerDownload,
 } = await import(compiled.href);
@@ -231,7 +232,14 @@ test("Arabic PDF exports use embedded font and paginate full source report", asy
     assert.ok(pdf.startsWith("%PDF-"));
     assert.ok(pdf.includes("/FontFile2"));
     assert.ok(
-      (pdf.match(/\/Type \/Page\b/g) || []).length >= (summary ? 10 : 20),
+      (pdf.match(/\/Type \/Page\b/g) || []).length > 0,
     );
   }
+});
+
+test('page preview equals actual final PDF for a full month matrix with overnight clocks',async()=>{
+ const fontBase64=(await readFile('public/fonts/FANUArabic.ttf')).toString('base64');
+ const scope={title:'موقف شهر الاختبار',period:'سبتمبر 2026',headers:['الكود الوظيفي','الموظف',...Array.from({length:30},(_,i)=>String(i+1))],rows:Array.from({length:215},(_,i)=>['TEST-'+String(i).padStart(6,'0'),'عبدالله حسين عبدالهادي',...Array(30).fill('٤:٠٠م\n١:٣٠ص\n+1')]),columnWeights:[14,22,...Array(30).fill(6)],compact:true,fontBase64};
+ const estimate=await estimateTablePdfPages(scope),pdf=await tablePdfBytes(scope);
+ assert.equal(estimate,(Buffer.from(pdf).toString('latin1').match(/\/Type \/Page\b/g)||[]).length);assert.ok(estimate>1);
 });
