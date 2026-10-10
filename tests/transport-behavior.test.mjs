@@ -33,3 +33,14 @@ test('cross-origin mutation is denied and internal errors cannot echo payloads',
  const original=console.error;const logs=[];console.error=(...parts)=>logs.push(parts.join(' '));
  try{const response=errorResponse(new Error('SECRET synthetic sensitive payload'));assert.equal(response.status,500);assert.ok(!(await response.text()).includes('SECRET'));assert.ok(!logs.join('').includes('SECRET'));}finally{console.error=original;}
 });
+test('GoTrue 403 bad_jwt renews with the genuine refresh token; other forbidden responses do not',async()=>{
+ const original=globalThis.fetch;let refreshes=0,code='bad_jwt';const values=new Map([['hr-access','expired.synthetic.token'],['hr-refresh','real-flow-synthetic-fixture']]);
+ globalThis.transportJar={get:k=>values.has(k)?{value:values.get(k)}:undefined,set:(k,v)=>values.set(k,v)};
+ globalThis.fetch=async(url,options)=>{
+  if(url.includes('grant_type=refresh_token')){refreshes++;return Response.json({access_token:'fresh.synthetic.token',refresh_token:'rotated',expires_in:3600});}
+  if(url.endsWith('/user'))return new Headers(options.headers).get('authorization')==='Bearer expired.synthetic.token'?Response.json({error_code:code},{status:403}):Response.json({id:'synthetic'});
+  if(url.includes('/rpc/hr_read'))return Response.json({role:'HR',is_active:true});
+  throw Error('Unexpected request');
+ };
+ try{assert.equal((await session()).profile.role,'HR');assert.equal(refreshes,1);values.set('hr-access','expired.synthetic.token');code='user_banned';await assert.rejects(session(),e=>e.status===401);assert.equal(refreshes,1);}finally{globalThis.fetch=original;delete globalThis.transportJar;}
+});

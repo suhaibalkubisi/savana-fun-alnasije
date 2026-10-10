@@ -100,7 +100,11 @@ export async function session() {
   const refresh = jar.get("hr-refresh")?.value;
   if (!token && !refresh) throw new AppError("يرجى تسجيل الدخول", 401);
   let valid = token ? await upstream("/auth/v1/user", {}, token) : null;
-  if ((!valid || valid.response.status === 401) && refresh) {
+  // GoTrue can return 403/bad_jwt for expired access tokens. Refresh still
+  // requires the genuine refresh token and a fresh live-session/profile check.
+  const invalidAccess = valid?.response.status === 401 ||
+    (valid?.response.status === 403 && valid.data?.error_code === "bad_jwt");
+  if ((!valid || invalidAccess) && refresh) {
     const r = await refreshSession(refresh);
     if (r.response.ok && r.data?.access_token) {
       token = r.data.access_token;
