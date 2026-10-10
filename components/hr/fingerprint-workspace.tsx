@@ -101,6 +101,7 @@ export function FingerprintWorkspace({monthly=false,reference}:{monthly?:boolean
  return <div className="fingerprint-product">
   <PageTitle title={monthly?'البصمة الشهرية':'البصمة اليومية'} subtitle={monthly?'ملف واحد، أدلة واضحة، واعتماد مستقل':'اقرأ دليل اليوم قبل اتخاذ قرار الحضور'} actions={<Button variant="outline" asChild><Link href={reportHref}>{monthly&&current?'موقف الملف':'الموقف المعتمد'} <ArrowLeft size={16}/></Link></Button>}/>
   <nav className="workflow-steps" aria-label="مراحل ملف البصمة">{stages.map((label,index)=><button key={label} aria-current={stage===index?'step':undefined} onClick={()=>setStage(index)}><span>{index+1}</span><div><strong>{label}</strong><small>{['تحديد المصدر ونطاقه','الأصل والحساب جنباً إلى جنب','سبب محدد وخطوة تالية','قرار صريح بصلاحية HR'][index]}</small></div></button>)}</nav>
+  {current&&state==='preview'&&<Button variant="outline" asChild><Link href={`/company-onboarding?import_id=${current.id}`}>تهيئة هذا الملف · دفعة هوية واحدة ونموذج النقص</Link></Button>}
   <div className="fingerprint-layout">
    <aside className="source-rail">
     <section className="source-card"><span className="eyebrow">مصدر العمل</span><FileSpreadsheet size={26}/><h2>{pending?.name||current?.source_name||'ابدأ بملف البصمة'}</h2><span className="status-chip">{pending?'محلي · غير محفوظ':current?stateLabels[state]:'لم يُختَر ملف'}</span>

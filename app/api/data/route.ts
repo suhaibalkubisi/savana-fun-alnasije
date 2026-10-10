@@ -10,6 +10,7 @@ import { attendanceSchemas } from "@/lib/hr/attendance-validation";
 import { buildMonthlyPosition } from "@/lib/hr/monthly-position.mjs";
 import {comprehensivePosition} from "@/lib/hr/comprehensive-position.mjs";
 import { buildDailyPosition } from "@/lib/hr/attendance-engine.mjs";
+import {inspectFileOnboarding} from '@/lib/server/onboarding';
 import {
   AppError,
   body,
@@ -49,6 +50,7 @@ export async function GET(request: Request) {
     const filters = Object.fromEntries(
       [...params].filter(([k]) => k !== "kind"),
     );
+    if(kind==='attendance.onboarding')return json(await inspectFileOnboarding(z.string().uuid().parse(filters.import_id),s.token));
     if(kind==="report")return json(comprehensivePosition(await rpc("hr_comprehensive_evidence",{p_filters:filters},s.token)));
     if(kind==="attendance.period_gaps")return json(await rpc("attendance_period_gaps",{p_filters:filters},s.token));
     if(kind==="attendance.sources")return json(await rpc("attendance_sources",{},s.token));
@@ -81,6 +83,10 @@ export async function POST(request: Request) {
     if (s.profile.role === "VIEWER")
       throw new AppError("ليست لديك صلاحية لهذه العملية", 403);
     let schema: z.ZodTypeAny;
+    if(action==='attendance.onboarding.inspect'){
+      const input=z.object({import_id:z.string().uuid(),proposed:z.array(z.object({person_code:z.string().min(1).max(100),employee_uuid:z.string().uuid()})).max(500)}).parse(data);
+      return json(await inspectFileOnboarding(input.import_id,s.token,input.proposed));
+    }
     if (action === 'attendance.daily.replace') return json(await rpc('attendance_daily_replace',{p_data:z.object({id:z.string().uuid(),version:z.number().int().positive(),replacement_id:z.string().uuid(),replacement_version:z.number().int().positive(),reason:z.string().trim().min(3).max(2000)}).parse(data)},s.token));
     if (action === 'attendance.boundary.record') return json(await rpc('attendance_boundary_record',{p_data:z.object({id:z.string().uuid(),version:z.number().int().positive(),adjacent_import_id:z.string().uuid(),reason:z.string().trim().min(3).max(2000)}).parse(data)},s.token));
     if(action==='employee.assignment.bulk'){
