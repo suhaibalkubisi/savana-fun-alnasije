@@ -15,7 +15,7 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
         : undefined,
       body: body ? JSON.stringify(body) : undefined,
       cache: "no-store",
-      signal: AbortSignal.timeout(body && typeof body==='object' && 'action' in body && String(body.action).startsWith('attendance.import.') ? 135000 : 45000),
+      signal: AbortSignal.timeout(body && typeof body==='object' && 'action' in body && (String(body.action).startsWith('attendance.import.') || String(body.action).startsWith('attendance.company.')) ? 135000 : 45000),
     });
   } catch {
     throw new Error(

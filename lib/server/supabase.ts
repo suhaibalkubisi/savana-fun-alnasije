@@ -131,7 +131,7 @@ export async function session() {
 export async function rpc<T>(fn: string, body: unknown, token: string) {
   const { response, data } = await upstream(
     `/rest/v1/rpc/${fn}`,
-    { method: "POST", body: JSON.stringify(body), signal: AbortSignal.timeout(fn.startsWith('attendance_write') || fn.startsWith('attendance_inspect') ? 120000 : 30000) },
+    { method: "POST", body: JSON.stringify(body), signal: AbortSignal.timeout(fn.startsWith('attendance_write') || fn.startsWith('attendance_inspect') || fn.startsWith('attendance_company_') ? 120000 : 30000) },
     token,
   );
   if (!response.ok) {

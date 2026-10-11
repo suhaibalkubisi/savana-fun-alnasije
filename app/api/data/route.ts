@@ -50,6 +50,7 @@ export async function GET(request: Request) {
     const filters = Object.fromEntries(
       [...params].filter(([k]) => k !== "kind"),
     );
+    if(kind==='attendance.company_review')return json(await rpc('attendance_company_review',{p_filters:{import_id:z.string().uuid().parse(filters.import_id)}},s.token));
     if(kind==='attendance.onboarding')return json(await inspectFileOnboarding(z.string().uuid().parse(filters.import_id),s.token));
     if(kind==="report")return json(comprehensivePosition(await rpc("hr_comprehensive_evidence",{p_filters:filters},s.token)));
     if(kind==="attendance.period_gaps")return json(await rpc("attendance_period_gaps",{p_filters:filters},s.token));
@@ -83,6 +84,13 @@ export async function POST(request: Request) {
     if (s.profile.role === "VIEWER")
       throw new AppError("ليست لديك صلاحية لهذه العملية", 403);
     let schema: z.ZodTypeAny;
+    if(action==='attendance.company.confirm'){
+      const selection=z.object({person_code:z.string().min(1).max(100),employee_uuid:z.string().uuid(),employee_version:z.number().int().positive(),reason:z.string().max(1800).optional(),evidence_reference:z.string().max(1800).optional()}).strict();
+      const input=z.object({batch_id:z.string().min(1).max(150),batch_version:z.number().int().positive(),request_id:z.string().uuid(),review_confirmed:z.literal(true),evidence_reference:z.string().trim().min(3).max(1800),selections:z.array(selection).min(1).max(500)}).strict().parse(data);
+      return json(await rpc('attendance_company_confirm',{p_data:input},s.token));
+    }
+    if(action==='attendance.company.apply')return json(await rpc('attendance_company_apply',{p_data:z.object({confirmation_id:z.string().uuid(),apply_confirmed:z.literal(true)}).strict().parse(data)},s.token));
+    if(action==='attendance.company.notes')return json(await rpc('attendance_company_notes',{p_data:z.object({import_id:z.string().uuid(),preview_version:z.number().int().positive(),notes_version:z.number().int().nonnegative(),answers:z.record(z.string().max(200),z.string().max(2000))}).strict().parse(data)},s.token));
     if(action==='attendance.onboarding.inspect'){
       const input=z.object({import_id:z.string().uuid(),proposed:z.array(z.object({person_code:z.string().min(1).max(100),employee_uuid:z.string().uuid()})).max(500)}).parse(data);
       return json(await inspectFileOnboarding(input.import_id,s.token,input.proposed));
