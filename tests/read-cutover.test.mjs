@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isolatedDatabase} from './helpers/isolated-db.mjs';
+import {historicalDatabase as isolatedDatabase} from './helpers/isolated-db.mjs';
 import {buildDailyPosition} from '../lib/hr/attendance-engine.mjs';
 
 test('post-deploy gateway preserves metadata but denies every legacy calculation path for all app roles',()=>isolatedDatabase(async({db,who,admin})=>{

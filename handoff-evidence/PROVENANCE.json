@@ -1,0 +1,29 @@
+{
+  "base_candidate_archive_sha256": "e1d92abb897dab03ef0260622ab1675270dc7ad5a716bd1d9804f12799d89e7c",
+  "candidate_source_files": 377,
+  "unchanged_candidate_payload_files": 376,
+  "handoff_only_source_change": ".gitignore private-data exclusions",
+  "N01_handler_sha256": "c897aec3f7aa073366b143da420f58e00acf0db21cb276cf20c1650f6d0a1b38",
+  "N01_regression_sha256": "2941d3ae664618dc6da4aa1695abafe5182b9c7d47bdf8ec783ecadea11087fa",
+  "native_cases": {
+    "passed": 13,
+    "failed": 2,
+    "not_executed": 0
+  },
+  "local_unique_cases": {
+    "passed": 155,
+    "qualification": "154 in last full batch; one existing scheduler timeout passed on isolated retry; not an uninterrupted155/155 batch"
+  },
+  "production_deployed": false,
+  "sql_production_applied": false,
+  "source_sql_unchanged": "497f71fb1903fe5816c9e109aa20970045ef28389a1641547dc4bc4241ccaa7e",
+  "evidence_allowlist": {
+    "H10-capability-revocation.json": "native/hosted/results/managed-evidence-storage-acl-only.json",
+    "H10c-logout-and-outside-scope.json": "native/hosted/results/managed-evidence-storage-remaining.json",
+    "SupportRepro.md": "native/SupportRepro.md",
+    "native-duplicate-shape.json": "native/hosted/results/native-duplicate-shape.json",
+    "N01-and-HMAC-native.json": "native/hosted/results/managed-evidence-secret-only-provider-fix.json",
+    "N01-partial-native.json": "native/hosted/results/managed-evidence-account-partial-provider-fix.json"
+  },
+  "excluded": "No private configs, passwords, tokens, TLS keys, employee source files, private logs, outputs archives, node_modules or generated runtime"
+}

@@ -1,0 +1,11 @@
+export const PHOTO_LIMIT:number;
+export const DOCUMENT_LIMIT:number;
+export const THUMBNAIL_LIMIT:number;
+export function decodeFile(encoded:unknown,limit:number):Uint8Array;
+export function validateFile(bytes:Uint8Array,mime:string,options?:{photo?:boolean;thumbnail?:boolean}):{mime:string;width?:number;height?:number};
+export function stripJpegMetadata(bytes:Uint8Array):Uint8Array;
+export function safeFileName(name:unknown,mime:string):string;
+export function fileDigest(bytes:Uint8Array):Promise<string>;
+export function verifiedStoredFile(response:Response,doc:{kind:string;mime_type:string;byte_size:number;original_sha256:string;thumbnail_byte_size?:number|null;thumbnail_sha256?:string|null},variant?:string):Promise<Uint8Array>;
+export function createDocumentGrant(secret:string,user:string,document:string,variant?:string,now?:number):Promise<{expires:number;signature:string}>;
+export function verifyDocumentGrant(secret:string,user:string,document:string,variant:string,expires:number,signature:string,now?:number):Promise<boolean>;

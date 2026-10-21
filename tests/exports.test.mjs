@@ -1,21 +1,19 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { readFile, rm } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
+import { readFile, rm, writeFile, mkdir } from "node:fs/promises";
+import ts from "typescript";
 import { unzipSync, strFromU8 } from "fflate";
 import { report } from "./export-fixture.mjs";
 import { formatClock12 } from "../lib/hr/time-format.mjs";
-const compiled = new URL("./.export-check.mjs", import.meta.url);
-await build({
-  absWorkingDir: fileURLToPath(new URL('../', import.meta.url)),
-  entryPoints: [fileURLToPath(new URL('../lib/hr/exports.ts', import.meta.url))],
-  bundle: true,
-  platform: "node",
-  format: "esm",
-  packages: "external",
-  outfile: fileURLToPath(compiled),
-});
+const compiled = new URL("../work/legacy-export-test/exports.mjs", import.meta.url);
+await mkdir(new URL('./',compiled),{recursive:true});
+// Compile the actual legacy source in-process without expanding filesystem
+// permissions for a native bundler's ancestor-directory discovery.
+for(const name of ['exports','excel-brand','brand','types']){
+ const source=await readFile(new URL('../lib/hr/'+name+'.ts',import.meta.url),'utf8');
+ const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/(["'])\.\/(excel-brand|brand|types)\1/g,'"./$2.mjs"');
+ await writeFile(new URL(name+'.mjs',compiled),code);
+}
 const {
   excelBytes,
   pdfBytes,

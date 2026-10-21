@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {interpretSession,dayIndex,buildDailyPosition,assignmentAt} from '../lib/hr/attendance-engine.mjs';
-import {isolatedDatabase} from './helpers/isolated-db.mjs';
+import {historicalDatabase as isolatedDatabase} from './helpers/isolated-db.mjs';
 const rule={department_id:'department',effective_from:'2026-09-01',start_minute:960,grace_minutes:15,entry_window_start:720,entry_window_end:1439,working_weekdays:[0,1,2,3,4,5,6]};
 const assignment={employee_id:'employee',department_id:'department',valid_from:'2026-09-01',valid_to:null};
 const punch=(date,minute)=>({timestamp:dayIndex(date)*1440+minute,calendar_date:date,minute,issues:[]});

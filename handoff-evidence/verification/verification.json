@@ -1,0 +1,251 @@
+{
+  "started_at_utc": "2026-10-21T20:06:44.321Z",
+  "source": "<LOCAL_SOURCE>",
+  "base_sealed_review_sha256": "fa5140125a97f7b918e666e78e27b9e67bdd168660d7e2782c5303f2e82bd35f",
+  "tests": [
+    "tests/followup-client-workflows.test.mjs",
+    "tests/followup-roster-setup.test.mjs",
+    "tests/controlled-roster-setup.test.mjs",
+    "tests/evening-contracts.test.mjs",
+    "tests/followup-exceptions.test.mjs",
+    "tests/export-scheduling.test.mjs",
+    "tests/followup-formal-exports.test.mjs",
+    "tests/private-documents.test.mjs",
+    "tests/document-upload-handler.test.mjs",
+    "tests/followup-release-integrity.test.mjs",
+    "tests/followup-download-cleanup.test.mjs",
+    "tests/followup-conflict-transport.test.mjs",
+    "tests/followup.test.mjs",
+    "tests/logout-transport.test.mjs",
+    "tests/transport-behavior.test.mjs",
+    "tests/test-seed-safety.test.mjs",
+    "tests/staff-repairs.test.mjs",
+    "tests/staff-read-smoke.test.mjs",
+    "tests/staff-http-search.test.mjs",
+    "tests/staff-canonical.test.mjs",
+    "tests/staff-baseline-reproduction.test.mjs",
+    "tests/staff-readback.test.mjs",
+    "tests/staff-round2-db.test.mjs",
+    "tests/staff-round2-ui.test.mjs",
+    "tests/staff-round2-api.test.mjs",
+    "tests/staff-round2-flow.test.mjs",
+    "tests/staff-round2-review-db.test.mjs",
+    "tests/staff-n01-account-ledger.test.mjs",
+    "tests/staff-n01-notice.test.mjs",
+    "tests/staff-n02-api-scope.test.mjs",
+    "tests/staff-n02-recovery-db.test.mjs",
+    "tests/staff-n02-recovery.test.mjs",
+    "tests/staff-n01-provider-error-shape.test.mjs"
+  ],
+  "inputs": [
+    {
+      "file": "tests/followup-client-workflows.test.mjs",
+      "sha256": "4603b1631d842ecd6996db64179c2d07474082088ce308e14fed4c806a3e1afc"
+    },
+    {
+      "file": "tests/followup-roster-setup.test.mjs",
+      "sha256": "846d9af19a10b600a0c154d5883510f81ea4af91c1db845a81c26ea208c04151"
+    },
+    {
+      "file": "tests/controlled-roster-setup.test.mjs",
+      "sha256": "31bdb96f80077c90af92fba28086ff530981e32f56e7f6fc1d18ee3960107cb1"
+    },
+    {
+      "file": "tests/evening-contracts.test.mjs",
+      "sha256": "4ffd4ed5667cdcd5301d23c85ac169ac667a2658d4031700f5cf0366c9dcff48"
+    },
+    {
+      "file": "tests/followup-exceptions.test.mjs",
+      "sha256": "4a8714d160ca05b0023840ca97832341e35341c3ff8ac8353d1551e0a568a83e"
+    },
+    {
+      "file": "tests/export-scheduling.test.mjs",
+      "sha256": "024dab452112d70834dc50325ebabce9083ea5f9b67c595b976ba2c2eae205f9"
+    },
+    {
+      "file": "tests/followup-formal-exports.test.mjs",
+      "sha256": "6c117dac7a776d44681db919cac6a57e7418b20469cecfbb56a83f8b4c2e6a6a"
+    },
+    {
+      "file": "tests/private-documents.test.mjs",
+      "sha256": "9a344e23105983f30e9b34936724679d9f64283c8bfac9cfaaa6ad4962fb9c3f"
+    },
+    {
+      "file": "tests/document-upload-handler.test.mjs",
+      "sha256": "41e8d6d51776ae0ad29d8182266973d24dfcc3f443b04e65d3ba87d68fbf1e6b"
+    },
+    {
+      "file": "tests/followup-release-integrity.test.mjs",
+      "sha256": "495826f94a88607ec97e7b6465ca6a117b1c4ddbc20f30e9b5a48c4b588c5790"
+    },
+    {
+      "file": "tests/followup-download-cleanup.test.mjs",
+      "sha256": "58e9cc22b8a2564c615baa06581412fcc2fa2105394232d9fb57928ebdec4433"
+    },
+    {
+      "file": "tests/followup-conflict-transport.test.mjs",
+      "sha256": "d2df005e97287ac669fed0ce225d4e81ef0a19368b9663f5d85b0e14ba4fce33"
+    },
+    {
+      "file": "tests/followup.test.mjs",
+      "sha256": "fecdccb8c31242fe9fe5147881e06078d8314bc95bc66a2188cf5809d859200e"
+    },
+    {
+      "file": "tests/logout-transport.test.mjs",
+      "sha256": "e35b78b341dc764c331fb2e524f047ea4f30d282a3ce9cb8e2d4592b1858c76c"
+    },
+    {
+      "file": "tests/transport-behavior.test.mjs",
+      "sha256": "3bb205d5a63fafe35b1dfe677e6c20b90a227380dcd7b54e917a92fcddd97f76"
+    },
+    {
+      "file": "tests/test-seed-safety.test.mjs",
+      "sha256": "909d49bc42f202e019f7f742126fed9f112c9a9638f875cc9a5da903a4d36833"
+    },
+    {
+      "file": "tests/staff-repairs.test.mjs",
+      "sha256": "ca35831bc4fc00eded403dadf65d2daee0d63140c978c683675542e16e5ad7fb"
+    },
+    {
+      "file": "tests/staff-read-smoke.test.mjs",
+      "sha256": "8fcfc0dcb004c2d05c7d2189665f81383470ccd2317a718c00ce8b52a9e0342f"
+    },
+    {
+      "file": "tests/staff-http-search.test.mjs",
+      "sha256": "2c19cb93367552afd089f75a43624c6ca94d148f2c2b62ce006b74f96f5e9fb0"
+    },
+    {
+      "file": "tests/staff-canonical.test.mjs",
+      "sha256": "561e999ccac1ad9e77f7a03cf5110feee153127e355681e38763d1d2d7801298"
+    },
+    {
+      "file": "tests/staff-baseline-reproduction.test.mjs",
+      "sha256": "59709966623cb16c5bab056c1aac12b11f1a7c7db4bcc677c1cedfe94e89d7af"
+    },
+    {
+      "file": "tests/staff-readback.test.mjs",
+      "sha256": "7629b2f44f81ae9385ec675c5ba9b443e46d0c9e27e602ed42262d5ab8299204"
+    },
+    {
+      "file": "tests/staff-round2-db.test.mjs",
+      "sha256": "d93828ab201f140c75f7fe1428ad811c24d69484c0c62086259f726d7404c9f3"
+    },
+    {
+      "file": "tests/staff-round2-ui.test.mjs",
+      "sha256": "98f14af985e40fd50653681eddb5b77c1333f23716d9ffb7045081db99e74f14"
+    },
+    {
+      "file": "tests/staff-round2-api.test.mjs",
+      "sha256": "64851f5b6d8df23b1f9454df5f0fe9fcb9647637de63b77629048d870764e0eb"
+    },
+    {
+      "file": "tests/staff-round2-flow.test.mjs",
+      "sha256": "595eda459d194de7babb7a31fe1d5c3e6934a21bf3bfac26d2615692a75176a3"
+    },
+    {
+      "file": "tests/staff-round2-review-db.test.mjs",
+      "sha256": "1a2422cb4a0359114f6528aa725a7fb8cf2b682e2f28462bc07aa7a2c1b99ffa"
+    },
+    {
+      "file": "tests/staff-n01-account-ledger.test.mjs",
+      "sha256": "51ae3d7fc0ca04e286e6dc902468eb9b37895794da1b0413d17ac8cf779752d3"
+    },
+    {
+      "file": "tests/staff-n01-notice.test.mjs",
+      "sha256": "11ba236d1d3eb0c48ebcbf8f8f2746320966d608045a76cbaa65c17b85318b65"
+    },
+    {
+      "file": "tests/staff-n02-api-scope.test.mjs",
+      "sha256": "5035cec5a88895167aff3a25425f650d07e363d8cdbf6848abdf560a6ef66756"
+    },
+    {
+      "file": "tests/staff-n02-recovery-db.test.mjs",
+      "sha256": "e33f18ca75c547ab2755c87d2b1f8763d4bad5e6dfc836f1ba190fe19bf8ca48"
+    },
+    {
+      "file": "tests/staff-n02-recovery.test.mjs",
+      "sha256": "c99ac820ea30d431cfcaede4b197422b145604a78fe1e4fa2aa8dfc965664dcd"
+    },
+    {
+      "file": "tests/staff-n01-provider-error-shape.test.mjs",
+      "sha256": "2941d3ae664618dc6da4aa1695abafe5182b9c7d47bdf8ec783ecadea11087fa"
+    },
+    {
+      "file": "app/api/users/route.ts",
+      "sha256": "c897aec3f7aa073366b143da420f58e00acf0db21cb276cf20c1650f6d0a1b38"
+    },
+    {
+      "file": "package.json",
+      "sha256": "94efba9d5cc7a0c3ecb44282c5da0a4c5247e9354d5c4cc75f8e73fc3e8325b9"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "5e1b0aca5ed21c528099b9f7a222d608da30cedf36da7e04d3198abe5238ba69"
+    },
+    {
+      "file": "supabase/proposals/staff-repairs.sql",
+      "sha256": "497f71fb1903fe5816c9e109aa20970045ef28389a1641547dc4bc4241ccaa7e"
+    }
+  ],
+  "checks": [
+    {
+      "name": "lock",
+      "args": [
+        "scripts/install-ci.mjs"
+      ],
+      "exit_code": 0,
+      "duration_ms": 333
+    },
+    {
+      "name": "tests",
+      "args": [
+        "--test",
+        "--test-concurrency=2",
+        "tests/followup-client-workflows.test.mjs",
+        "tests/followup-roster-setup.test.mjs",
+        "tests/controlled-roster-setup.test.mjs",
+        "tests/evening-contracts.test.mjs",
+        "tests/followup-exceptions.test.mjs",
+        "tests/export-scheduling.test.mjs",
+        "tests/followup-formal-exports.test.mjs",
+        "tests/private-documents.test.mjs",
+        "tests/document-upload-handler.test.mjs",
+        "tests/followup-release-integrity.test.mjs",
+        "tests/followup-download-cleanup.test.mjs",
+        "tests/followup-conflict-transport.test.mjs",
+        "tests/followup.test.mjs",
+        "tests/logout-transport.test.mjs",
+        "tests/transport-behavior.test.mjs",
+        "tests/test-seed-safety.test.mjs",
+        "tests/staff-repairs.test.mjs",
+        "tests/staff-read-smoke.test.mjs",
+        "tests/staff-http-search.test.mjs",
+        "tests/staff-canonical.test.mjs",
+        "tests/staff-baseline-reproduction.test.mjs",
+        "tests/staff-readback.test.mjs",
+        "tests/staff-round2-db.test.mjs",
+        "tests/staff-round2-ui.test.mjs",
+        "tests/staff-round2-api.test.mjs",
+        "tests/staff-round2-flow.test.mjs",
+        "tests/staff-round2-review-db.test.mjs",
+        "tests/staff-n01-account-ledger.test.mjs",
+        "tests/staff-n01-notice.test.mjs",
+        "tests/staff-n02-api-scope.test.mjs",
+        "tests/staff-n02-recovery-db.test.mjs",
+        "tests/staff-n02-recovery.test.mjs",
+        "tests/staff-n01-provider-error-shape.test.mjs"
+      ],
+      "exit_code": 1,
+      "duration_ms": 211462,
+      "summary": {
+        "tests": 155,
+        "pass": 154,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "finished_at_utc": "2026-10-21T20:10:16.148Z",
+  "all_passed": false
+}

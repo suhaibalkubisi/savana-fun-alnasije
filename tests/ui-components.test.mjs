@@ -1,17 +1,42 @@
 import assert from "node:assert/strict";
-import { readdir, readFile, rm, mkdir } from "node:fs/promises";
+import { readdir, readFile, writeFile, rm, mkdir, access } from "node:fs/promises";
 import path from "node:path";
 import test, { after } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { build } from "esbuild";
+import ts from "typescript";
 import { pathToFileURL } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const compiled=path.join(root,'outputs','acceptance','ui-test');await mkdir(compiled,{recursive:true});
-const vite={ssrLoadModule:async(source)=>{const file=path.join(compiled,path.basename(source)+'.mjs');await build({entryPoints:[path.join(root,source.slice(1))],bundle:true,platform:'node',format:'esm',packages:'external',outfile:file});return import(pathToFileURL(file).href);}};
+const seen=new Set();
+// Load the actual components and their local dependencies in process. This
+// avoids a native bundler traversing restricted Windows ancestor directories.
+async function compile(source){
+  const file=path.join(compiled,path.relative(root,source).replace(/\.[^.]+$/,'.mjs'));
+  if(seen.has(source))return file;
+  seen.add(source);
+  const raw=await readFile(source,'utf8');
+  let code=ts.transpileModule(raw,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+  const tree=ts.createSourceFile(source,code,ts.ScriptTarget.ES2022,true,ts.ScriptKind.JS);
+  const imports=tree.statements.filter(s=>(ts.isImportDeclaration(s)||ts.isExportDeclaration(s))&&s.moduleSpecifier&&ts.isStringLiteral(s.moduleSpecifier)).map(s=>s.moduleSpecifier.text);
+  for(const specifier of imports){
+    if(!specifier.startsWith('@/')&&!specifier.startsWith('.'))continue;
+    const base=specifier.startsWith('@/')?path.join(root,specifier.slice(2)):path.resolve(path.dirname(source),specifier);
+    const local=await Promise.any([base,...['.tsx','.ts','.mjs','.js','/index.tsx','/index.ts'].map(suffix=>base+suffix)].map(async candidate=>{await access(candidate);return candidate;}));
+    const relative=path.relative(root,local);
+    if(relative.startsWith('..')||path.isAbsolute(relative))throw Error('UI test dependency outside workspace');
+    const target=await compile(local);
+    let outputSpecifier=path.relative(path.dirname(file),target).replaceAll('\\','/');
+    if(!outputSpecifier.startsWith('.'))outputSpecifier='./'+outputSpecifier;
+    code=code.replaceAll(JSON.stringify(specifier),JSON.stringify(outputSpecifier));
+  }
+  await mkdir(path.dirname(file),{recursive:true});await writeFile(file,code);
+  return file;
+}
+const vite={ssrLoadModule:async(source)=>import(pathToFileURL(await compile(path.join(root,source.slice(1)))).href)};
 after(async()=>{await rm(compiled,{recursive:true,force:true});});
 
 async function readCssTree(directory) {

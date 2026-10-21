@@ -1,0 +1,10 @@
+import type {Employee} from './types';
+export type IdentityIssue={id:string;version:number;source_name:string;person_code:string;issue_type:string;group_token?:string;related_open_count?:number;candidates:{id:string}[]};
+export type IdentityChoice={selected:boolean;employee_id:string;reason?:string};
+export type IdentityBatch={id:string;version:number;state:string;import_kind:string;lifecycle_state?:string;device_namespace:string};
+export type IdentitySource={id:string;version:number;namespace:string;confirmation_reason:string|null};
+export type IdentityPacket={schema_version:number;status:string;source_scope:{id:string;namespace:string;expected_revision:number};preview_guard:{id:string;expected_revision:number;expected_state:string;lifecycle_state?:string};selected_decisions:{issue_id:string;expected_issue_revision:number;group_token:string;person_code:string;source_name:string;employee_uuid:string;employee_name:string;department:string;expected_employee_revision:number;evidence_reference:string;correction_reason:string|null;related_open_count?:number}[];selected_count:number;unselected_cases:{person_code:string;issue_id:string;disposition:string}[];production_applied:boolean;attendance_approved:boolean};
+export function loadIdentityGroups(readPage:(page:number)=>Promise<{rows:IdentityIssue[];total:number}>):Promise<IdentityIssue[]>;
+export function identityReviewGroup(issue:IdentityIssue,employees:Employee[]):string;
+export function identityDecisionPacket(input:{batch:IdentityBatch;source?:IdentitySource;rows:IdentityIssue[];choices:Record<string,IdentityChoice>;employees:Employee[];evidence:string}):IdentityPacket;
+export function executeIdentityDecisions(packet:IdentityPacket,handlers:{verify:(decision:IdentityPacket['selected_decisions'][number])=>Promise<void>;resolve:(input:{id:string;version:number;group_token:string;state:string;employee_id:string;resolution_note:string})=>Promise<unknown>;onSaved?:(decision:IdentityPacket['selected_decisions'][number],count:number)=>void}):Promise<{saved:string[];stopped_at:string|null;error:string|null;requires_saved_state_check:boolean}>;

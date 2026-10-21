@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/node_modules-reused-link
 /.pnp
 .pnp.*
 .yarn/*
@@ -50,3 +51,15 @@ next-env.d.ts
 
 /tests/.transport-check.mjs
 /node_modules.previous/
+node_modules.previous
+
+# Private operator/QA data must stay outside the public handoff
+.private/
+*.private.json
+*.private.*
+*.key
+*.p12
+*.pfx
+/data/initial-employees.json
+/data/import-summary.json
+/native/hosted/runtime*/

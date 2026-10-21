@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {isolatedDatabase} from './helpers/isolated-db.mjs';
+import {historicalDatabase as isolatedDatabase} from './helpers/isolated-db.mjs';
 const day='2026-09-10';
 const payload=(hash,code,name)=>({source_name:'synthetic.xls',source_hash:hash.repeat(64),device_namespace:'qa-device',import_kind:'daily',period_start:day,period_end:day,rows:[{source_sheet:'test',source_row:2,calendar_date:day,person_code:code,source_name:name,raw_values:['16:00'],punch_minutes:[960],invalid:false}]});
 const meta=async(db,k,f={})=>(await db.query('select public.attendance_read_v5($1,$2) value',[k,f])).rows[0].value;

@@ -1,0 +1,36 @@
+{
+  "repository": "suhaibalkubisi/savana-fun-alnasije",
+  "target_branch": "handoff/fanu-final-20261022",
+  "main_sha_observed": "075bbe6db88c542dd6fdf448e0dba8c4a3d96e16",
+  "observed_utc": "2026-10-21T22:09:00Z",
+  "read_only_checks": {
+    "repository_tree_has_github_workflows": false,
+    "github_actions_workflows": {"http_status": 200, "total_count": 0},
+    "github_actions_runs": {"total_count": 0},
+    "github_deployments": {"http_status": 200, "count": 0},
+    "github_environments": {"http_status": 200, "total_count": 0},
+    "github_pages": {"http_status": 404},
+    "private_webhooks": {
+      "method": "Authenticated owner browser; repository Settings > Webhooks",
+      "url": "https://github.com/suhaibalkubisi/savana-fun-alnasije/settings/hooks",
+      "verified": true,
+      "configured_count": 0,
+      "visible_evidence": "Webhooks heading, Add webhook link and introductory text; no configured webhook rows."
+    },
+    "private_github_app_deployment_integrations": {
+      "method": "Authenticated owner browser; repository Settings > Integrations > GitHub Apps",
+      "url": "https://github.com/suhaibalkubisi/savana-fun-alnasije/settings/installations",
+      "verified": true,
+      "installed_apps": ["ChatGPT Codex Connector (Developed by openai)"],
+      "deployment_provider_apps": []
+    },
+    "main_ref_rechecked": "075bbe6db88c542dd6fdf448e0dba8c4a3d96e16",
+    "target_branch_absent_before_creation": true
+  },
+  "owner_response": "Initial uncertainty resolved by read-only authenticated repository settings inspection after owner sign-in.",
+  "conclusion": "PASS for the configured GitHub deployment paths inspected: no workflows, webhooks, deployment-provider GitHub Apps, Pages deployment, environments or deployment records. The candidate tree contains no workflows. Branch publication is a source handoff only.",
+  "limitations": "These observations concern configured repository integrations. They cannot attest to an undisclosed independent external polling service. No integration settings were changed.",
+  "publication_state_at_preflight": "No branch ref created yet; re-read the actual branch and main refs after publication.",
+  "main_sites_and_production_database_modified": false,
+  "scope": "GitHub source handoff only; no deployment or production SQL authorized by this handoff request."
+}

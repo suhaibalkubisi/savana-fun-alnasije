@@ -1,0 +1,69 @@
+{
+  "date_baghdad": "2026-10-21",
+  "project_ref": "oovfsstwhwkpvndepluy",
+  "mode": "storage-remaining",
+  "provider": "Original managed Supabase Auth/PostgREST/Storage",
+  "application_transport": "Actual unchanged Next.js HTTPS routes and HttpOnly cookie jars; local CA pinned, normal upstream TLS verified",
+  "source_archive_sha256": "36a2a13d37d2558de4b943ebd502672b6bce4ddfb5e7d99f8513a3211bdd143e",
+  "source_files": 376,
+  "auth_users_seed": "Explicit fixture seed if root used 01b; not claimed as Auth admin-create acceptance",
+  "checks": [
+    {
+      "name": "H10b original Storage denies direct access to a real object in another department",
+      "status": "PASS",
+      "detail": {
+        "real_document_id": "2eaddd96-cb8d-4679-bab5-5c9d0c2b125b",
+        "native_objects": 1,
+        "admin_blob": 200,
+        "outside_followup_blob": 400
+      }
+    },
+    {
+      "name": "H10c original Storage denies an unexpired old JWT after native logout",
+      "status": "FAIL",
+      "reason": "Old JWT must be denied by original Storage after logout, received 200"
+    }
+  ],
+  "fault_injection": [
+    {
+      "test": "H10c native logout diagnostics",
+      "native_session_deleted": true,
+      "native_guard_probe": {
+        "actor": "33333333-3333-4333-8333-333333333333",
+        "read_allowed": false,
+        "database_role": "authenticated"
+      },
+      "same_url": {
+        "status": 200,
+        "headers": {
+          "cache-control": "private, no-store",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a4e2a1e7e9a1b73c-BGW",
+          "etag": "\"85bcc292e4c1c4bb897ce707c72336ce\"",
+          "sb-request-id": "01a15fea-6cfc-75ba-8136-c02f252315d7"
+        }
+      },
+      "separate_cache_query": {
+        "status": 400,
+        "headers": {
+          "cf-cache-status": "DYNAMIC",
+          "cf-ray": "a4e2a1e849d8b73c-BGW",
+          "sb-request-id": "01a15fea-6d2f-7bf3-a0e1-bee6cbe54b51"
+        },
+        "does_not_replace_acceptance": true
+      }
+    }
+  ],
+  "cleanup": {
+    "owned_next_pid": 17800,
+    "ownership": "Direct Next server PID returned by this harness's own spawn only",
+    "termination_result": {
+      "direct_owned_pid": 17800,
+      "kill_returned": true,
+      "strategy": "Official Next startServer runs directly in owned PID, no next-dev CLI server child"
+    },
+    "next_port_closed": true,
+    "proxy_port_closed": true
+  },
+  "production_requests": 0
+}

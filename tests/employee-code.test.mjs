@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {isolatedDatabase} from './helpers/isolated-db.mjs';
+import {historicalDatabase as isolatedDatabase} from './helpers/isolated-db.mjs';
 
 test('internal code backfill includes all statuses without changing employee content, revisions or audit history',()=>isolatedDatabase(async({db})=>{
  const before=(await db.query('select to_jsonb(e) value from public.employees e order by e.id')).rows;

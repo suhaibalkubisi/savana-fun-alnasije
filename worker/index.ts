@@ -28,6 +28,7 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    if(['/api/data','/api/import'].some(p=>url.pathname===p||url.pathname.startsWith(p+'/'))){return Response.json({error:'تم إيقاف عمليات البصمة والموارد البشرية. استخدم قسم المتابعة.'},{status:410});}
 
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];

@@ -1,0 +1,71 @@
+
+  vinext build  (Vite 8.3.1)
+
+[vinext] next.config option "webpack" is not yet supported and will be ignored
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - JSON import "./.openai/hosting.json" without import attributes (vite.config.ts:3:27). Add `with { type: 'json' }`
+  - import "./build/sites-vite-plugin" without a file extension (vite.config.ts:4:23). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+[vinext] next.config option "webpack" is not yet supported and will be ignored
+[1/5] analyze client references...
+transforming...
+✓ 161 modules transformed.
+rendering chunks...
+✓ built in 10.16s
+[33m[PLUGIN_TIMINGS] [0mJavaScript callbacks ran for 9.8s of this 10.1s build (97%).
+The slowest callbacks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - plugin vite:css transform (84%, 8.5s, 2 calls)
+  - plugin vinext:optimize-imports transform (19%, 2.0s, 153 calls)
+These rows add up to more than the total. Callbacks can overlap, so the same time counts for more than one row.
+4 callbacks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - plugin rsc:virtual-client-package resolveId (476 calls)
+  - plugin rsc:use-client transform (161 calls)
+  - plugin rsc:react-server-dom-webpack-alias resolveId (3 calls)
+  … and 1 more
+See https://rolldown.rs/reference/InputOptions.checks#bundlertimings for more details.
+
+[2/5] analyze server references...
+transforming...
+✓ 188 modules transformed.
+rendering chunks...
+✓ built in 1.82s
+[3/5] build rsc environment...
+transforming...
+✓ 167 modules transformed.
+rendering chunks...
+computing gzip size...
+✓ built in 2.30s
+[4/5] build client environment...
+`output.codeSplitting.groups[0].name` is a function. Set `output.codeSplitting.groups[0].debugName` so the bundler timing report can identify this group.
+transforming...
+✓ 2097 modules transformed.
+rendering chunks...
+computing gzip size...
+✓ built in 10.46s
+[5/5] build ssr environment...
+transforming...
+✓ 344 modules transformed.
+rendering chunks...
+computing gzip size...
+✓ built in 1.57s
+[0m
+  Route (app)
+  ┌ ? /                              
+  ├ ƒ /:path+                        
+  ├ λ /api/auth                      
+  ├ λ /api/data                      
+  ├ λ /api/followup                  
+  ├ λ /api/followup/documents        
+  ├ λ /api/followup/documents/content
+  ├ λ /api/followup/export           
+  ├ λ /api/import                    
+  └ λ /api/users                     
+
+  λ API  ƒ Dynamic  ? Unknown
+
+  ? Some routes could not be classified. vinext currently uses static analysis
+    and cannot detect dynamic API usage (headers(), cookies(), etc.) at build time.
+    Automatic classification will be improved in a future release.
+
+  Build complete. Run `vinext start` to start the production server.
+

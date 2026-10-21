@@ -1,0 +1,62 @@
+{
+  "date_baghdad": "2026-10-21",
+  "project_ref": "oovfsstwhwkpvndepluy",
+  "mode": "account-partial",
+  "provider": "Original managed Supabase Auth/PostgREST/Storage",
+  "application_transport": "Actual Next.js HTTPS routes and HttpOnly cookie jars; local CA pinned, normal upstream TLS verified",
+  "source_archive_sha256": "e1d92abb897dab03ef0260622ab1675270dc7ad5a716bd1d9804f12799d89e7c",
+  "source_files": 377,
+  "candidate_revision": {
+    "base_source_archive_sha256": "36a2a13d37d2558de4b943ebd502672b6bce4ddfb5e7d99f8513a3211bdd143e",
+    "changed": [
+      {
+        "file": "app/api/users/route.ts",
+        "before_sha256": "76887a658081b706b08beab1094dbbc24d6770adf6ad75d93e4f56254af00a07",
+        "after_sha256": "c897aec3f7aa073366b143da420f58e00acf0db21cb276cf20c1650f6d0a1b38"
+      }
+    ],
+    "added": [
+      {
+        "file": "tests/staff-n01-provider-error-shape.test.mjs",
+        "sha256": "2941d3ae664618dc6da4aa1695abafe5182b9c7d47bdf8ec783ecadea11087fa"
+      }
+    ]
+  },
+  "auth_users_seed": "Initial four users fixture seeded, not Auth admin-create proof; H02/H03 explicitly exercise original managed Auth admin creation",
+  "checks": [
+    {
+      "name": "H03b native Auth created and ledger recorded before account configuration fails, then exact recovery",
+      "status": "PASS",
+      "detail": {
+        "native_auth_created": true,
+        "created_ledger_before_failed_config": true,
+        "initial_http": 409,
+        "exact_native_user_id": "7ccf70f4-443f-498c-accf-5766b3759cb8",
+        "recovery": "configured",
+        "provider_count": 1,
+        "configuration_fault": "before native account RPC; original Auth creation and created-ledger commits already happened"
+      }
+    }
+  ],
+  "fault_injection": [
+    {
+      "path": "/rest/v1/rpc/followup_write",
+      "kind": "account",
+      "request_id": "6004966d-8571-455f-9fd5-b22cbaa7e012",
+      "mode": "before_forward",
+      "real_upstream_called": false
+    }
+  ],
+  "cleanup": {
+    "owned_next_pid": 29200,
+    "ownership": "Direct Next server PID returned by this harness's own spawn only",
+    "termination_result": {
+      "direct_owned_pid": 29200,
+      "kill_returned": true,
+      "strategy": "Official Next startServer runs directly in owned PID, no next-dev CLI server child"
+    },
+    "next_port_closed": true,
+    "proxy_port_closed": true
+  },
+  "production_requests": 0
+}

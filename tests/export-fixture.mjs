@@ -1,4 +1,4 @@
-// Isolated UI-test database. Never imported by the application or deployed.
+// Isolated historical HR export database. Never imported by the application or deployed.
 import { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
 const db = new PGlite();
@@ -6,8 +6,11 @@ const admin = "11111111-1111-4111-8111-111111111111";
 await db.exec(
   `create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`,
 );
+// These assertions cover the retained HR export contract before the evening
+// Follow-up cutover. Candidate tests keep its retired RPCs denied.
+const finalHrMigration = "20261011055923_company_identity_batch.sql";
 for (const file of (await readdir("supabase/migrations"))
-  .filter((name) => name.endsWith(".sql"))
+  .filter((name) => name.endsWith(".sql") && name <= finalHrMigration)
   .sort())
   await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
 await db.exec("set hr.test_fixture = 'on'");

@@ -1,0 +1,15 @@
+{
+  "project_ref": "oovfsstwhwkpvndepluy",
+  "kind": "Original managed Auth duplicate error shape; no secret or email logged",
+  "status": 422,
+  "raw_code": 422,
+  "error_code": "email_exists",
+  "response_keys": [
+    "code",
+    "error_code",
+    "msg"
+  ],
+  "native_email_users_before": 1,
+  "native_email_users_after": 1,
+  "production": false
+}

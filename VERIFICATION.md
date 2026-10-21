@@ -1,4 +1,16 @@
-# Verification — 4 September 2026
+# Verification
+
+## Current acceptance — 11 October 2026
+
+The v26 controlled release was deployed from `075bbe6db88c542dd6fdf448e0dba8c4a3d96e16`. Its retained evidence includes actual hosted Worker/managed Supabase Auth and reporting, native PostgreSQL/GoTrue/PostgREST operations, full backup recovery and data preservation. The older construction notes below describe historical limitations and are not the current deployment state.
+
+The next repair adds practical identity batches and fixes two observed native failures: GoTrue can reject an expired access token with `403 bad_jwt`, and the deferred monthly integrity trigger loses the gateway's execution context at transaction end. The private trigger correction keeps direct table access denied, preserves its original monthly review invariant, checks a live ADMIN/HR session for API calls and leaves its owner, table grants and RLS unchanged. Its migration rejects unexpected prior definitions.
+
+Acceptance uses synthetic data for native write paths. It exercises a review exceeding 100 identities, explicit selection/exclusion and shared evidence, persisted progress, repeated-upload mapping reuse, entry-only daily approval, monthly bulk resolution, duplicate raw punches, real next-day exits, independent manual HR decisions, actual XLSX/PDF downloads and browser printing. A real expired GoTrue JWT renews through the actual application; the refreshed JWT remains unusable after logout. The deferred guard also rejects an implicit monthly approval at COMMIT. Core regression results and fresh production preservation/recovery evidence are retained privately rather than embedded with employee data in this repository.
+
+Real identity proposals require explicit human approval. Effective schedules, historical service/department assignments and complete export coverage must come from actual business evidence. Native Excel print preview and a physical printer are separate checks and are not claimed by browser/PDF acceptance.
+
+## Historical construction acceptance — 4 September 2026
 
 ## Automated checks
 

@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "./workspace-theme.css";
-import "./workspace-shell.css";
-import "./product-workspaces.css";
+import "./followup.css";
 
 export const metadata: Metadata = {
-  title: "قسم الموارد البشرية – مسائي | FANU ALNASIJ",
-  description: "نظام فن النسيج لإدارة عمليات الموارد البشرية – الشفت المسائي",
+  title: "قسم المتابعة | FANU / SAVANA",
+  description: "تصريحات الأقسام والمراجعة ومتابعة الإجراءات",
   icons: {
     icon: [
       { url: "/favicon.ico?v=2" },
@@ -26,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body className="antialiased hr-product">{children}</body>
+      <body className="followup-product">{children}</body>
     </html>
   );
 }

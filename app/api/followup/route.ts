@@ -1,0 +1,3 @@
+import {AppError,body,errorResponse,json,protectMutation,rpc,session} from '@/lib/server/supabase';
+export async function GET(request:Request){try{const s=await session();const p=new URL(request.url).searchParams;return json(await rpc('followup_read',{p_kind:p.get('kind')||'bootstrap',p_filters:Object.fromEntries([...p].filter(([k])=>k!=='kind'))},s.token));}catch(e){return errorResponse(e);}}
+export async function POST(request:Request){try{protectMutation(request);const s=await session();const b=await body(request,1000000);if(typeof b.kind!=='string'||!b.data||typeof b.request_id!=='string')throw new AppError('طلب غير صالح');return json(await rpc('followup_write',{p_kind:b.kind,p_data:b.data,p_request_id:b.request_id},s.token));}catch(e){return errorResponse(e);}}

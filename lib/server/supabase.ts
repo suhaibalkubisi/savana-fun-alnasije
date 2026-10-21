@@ -100,7 +100,11 @@ export async function session() {
   const refresh = jar.get("hr-refresh")?.value;
   if (!token && !refresh) throw new AppError("يرجى تسجيل الدخول", 401);
   let valid = token ? await upstream("/auth/v1/user", {}, token) : null;
-  if ((!valid || valid.response.status === 401) && refresh) {
+  // GoTrue can return 403/bad_jwt for expired access tokens. Refresh still
+  // requires the genuine refresh token and a fresh live-session/profile check.
+  const invalidAccess = valid?.response.status === 401 ||
+    (valid?.response.status === 403 && valid.data?.error_code === "bad_jwt");
+  if ((!valid || invalidAccess) && refresh) {
     const r = await refreshSession(refresh);
     if (r.response.ok && r.data?.access_token) {
       token = r.data.access_token;
@@ -118,8 +122,8 @@ export async function session() {
     throw new AppError("انتهت الجلسة. يرجى تسجيل الدخول", 401);
   }
   const profile = await rpc<Profile>(
-    "hr_read",
-    { p_kind: "session", p_filters: {} },
+    "followup_session",
+    {},
     token,
   );
   return { token, profile };
@@ -127,7 +131,7 @@ export async function session() {
 export async function rpc<T>(fn: string, body: unknown, token: string) {
   const { response, data } = await upstream(
     `/rest/v1/rpc/${fn}`,
-    { method: "POST", body: JSON.stringify(body), signal: AbortSignal.timeout(fn.startsWith('attendance_write') || fn.startsWith('attendance_inspect') ? 120000 : 30000) },
+    { method: "POST", body: JSON.stringify(body), signal: AbortSignal.timeout(fn.startsWith('attendance_write') || fn.startsWith('attendance_inspect') || fn.startsWith('attendance_company_') ? 120000 : 30000) },
     token,
   );
   if (!response.ok) {
@@ -139,9 +143,10 @@ export async function rpc<T>(fn: string, body: unknown, token: string) {
           : "تعذر حفظ البيانات. تحقق من القيم المدخلة";
     throw new AppError(
       message,
-      data?.code === "42501" ? 403 : data?.code === "40001" ? 409 : 400,
+      data?.code === "42501" ? 403 : data?.code === "PT410" ? 410 : data?.code === "PT409" || data?.code === "40001" || data?.code === "23505" ? 409 : response.status >= 500 ? 503 : 400,
     );
   }
+  if(data===null||data===undefined)throw new AppError('لم تصل نتيجة العملية بصيغة صالحة. تحقق من السجل قبل إعادة المحاولة',503);
   return data as T;
 }
 export function protectMutation(request: Request) {
@@ -193,4 +198,29 @@ export function json(data: unknown, status = 200) {
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+export async function logoutSession(secure = true) {
+  const jar = await cookies();
+  let token = jar.get("hr-access")?.value;
+  const refresh = jar.get("hr-refresh")?.value;
+  if (!token && !refresh) { await clearSession(); return; }
+  const failure = () => new AppError("لم يتأكد إلغاء الجلسة لدى خدمة الدخول. احتُفظ ببيانات الجلسة لإعادة محاولة تسجيل الخروج.", 503);
+  async function renew() {
+    if (!refresh) throw failure();
+    const r = await refreshSession(refresh);
+    if (!r.response.ok || typeof r.data?.access_token !== "string" || !r.data.access_token || typeof r.data.refresh_token !== "string" || !r.data.refresh_token || typeof r.data.expires_in !== "number" || !Number.isFinite(r.data.expires_in) || r.data.expires_in <= 0) throw failure();
+    token = r.data.access_token;
+    await setSession({access_token: r.data.access_token, refresh_token: r.data.refresh_token, expires_in: r.data.expires_in}, secure);
+  }
+  try {
+    if (!token) await renew();
+    let r = await upstream("/auth/v1/logout", {method: "POST"}, token);
+    if (!r.response.ok && refresh && (r.response.status === 401 || (r.response.status === 403 && r.data?.error_code === "bad_jwt"))) {
+      await renew();
+      r = await upstream("/auth/v1/logout", {method: "POST"}, token);
+    }
+    if (!r.response.ok) throw failure();
+  } catch { throw failure(); }
+  await clearSession();
 }

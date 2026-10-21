@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isolatedDatabase} from './helpers/isolated-db.mjs';
+import {historicalDatabase as isolatedDatabase} from './helpers/isolated-db.mjs';
 import {buildMonthlyPosition} from '../lib/hr/monthly-position.mjs';
 const month='2026-09';
 async function fixture(ctx){

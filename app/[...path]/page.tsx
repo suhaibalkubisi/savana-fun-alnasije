@@ -1,4 +1,4 @@
-import { HRApp } from "@/components/hr/app";
+import { FollowupApp } from "@/components/followup/app";
 export default function Page() {
-  return <HRApp />;
+  return <FollowupApp />;
 }

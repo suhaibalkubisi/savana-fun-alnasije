@@ -113,6 +113,7 @@ const MonthlyPositionPage = lazy(() => import('./monthly-position').then(m=>({de
 const FingerprintImport = lazy(() =>
   import("./fingerprint-workspace").then((m) => ({ default: m.FingerprintWorkspace })),
 );
+const CompanyOnboarding=lazy(()=>import('./company-onboarding').then(m=>({default:m.CompanyOnboarding})));
 const FingerprintIssues = lazy(() =>
   import("./attendance").then((m) => ({ default: m.FingerprintIssues })),
 );
@@ -155,6 +156,7 @@ class PageBoundary extends Component<
 }
 const navigation = [
   { path: "/", label: "الرئيسية", icon: LayoutDashboard, group: "مساحة العمل" },
+  {path:'/company-onboarding',label:'تهيئة ملفات البصمة',icon:ClipboardCheck,group:'مساحة العمل',write:true},
   {
     path: "/tasks",
     label: "مهام الموارد البشرية",
@@ -283,7 +285,7 @@ const navigation = [
     group: "الإدارة",
   },
 ];
-const primaryPaths=['/','/employees','/status','/fingerprint-daily','/fingerprint-monthly','/review','/reports','/audit'];
+const primaryPaths=['/','/employees','/status','/fingerprint-daily','/company-onboarding','/fingerprint-monthly','/review','/reports','/audit'];
 const secondaryGroups=[
   {label:'سجلات وملخصات',icon:FileBarChart,paths:['/monthly-position','/daily-position','/monthly-dashboard','/monthly','/departments','/summary','/lateness','/absence-leave','/actions']},
   {label:'المستخدمون والإعدادات',icon:Settings,paths:['/organization','/attendance-settings','/users','/settings']},
@@ -634,6 +636,7 @@ function Workspace({ user }: { user: Profile }) {
     content = (
       <FingerprintImport key={path} monthly={path === "/fingerprint-monthly"} reference={ref.data}/>
     );
+  else if (path === '/company-onboarding') content=user.role==='VIEWER'?<div className="error-state">ليست لديك صلاحية لهذه الصفحة</div>:<CompanyOnboarding reference={ref.data}/>;
   else if (path === "/fingerprint-issues")
     content = (
       <FingerprintIssues

@@ -46,6 +46,7 @@ import {
 import { download, brandedExcelBytes, tablePdfBytes, dailyColumnWeights } from "@/lib/hr/exports";
 import { formatClock12 } from "@/lib/hr/time-format.mjs";
 import { IdentityProposal } from "./identity-evidence";
+import { IdentityBatchReview } from "./identity-batch";
 import { MonthlyPositionPage } from './monthly-position';
 import {
   Choice,
@@ -1275,6 +1276,7 @@ export function FingerprintIssues({
           ]}
         />
       </div>
+      {canWrite && state === "open" && importId && <IdentityBatchReview key={importId} importId={importId} reference={reference} onSaved={query.refresh}/>}
       <LoadState
         loading={query.loading}
         error={query.error}

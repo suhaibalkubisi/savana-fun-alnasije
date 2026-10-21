@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isolatedDatabase} from './helpers/isolated-db.mjs';
+import {historicalDatabase as isolatedDatabase} from './helpers/isolated-db.mjs';
 import {buildDailyPosition,interpretDailyEntry,dayIndex} from '../lib/hr/attendance-engine.mjs';
 import {buildMonthlyPosition} from '../lib/hr/monthly-position.mjs';
 import {readFile} from 'node:fs/promises';

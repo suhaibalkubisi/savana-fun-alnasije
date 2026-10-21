@@ -7,6 +7,7 @@ import {
   config,
   errorResponse,
   json,
+  logoutSession,
   protectMutation,
   session,
   setSession,
@@ -34,11 +35,7 @@ export async function POST(request: Request) {
     protectMutation(request);
     const data = await body(request, 5000);
     if (data.action === "logout") {
-      try {
-        const s = await session();
-        await upstream("/auth/v1/logout", { method: "POST" }, s.token);
-      } catch {}
-      await clearSession();
+      await logoutSession(new URL(request.url).protocol === "https:");
       return json({ ok: true });
     }
     if (data.action === "password") {
